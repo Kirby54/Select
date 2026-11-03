@@ -1,0 +1,29 @@
+name: New contract check or task type
+description: Propose a deterministic check or a delivery contract for a new kind of work
+labels: [new-check]
+body:
+  - type: input
+    id: task_type
+    attributes:
+      label: Task type
+      placeholder: e.g. purchase_order, appointment_confirmation
+    validations:
+      required: true
+  - type: textarea
+    id: correct
+    attributes:
+      label: What does a correct result look like?
+      description: Fields, rules and the sources a value must come from.
+    validations:
+      required: true
+  - type: textarea
+    id: failures
+    attributes:
+      label: Two or three wrong results the check must catch
+    validations:
+      required: true
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk class
+      options: [low, medium, high, legal]

@@ -1,0 +1,19 @@
+id: message_triage
+version: 1
+title: Message triage
+description: Classify an incoming message so the right agent picks it up. No external effect.
+risk: low
+required:
+  - category
+  - priority
+checks:
+  - id: category_known
+    rule: allowed_values
+    params: { field: category, values: [quote_request, support, invoice_question, spam, other] }
+  - id: priority_known
+    rule: allowed_values
+    params: { field: priority, values: [low, normal, high] }
+correction:
+  max_attempts: 1
+approval:
+  mode: by_autonomy

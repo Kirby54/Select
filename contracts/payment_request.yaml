@@ -1,0 +1,26 @@
+# Moving money is a legal-risk action: it is capped at "supervised" forever,
+# whatever the agent's track record. See docs/autonomy.md.
+id: payment_request
+version: 1
+title: Payment request
+description: A proposed outgoing payment to a supplier. Never executed without a human.
+risk: legal
+required:
+  - payee
+  - iban_last4
+  - amount
+  - reference
+checks:
+  - id: amount_sourced
+    rule: provenance
+    description: The amount appears in the supplier invoice.
+    params: { fields: [amount] }
+  - id: iban_hint_format
+    rule: pattern
+    description: Only the last four digits are stored; the full IBAN stays in the bank.
+    params: { field: iban_last4, regex: "[0-9]{4}" }
+correction:
+  max_attempts: 0
+approval:
+  mode: always
+  external_action: none_payments_are_manual

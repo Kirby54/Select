@@ -1,0 +1,20 @@
+name: Feature request
+description: Propose an improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Which job are you trying to get done, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+  - type: textarea
+    id: verification
+    attributes:
+      label: How would we verify it works?
+      description: Select favours features whose success can be checked. A test, a contract check or a measurable outcome helps.

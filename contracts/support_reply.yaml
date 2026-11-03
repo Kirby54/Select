@@ -1,0 +1,32 @@
+id: support_reply
+version: 1
+title: Support reply
+description: An answer to a customer message. It may not promise refunds, discounts or deadlines.
+risk: medium
+required:
+  - to
+  - subject
+  - body
+checks:
+  - id: recipient_from_message
+    rule: provenance
+    description: The recipient is the address that wrote to us.
+    params: { fields: [to] }
+  - id: recipient_format
+    rule: pattern
+    params: { field: to, regex: "[^@\\s]+@[^@\\s]+\\.[a-zA-Z]{2,}" }
+  - id: body_length
+    rule: max_length
+    description: Short enough to be read on a phone.
+    params: { field: body, max: 1500 }
+  - id: no_unauthorised_promises
+    rule: forbidden_phrases
+    description: Refunds, discounts and guaranteed dates need a human.
+    params:
+      field: body
+      phrases: ["refund", "rückerstattung", "discount", "rabatt", "guarantee", "garantiert", "for free", "kostenlos"]
+correction:
+  max_attempts: 2
+approval:
+  mode: by_autonomy
+  external_action: send_email

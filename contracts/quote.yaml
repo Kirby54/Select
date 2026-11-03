@@ -1,0 +1,52 @@
+# Customer quote built from a customer request and the company catalog.
+# Amounts are computed by code; the model may only point at catalog items and quote the request.
+id: quote
+version: 1
+title: Customer quote
+description: A priced quote answering a customer request. Every price comes from the catalog, every quantity from the request.
+risk: medium
+required:
+  - customer.name
+  - customer.email
+  - lines
+  - totals.gross
+checks:
+  - id: lines_in_catalog
+    rule: catalog_reference
+    description: Each line points at an existing catalog item.
+    params: { items: "lines[]" }
+  - id: prices_match_catalog
+    rule: catalog_price
+    description: Each unit price equals the catalog price.
+    params: { items: "lines[]" }
+  - id: totals_add_up
+    rule: quote_totals
+    description: Line totals, net, VAT and gross recomputed with exact decimals.
+  - id: vat_rate_allowed
+    rule: allowed_values
+    description: Only the German standard (19 %) or reduced (7 %) VAT rate.
+    params: { field: "lines[].vat_rate", values: ["0.19", "0.07"] }
+  - id: every_number_sourced
+    rule: provenance
+    description: Quantities come from the request, prices from the catalog, totals from calculation.
+    params:
+      fields:
+        - customer.name
+        - customer.email
+        - lines[].quantity
+        - lines[].unit_price
+        - lines[].vat_rate
+        - lines[].line_total
+        - totals.net
+        - totals.vat
+        - totals.gross
+      computed: ["lines[].line_total", totals.net, totals.vat, totals.gross]
+  - id: email_format
+    rule: pattern
+    description: Customer e-mail looks valid.
+    params: { field: customer.email, regex: "[^@\\s]+@[^@\\s]+\\.[a-zA-Z]{2,}" }
+correction:
+  max_attempts: 2
+approval:
+  mode: by_autonomy
+  external_action: send_quote_email

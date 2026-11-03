@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node / Next.js
+node_modules/
+apps/web/.next/
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/tsconfig.tsbuildinfo
+apps/web/next-env.d.ts
+
+# Local runtime data and secrets — never commit these
+.env
+.run/
+data/
+*.key

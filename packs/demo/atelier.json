@@ -1,0 +1,56 @@
+{
+  "company": {
+    "name": "Atelier Holzwerk (demo)",
+    "currency": "EUR",
+    "monthly_budget": "300.00",
+    "policy": {
+      "promote_after": { "supervised": 4, "sampled": 6 },
+      "sample_rate": 0.25,
+      "max_level_by_risk": { "low": "autonomous", "medium": "autonomous", "high": "supervised" }
+    }
+  },
+  "policy_note": "Demo thresholds are deliberately low (4 and 6) so promotions happen within one simulated week. Real companies start with 20 and 50.",
+  "catalog": [
+    { "ref": "AP-120", "label": "Oak worktop", "unit": "m", "unit_price": "189.00", "vat_rate": "0.19" },
+    { "ref": "WR-40", "label": "Wall shelf, oak", "unit": "pc", "unit_price": "64.50", "vat_rate": "0.19" },
+    { "ref": "KT-10", "label": "Kitchen front, lacquered", "unit": "pc", "unit_price": "129.00", "vat_rate": "0.19" },
+    { "ref": "TB-200", "label": "Dining table, oak", "unit": "pc", "unit_price": "1490.00", "vat_rate": "0.19" },
+    { "ref": "MO-01", "label": "Assembly", "unit": "h", "unit_price": "58.00", "vat_rate": "0.19" },
+    { "ref": "DL-01", "label": "Delivery, Cologne area", "unit": "flat", "unit_price": "45.00", "vat_rate": "0.19" }
+  ],
+  "agents": [
+    { "key": "ops", "name": "Nora", "role": "Operations lead", "manager": null, "task_types": ["message_triage"],
+      "description": "Reads every incoming message and routes it to the right colleague." },
+    { "key": "sales", "name": "Lea", "role": "Sales", "manager": "ops", "task_types": ["quote", "message_triage"],
+      "description": "Turns customer requests into priced quotes from the catalog." },
+    { "key": "accounting", "name": "Tom", "role": "Accounting", "manager": "ops", "task_types": ["invoice_draft", "payment_request"],
+      "description": "Prepares invoice drafts and supplier payments for approval." },
+    { "key": "support", "name": "Sam", "role": "Support", "manager": "ops", "task_types": ["support_reply"],
+      "description": "Answers customer questions without promising what needs a human." },
+    { "key": "comms", "name": "Mia", "role": "Communication", "manager": "ops", "task_types": ["social_post"],
+      "description": "Writes short posts about finished work." }
+  ],
+  "customers": [
+    { "name": "Jonas Weber", "email": "jonas.weber@example.org" },
+    { "name": "Aylin Kaya", "email": "aylin.kaya@example.net" },
+    { "name": "Marc Dubois", "email": "marc.dubois@example.com" },
+    { "name": "Sofia Rossi", "email": "s.rossi@example.org" },
+    { "name": "Lukas Brandt", "email": "lukas.brandt@example.net" },
+    { "name": "Hana Sato", "email": "hana.sato@example.com" },
+    { "name": "Paul Becker", "email": "p.becker@example.org" }
+  ],
+  "quote_requests": [
+    { "items": [["AP-120", "oak worktop", "3.2", "m"], ["MO-01", "hours of assembly", "3", "h"]] },
+    { "items": [["WR-40", "oak wall shelves", "4", "pc"], ["DL-01", "delivery", "1", "flat"]] },
+    { "items": [["KT-10", "lacquered kitchen fronts", "6", "pc"], ["MO-01", "hours of assembly", "2", "h"]] },
+    { "items": [["TB-200", "oak dining table", "1", "pc"], ["DL-01", "delivery", "1", "flat"]] },
+    { "items": [["AP-120", "oak worktop", "2.4", "m"], ["WR-40", "matching shelves", "2", "pc"]] }
+  ],
+  "support_questions": [
+    "my new drawer squeaks when I open it. Is that normal?",
+    "when can you come to measure the kitchen?",
+    "the oil finish on my table looks dull in one corner, what should I use?",
+    "do you also build shoe cabinets?",
+    "can I change the colour of the fronts I ordered last week?"
+  ]
+}

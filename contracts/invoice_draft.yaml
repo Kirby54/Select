@@ -1,0 +1,35 @@
+# An invoice DRAFT. Not an e-invoice: no XRechnung / ZUGFeRD file is produced or validated yet.
+# Select must never present this as legally compliant. A human approves every invoice.
+id: invoice_draft
+version: 1
+title: Invoice draft (not an e-invoice)
+description: Invoice lines and totals derived from an approved quote. Human approval is always required.
+risk: high
+required:
+  - invoice_number
+  - customer.name
+  - lines
+  - totals.gross
+checks:
+  - id: number_format
+    rule: pattern
+    params: { field: invoice_number, regex: "RE-[0-9]{4}-[0-9]{3,6}" }
+  - id: lines_in_catalog
+    rule: catalog_reference
+    params: { items: "lines[]" }
+  - id: prices_match_catalog
+    rule: catalog_price
+    params: { items: "lines[]" }
+  - id: totals_add_up
+    rule: quote_totals
+  - id: every_number_sourced
+    rule: provenance
+    params:
+      fields: ["lines[].quantity", "lines[].unit_price", "lines[].line_total", totals.net, totals.vat, totals.gross]
+      computed: ["lines[].line_total", totals.net, totals.vat, totals.gross]
+      quote_check: true
+correction:
+  max_attempts: 1
+approval:
+  mode: always
+  external_action: send_invoice_email

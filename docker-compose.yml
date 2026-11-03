@@ -1,0 +1,72 @@
+# Select: `docker compose up --build`, then open http://localhost:3000
+# Ports are bound to 127.0.0.1 because the default auth mode ("local") trusts whoever can reach the app.
+# Before exposing Select to a network, set SELECT_AUTH_MODE=token (see docs/deployment.md).
+name: select
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: select
+      POSTGRES_USER: select
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-select}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U select -d select"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    environment:
+      SELECT_DATABASE_URL: postgresql+psycopg://select:${POSTGRES_PASSWORD:-select}@db:5432/select
+      SELECT_AUTH_MODE: ${SELECT_AUTH_MODE:-local}
+      SELECT_SECRET_KEY: ${SELECT_SECRET_KEY:-}
+      SELECT_CORS_ORIGINS: '["http://localhost:3000"]'
+    volumes:
+      - api-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    command: ["select-api", "worker"]
+    environment:
+      SELECT_DATABASE_URL: postgresql+psycopg://select:${POSTGRES_PASSWORD:-select}@db:5432/select
+      SELECT_SECRET_KEY: ${SELECT_SECRET_KEY:-}
+    volumes:
+      - api-data:/data
+    healthcheck:
+      disable: true
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    environment:
+      SELECT_API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  api-data:

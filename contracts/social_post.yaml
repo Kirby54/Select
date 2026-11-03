@@ -1,0 +1,29 @@
+id: social_post
+version: 1
+title: Social media post
+description: A short public post. Any figure it states must be traced to a source.
+risk: medium
+required:
+  - channel
+  - text
+checks:
+  - id: channel_known
+    rule: allowed_values
+    params: { field: channel, values: [linkedin, instagram, website] }
+  - id: length
+    rule: max_length
+    params: { field: text, max: 1300 }
+  - id: no_claims_without_proof
+    rule: forbidden_phrases
+    description: Superlatives and guarantees invite complaints.
+    params: { field: text, phrases: ["best in", "guaranteed", "100 %", "100%", "number one", "nr. 1"] }
+  - id: figures_sourced
+    rule: provenance
+    description: Each figure in the post points at a source.
+    blocking: true
+    params: { fields: ["figures[]"], allow_empty: true }
+correction:
+  max_attempts: 2
+approval:
+  mode: by_autonomy
+  external_action: publish_post
