@@ -41,7 +41,7 @@ export default function GoalsPage() {
               empty={<EmptyState icon={<Target />} title="No goal yet" description="Write down what this company aims for, for example “Answer every quote request within a day”." />}
               columns={[
                 { key: "title", header: "Goal", cell: (g) => <span className="text-fg">{g.title}</span> },
-                { key: "status", header: "Status", cell: (g) => <Badge tone={g.status === "achieved" ? "success" : g.status === "dropped" ? "neutral" : "accent"}>{g.status}</Badge> },
+                { key: "status", header: "Status", cell: (g) => <Badge tone={g.status === "achieved" ? "success" : "neutral"} dot>{g.status}</Badge> },
                 { key: "date", header: "Target", cell: (g) => <span className="text-muted">{formatDay(g.target_date)}</span> },
                 { key: "tasks", header: "Tasks", cell: (g) => <Link onClick={(e) => e.stopPropagation()} href={`/c/${cid}/tasks`} className="text-muted tabular hover:text-fg">{g.task_count}</Link>, align: "right" },
               ]} />
@@ -49,7 +49,7 @@ export default function GoalsPage() {
         </Card>
       </PageBody>
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)} title={editing === "new" ? "New goal" : "Edit goal"}
-        footer={<><Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button><Button size="sm" variant="primary" loading={save.isPending} disabled={!form.title.trim()} onClick={() => save.mutate(form)}>Save</Button></>}>
+        footer={<><Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button><Button variant="primary" loading={save.isPending} disabled={!form.title.trim()} onClick={() => save.mutate(form)}>Save</Button></>}>
         <div className="space-y-4">
           <Field label="Title" htmlFor="g-title" required error={!form.title.trim() ? "A title is required" : undefined}><Input id="g-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
           <Field label="Description" htmlFor="g-desc"><Textarea id="g-desc" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="min-h-16" /></Field>

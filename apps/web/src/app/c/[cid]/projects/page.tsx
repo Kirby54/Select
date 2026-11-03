@@ -42,7 +42,7 @@ export default function ProjectsPage() {
               empty={<EmptyState icon={<FolderKanban />} title="No project yet" description="Group tasks, for example “Kitchen renovations, spring”." />}
               columns={[
                 { key: "name", header: "Project", cell: (p) => <span className="text-fg">{p.name}</span> },
-                { key: "status", header: "Status", cell: (p) => <Badge tone={p.status === "done" ? "success" : p.status === "paused" ? "warning" : "accent"}>{p.status}</Badge> },
+                { key: "status", header: "Status", cell: (p) => <Badge tone={p.status === "done" ? "success" : p.status === "paused" ? "warning" : "neutral"} dot>{p.status}</Badge> },
                 { key: "goal", header: "Goal", cell: (p) => <span className="text-muted">{goalName(p.goal_id) ?? "—"}</span>, hideOnMobile: true },
                 { key: "tasks", header: "Tasks", cell: (p) => <span className="text-muted tabular">{p.task_count}</span>, align: "right" },
               ]} />
@@ -50,7 +50,7 @@ export default function ProjectsPage() {
         </Card>
       </PageBody>
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)} title={editing === "new" ? "New project" : "Edit project"}
-        footer={<><Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button><Button size="sm" variant="primary" loading={save.isPending} disabled={!form.name.trim()} onClick={() => save.mutate(form)}>Save</Button></>}>
+        footer={<><Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button><Button variant="primary" loading={save.isPending} disabled={!form.name.trim()} onClick={() => save.mutate(form)}>Save</Button></>}>
         <div className="space-y-4">
           <Field label="Name" htmlFor="p-name" required error={!form.name.trim() ? "A name is required" : undefined}><Input id="p-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
           <Field label="Description" htmlFor="p-desc"><Textarea id="p-desc" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="min-h-16" /></Field>

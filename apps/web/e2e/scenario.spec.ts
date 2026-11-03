@@ -123,6 +123,40 @@ test("keyboard: Ctrl+K opens the command palette and navigates", async ({ page }
   await expect(page.getByRole("heading", { name: "Autonomy" })).toBeVisible();
 });
 
+test("keyboard: J and Enter move through tasks and open the inspector", async ({ page }) => {
+  await page.goto("/?demo=1");
+  const cid = await companyId(page);
+  await page.goto(`/c/${cid}/tasks`);
+  await page.getByRole("radio", { name: "All" }).click();
+  const rows = page.locator("[data-row]");
+  await expect(rows.nth(1)).toBeVisible();
+  await page.locator("main").click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press("j");
+  await expect(rows.nth(1)).toBeFocused();
+  await page.keyboard.press("Enter");
+  const panel = page.getByRole("dialog");
+  await expect(panel.getByText("Status", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+});
+
+test("phone: the tab bar reaches approvals, which open full screen", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  await page.goto("/?demo=1");
+  const cid = await companyId(page);
+  await page.goto(`/c/${cid}/overview`);
+  await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: /Approvals/ }).click();
+  await page.waitForURL(/\/approvals/);
+  const queue = page.getByRole("list").first();
+  if (await queue.getByRole("button").count()) {
+    await queue.getByRole("button").first().click();
+    await expect(page.getByRole("dialog").getByRole("button", { name: "Approve" })).toBeVisible();
+  } else {
+    await expect(page.getByText("Nothing waits for your approval")).toBeVisible();
+  }
+  await page.close();
+});
+
 test("no horizontal scroll on a 360 px phone", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 360, height: 780 } });
   await page.goto("/?demo=1");

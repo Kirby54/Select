@@ -4,6 +4,8 @@ const config: NextConfig = {
   output: "standalone",
   reactStrictMode: true,
   poweredByHeader: false,
+  // `next dev` would otherwise write an AGENTS.md into the app folder on every start.
+  agentRules: false,
   async headers() {
     return [
       {

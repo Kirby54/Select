@@ -4,7 +4,7 @@ Snapshot of 3 November 2026, from a shallow clone of [paperclipai/paperclip](htt
 
 | Capability | Paperclip | Select 0.1 | To build | Priority | Tests in Select |
 | --- | --- | --- | --- | --- | --- |
-| Org chart, reporting lines | Yes (OrgChart page) | Yes, persisted, loop-checked | Drag and drop | Medium | `test_agent_validation_and_org_loops` |
+| Org chart, reporting lines | Yes (OrgChart page) | Yes, persisted, loop-checked; drag a post onto its new manager | Undo | Low | `test_agent_validation_and_org_loops` |
 | Agents with roles, budgets, pause | Yes | Yes | Agent config history | Medium | governance tests |
 | Tasks (issues), comments, history | Yes, very rich (threads, documents, attachments, labels, relations) | Basic: list, board, comments, history, archive | Attachments, labels, sub-task UI | Medium | vertical slice |
 | Goals and projects | Yes | Basic CRUD | Progress roll-up | Low | — |
@@ -24,7 +24,7 @@ Snapshot of 3 November 2026, from a shallow clone of [paperclipai/paperclip](htt
 | Secrets management | Yes | Encrypted provider keys | Secret rotation | Medium | `test_secrets_are_encrypted_and_never_returned` |
 | Demo without API key | Not found | Yes, reproducible week | — | Done | `test_demo_week_runs_the_real_pipeline` |
 | Installation | One command (`npx paperclipai onboard`), embedded PostgreSQL | Docker Compose (not yet built end to end), dev script | Verify compose build in CI | High | e2e |
-| Tests | ~3,500 test files | 52 backend, 9 frontend unit, 5 end-to-end | More coverage | Ongoing | — |
+| Tests | ~3,500 test files | 52 backend, 10 frontend unit, 7 end-to-end | More coverage | Ongoing | — |
 
 ## What this means
 

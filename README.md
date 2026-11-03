@@ -40,6 +40,7 @@ Multi-agent orchestrators let you decide in advance what agents may do alone. Se
 | Providers | Anthropic and OpenAI (official SDKs), Gemini and Ollama (HTTP APIs); plus a submission API for any agent runtime |
 | First business pack | Mail → quote: the model extracts, code prices from your catalog |
 | Demo | A recorded week in a fictional workshop, no API key, reproducible |
+| Interface | Dark graphite design system, keyboard-first (Ctrl/⌘ K, J/K, G then a letter), inspector panels, phone tab bar, WCAG 2.2 AA contrast |
 
 <p align="center">
   <img src="docs/screenshots/autonomy.png" alt="Autonomy page: licences per agent and task type, and why each level changed" width="900" />
@@ -100,12 +101,28 @@ More in [docs/verification.md](docs/verification.md).
 Default promotion thresholds are 20 and 50 verified successes in a row — **starting hypotheses to calibrate, not proven values**. Details: [docs/autonomy.md](docs/autonomy.md).
 
 <p align="center">
-  <img src="docs/screenshots/approvals.png" alt="Approval queue showing the exact quote that would be sent" width="900" />
+  <img src="docs/screenshots/approvals.png" alt="Approval queue: who asks, why a human is asked, which checks ran, the exact quote that would be sent" width="900" />
+</p>
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/tasks.png" alt="Tasks grouped by status, navigable with the keyboard" /></td>
+    <td width="50%"><img src="docs/screenshots/organization.png" alt="Organization chart with each post's model, status and autonomy level" /></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/verification.png" alt="Verification: contracts, checks and receipts with real counts" /></td>
+    <td><img src="docs/screenshots/task-receipts.png" alt="A task with its verification receipts" /></td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/screenshots/mobile-overview.png" alt="Overview on a phone" width="240" />
+  <img src="docs/screenshots/mobile-approvals.png" alt="Approvals on a phone" width="240" />
 </p>
 
 ## Architecture
 
-Next.js 16 web app → FastAPI API → PostgreSQL 16, with a worker on a durable PostgreSQL job queue. `select-verify` is a separate Python library with no database or network access. See [docs/architecture.md](docs/architecture.md).
+Next.js 16 web app → FastAPI API → PostgreSQL 16, with a worker on a durable PostgreSQL job queue. `select-verify` is a separate Python library with no database or network access. See [docs/architecture.md](docs/architecture.md). The interface follows its own design system, documented in [docs/design-system.md](docs/design-system.md).
 
 ## Security
 
@@ -114,11 +131,11 @@ Agents never hold a permission to send, pay or sign; the server applies the appr
 ## Tests
 
 ```bash
-make test     # 52 backend tests on PostgreSQL + 9 frontend unit tests
-make e2e      # 5 Playwright scenarios against a running stack
+make test     # 52 backend tests on PostgreSQL + 10 frontend unit tests
+make e2e      # 7 Playwright scenarios against a running stack
 ```
 
-The end-to-end suite creates a company, an agent and a task in the browser, submits a result, checks the receipt, approves it and verifies the history and the counters; it also checks that an injected price never reaches approval and that ten pages have no horizontal scroll at 360 px.
+The end-to-end suite creates a company, an agent and a task in the browser, submits a result, checks the receipt, approves it and verifies the history and the counters; it also checks that an injected price never reaches approval, that the keyboard moves through tasks and opens the inspector, that a phone reaches approvals from the tab bar, and that ten pages have no horizontal scroll at 360 px. Screenshots in this README are real captures of the demo company (`node scripts/screenshots.mjs`).
 
 ## Benchmarks
 

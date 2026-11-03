@@ -33,16 +33,26 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div aria-live="polite" className="pointer-events-none fixed inset-x-3 bottom-3 z-[60] flex flex-col items-end gap-2 sm:inset-x-auto sm:right-4 sm:bottom-4">
+      <div aria-live="polite" className="pointer-events-none fixed inset-x-3 bottom-[calc(64px+env(safe-area-inset-bottom))] z-[60] flex flex-col items-center gap-2 sm:inset-x-auto sm:right-4 sm:items-end lg:bottom-4">
         {toasts.map((t) => (
-          <div key={t.id} role={t.tone === "error" ? "alert" : "status"} className="pointer-events-auto flex w-full max-w-sm animate-slide-in items-start gap-2.5 rounded-lg border border-line bg-raised px-3.5 py-3 shadow-lg shadow-black/30">
-            {t.tone === "success" ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" aria-hidden /> : t.tone === "error" ? <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden /> : <Info className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />}
+          <div
+            key={t.id}
+            role={t.tone === "error" ? "alert" : "status"}
+            className="pointer-events-auto flex w-full max-w-sm animate-pop-in items-start gap-2.5 rounded-xl bg-raised px-3.5 py-3 shadow-[var(--shadow-popover)]"
+          >
+            {t.tone === "success" ? (
+              <CheckCircle2 className="mt-px size-4 shrink-0 text-success" aria-hidden />
+            ) : t.tone === "error" ? (
+              <AlertTriangle className="mt-px size-4 shrink-0 text-danger" aria-hidden />
+            ) : (
+              <Info className="mt-px size-4 shrink-0 text-accent" aria-hidden />
+            )}
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-fg">{t.title}</p>
+              <p className="text-[13px] font-medium text-fg">{t.title}</p>
               {t.description && <p className="mt-0.5 text-xs text-muted">{t.description}</p>}
             </div>
-            <button type="button" onClick={() => dismiss(t.id)} className="text-faint hover:text-fg" aria-label="Dismiss notification">
-              <X className="size-4" aria-hidden />
+            <button type="button" onClick={() => dismiss(t.id)} className="-m-1 rounded-md p-1 text-faint hover:bg-hover hover:text-fg" aria-label="Dismiss notification">
+              <X className="size-3.5" aria-hidden />
             </button>
           </div>
         ))}
@@ -57,13 +67,17 @@ export function useToast() {
   return ctx;
 }
 
-export function EmptyState({ icon, title, description, action }: { icon?: ReactNode; title: string; description?: string; action?: ReactNode }) {
+export function EmptyState({ icon, title, description, action, compact }: { icon?: ReactNode; title: string; description?: ReactNode; action?: ReactNode; compact?: boolean }) {
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
-      {icon && <div className="mb-3 text-faint [&_svg]:size-6">{icon}</div>}
-      <p className="text-sm font-medium text-fg">{title}</p>
-      {description && <p className="mt-1 max-w-sm text-sm text-muted">{description}</p>}
-      {action && <div className="mt-4">{action}</div>}
+    <div className={cx("flex flex-col items-center justify-center text-center", compact ? "px-6 py-8" : "px-6 py-14")}>
+      {icon && (
+        <div className="mb-3.5 flex size-10 items-center justify-center rounded-xl border border-line bg-surface-2 text-muted shadow-[var(--shadow-sheen)] [&_svg]:size-[18px]">
+          {icon}
+        </div>
+      )}
+      <p className="text-[13px] font-semibold text-fg">{title}</p>
+      {description && <p className="mt-1 max-w-sm text-[13px] text-muted">{description}</p>}
+      {action && <div className="mt-4 flex flex-wrap justify-center gap-2">{action}</div>}
     </div>
   );
 }
@@ -84,9 +98,9 @@ export function ErrorState({ error, retry, compact }: { error: unknown; retry?: 
     : errorMessage(error);
   return (
     <div className={cx("flex flex-col items-center justify-center text-center", compact ? "px-4 py-6" : "px-6 py-14")} role="alert">
-      <div className="mb-3 text-danger [&_svg]:size-6">{icon}</div>
-      <p className="text-sm font-medium text-fg">{title}</p>
-      <p className="mt-1 max-w-md text-sm text-muted">{detail}</p>
+      <div className="mb-3.5 flex size-10 items-center justify-center rounded-xl border border-danger/25 bg-danger/8 text-danger [&_svg]:size-[18px]">{icon}</div>
+      <p className="text-[13px] font-semibold text-fg">{title}</p>
+      <p className="mt-1 max-w-md text-[13px] text-muted">{detail}</p>
       {retry && (
         <Button className="mt-4" size="sm" icon={<RefreshCw className="size-3.5" aria-hidden />} onClick={retry}>
           Retry
@@ -96,11 +110,11 @@ export function ErrorState({ error, retry, compact }: { error: unknown; retry?: 
   );
 }
 
-export function LoadingRows({ rows = 6 }: { rows?: number }) {
+export function LoadingRows({ rows = 6, className }: { rows?: number; className?: string }) {
   return (
-    <div className="space-y-2 p-4" aria-busy="true" aria-label="Loading">
+    <div className={cx("space-y-1.5 p-4", className)} aria-busy="true" aria-label="Loading">
       {Array.from({ length: rows }, (_, i) => (
-        <Skeleton key={i} className="h-9 w-full" />
+        <Skeleton key={i} className="h-8 w-full" />
       ))}
     </div>
   );
@@ -108,10 +122,12 @@ export function LoadingRows({ rows = 6 }: { rows?: number }) {
 
 export function DemoBanner() {
   return (
-    <div className="flex items-center gap-2 border-b border-sampled/25 bg-sampled/8 px-4 py-1.5 text-xs text-sampled" role="note">
-      <Info className="size-3.5 shrink-0" aria-hidden />
-      <span>
-        <strong className="font-semibold">Demo company.</strong> Agent outputs are recorded and replayed; no model is called. Checks, receipts and autonomy run for real.
+    <div className="flex items-center gap-2 border-b border-line-soft bg-surface/60 px-4 py-1.5 text-xs text-muted sm:px-6" role="note">
+      <span className="inline-flex h-[18px] shrink-0 items-center rounded-[5px] border border-dashed border-line-strong px-1.5 text-2xs font-medium tracking-wide text-faint uppercase">Demo</span>
+      <span className="min-w-0 truncate sm:whitespace-normal">
+        <strong className="font-medium text-fg">Demo company.</strong>
+        <span className="sm:hidden"> Recorded outputs; checks and autonomy are real.</span>
+        <span className="max-sm:hidden"> Agent outputs are recorded and replayed; no model is called. Checks, receipts and autonomy run for real.</span>
       </span>
     </div>
   );

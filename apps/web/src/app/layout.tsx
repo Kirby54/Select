@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   icons: { icon: "/icon.svg" },
 };
 
-export const viewport: Viewport = { themeColor: "#101215", colorScheme: "dark" };
+export const viewport: Viewport = { themeColor: "#111214", colorScheme: "dark", viewportFit: "cover" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

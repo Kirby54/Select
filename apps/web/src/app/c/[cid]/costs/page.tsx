@@ -1,27 +1,46 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, CircleDollarSign } from "lucide-react";
 
 import { AmountChart } from "@/components/charts";
 import { CostMetric } from "@/components/domain";
 import { PageBody, PageHeader } from "@/components/shell/app-shell";
-import { DataTable } from "@/components/ui/data";
-import { ErrorState, LoadingRows } from "@/components/ui/feedback";
-import { Card, CardHeader, Checkbox, Select } from "@/components/ui/primitives";
+import { EmptyState, ErrorState } from "@/components/ui/feedback";
+import { Card, CardHeader, DemoTag, Progress, Segmented, Skeleton, Switch, cx } from "@/components/ui/primitives";
 import { money } from "@/lib/format";
 import { useCompany, useCompanyId, useCosts, usePersistentState } from "@/lib/queries";
 import type { CostRow } from "@/lib/types";
 
-function Breakdown({ title, rows }: { title: string; rows: CostRow[] }) {
+/** A breakdown as a ranked list with a quiet share bar: readable at a glance, exact on the right. */
+function Breakdown({ title, rows, currency, total }: { title: string; rows: CostRow[]; currency: string; total: number }) {
+  const max = Math.max(...rows.map((r) => Number(r.amount)), 0);
   return (
-    <Card>
+    <Card aria-label={title}>
       <CardHeader title={title} />
-      {rows.length === 0 ? <p className="px-4 py-6 text-sm text-muted">Nothing recorded.</p> : (
-        <DataTable caption={title} rows={rows} rowKey={(r) => `${r.key}`} columns={[
-          { key: "label", header: "Name", cell: (r) => <span className="text-fg">{r.label}</span> },
-          { key: "tokens", header: "Tokens in / out", cell: (r) => <span className="text-muted tabular">{r.input_tokens.toLocaleString("en")} / {r.output_tokens.toLocaleString("en")}</span>, hideOnMobile: true, align: "right" },
-          { key: "amount", header: "Amount", cell: (r) => <span className="tabular">{money(r.amount, "", 4)}</span>, align: "right" },
-        ]} />
+      {rows.length === 0 ? (
+        <p className="px-4 py-6 text-[13px] text-faint">Nothing recorded in this period.</p>
+      ) : (
+        <ul className="divide-y divide-line-soft">
+          {rows.slice(0, 8).map((r) => {
+            const amount = Number(r.amount);
+            return (
+              <li key={`${r.key}-${r.label}`} className="px-4 py-2.5">
+                <div className="flex items-baseline justify-between gap-3 text-[13px]">
+                  <span className="truncate text-fg">{r.label}</span>
+                  <span className="shrink-0 tabular text-fg">{money(r.amount, currency, 4)}</span>
+                </div>
+                <div className="mt-1.5 flex items-center gap-3">
+                  <span className="h-1 flex-1 overflow-hidden rounded-full bg-line-soft" aria-hidden>
+                    <span className="block h-full rounded-full bg-accent/70" style={{ width: `${max > 0 ? (amount / max) * 100 : 0}%` }} />
+                  </span>
+                  <span className="w-28 shrink-0 text-right text-2xs text-faint tabular" title="Tokens in / out">
+                    {total > 0 ? `${Math.round((amount / total) * 100)} % · ` : ""}{r.events} call{r.events === 1 ? "" : "s"}
+                  </span>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </Card>
   );
@@ -33,49 +52,90 @@ export default function CostsPage() {
   const [days, setDays] = usePersistentState<number>("costs.days", 30);
   const [includeDemo, setIncludeDemo] = usePersistentState<boolean>("costs.demo", true);
   const costs = useCosts(cid, days, includeDemo);
-  if (costs.isPending) return <LoadingRows rows={8} />;
-  if (costs.isError) return <ErrorState error={costs.error} retry={() => void costs.refetch()} />;
+  const isDemo = !!company.data?.is_demo;
+
+  const header = (
+    <PageHeader
+      title="Costs"
+      description={costs.data?.kind_note ?? "Spend, budgets and cost per verified result"}
+      actions={
+        <>
+          {isDemo && (
+            <label className="flex h-7 items-center gap-2 rounded-lg px-2 text-xs text-muted">
+              <Switch checked={includeDemo} onCheckedChange={setIncludeDemo} label="Include demo costs" />
+              <span aria-hidden>Include demo</span>
+            </label>
+          )}
+          <Segmented label="Period" value={String(days)} onChange={(v) => setDays(Number(v))} options={[{ value: "7", label: "7 days" }, { value: "30", label: "30 days" }, { value: "90", label: "90 days" }]} />
+        </>
+      }
+    />
+  );
+
+  if (costs.isPending) {
+    return <>{header}<PageBody><Skeleton className="h-64 rounded-xl" /><div className="grid gap-4 lg:grid-cols-2"><Skeleton className="h-48 rounded-xl" /><Skeleton className="h-48 rounded-xl" /></div></PageBody></>;
+  }
+  if (costs.isError) return <>{header}<ErrorState error={costs.error} retry={() => void costs.refetch()} /></>;
   const c = costs.data;
+  const currency = c.currency;
+  const total = Number(c.total);
+  const budget = Number(c.budget.monthly);
+  const spent = Number(c.budget.spent_live_this_month);
+  const demoIncluded = isDemo && includeDemo;
+
   return (
     <>
-      <PageHeader
-        title="Costs"
-        description={c.kind_note}
-        actions={
-          <>
-            {company.data?.is_demo && <Checkbox label="Include demo" checked={includeDemo} onChange={(e) => setIncludeDemo(e.target.checked)} />}
-            <label htmlFor="c-period" className="sr-only">Period</label>
-            <Select id="c-period" value={days} onChange={(e) => setDays(Number(e.target.value))} className="h-7 w-32 text-xs">
-              <option value={7}>Last 7 days</option><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option>
-            </Select>
-          </>
-        }
-      />
+      {header}
       <PageBody>
         {c.alerts.map((a) => (
-          <div key={a.message} role="alert" className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${a.level === "critical" ? "border-danger/40 bg-danger/10 text-danger" : "border-warning/40 bg-warning/10 text-warning"}`}>
-            <AlertTriangle className="size-4" aria-hidden />{a.message}
+          <div key={a.message} role="alert" className={cx("flex items-center gap-2.5 rounded-xl border px-4 py-3 text-[13px]", a.level === "critical" ? "border-danger/35 bg-danger/8 text-danger" : "border-warning/35 bg-warning/8 text-warning")}>
+            <AlertTriangle className="size-4 shrink-0" aria-hidden />{a.message}
           </div>
         ))}
-        <Card>
-          <div className="grid grid-cols-2 md:grid-cols-4 md:divide-x md:divide-line">
-            <CostMetric label={`Total, last ${c.period_days} days`} amount={c.total} kind="estimated" />
-            <CostMetric label="Per verified result" amount={c.cost_per_verified_result} kind="estimated" hint={`${c.verified_results} verified results`} />
-            <CostMetric label="Live spend this month" amount={c.budget.spent_live_this_month} kind="estimated" />
-            <div className="px-4 py-3">
+        <Card aria-label="Spend summary">
+          <div className="grid grid-cols-2 lg:grid-cols-4 [&>*]:border-line-soft lg:[&>*:not(:last-child)]:border-r max-lg:[&>*:nth-child(odd)]:border-r max-lg:[&>*:nth-child(n+3)]:border-t">
+            <div className="relative">
+              <CostMetric label={`Total, last ${c.period_days} days`} amount={c.total} currency={currency} kind="estimated" />
+              {demoIncluded && <DemoTag className="absolute top-3 right-4" />}
+            </div>
+            <CostMetric label="Per verified result" amount={c.cost_per_verified_result} currency={currency} kind="estimated" hint={`${c.verified_results} verified results`} />
+            <div className="min-w-0 px-4 py-3">
+              <div className="text-xs text-muted">Live spend this month</div>
+              <div className="mt-1 text-[22px] leading-7 font-semibold tracking-[-0.02em] tabular">{money(c.budget.spent_live_this_month, currency, 2)}</div>
+              {budget > 0 ? (
+                <Progress className="mt-2" value={spent} max={budget} tone={spent / budget > 0.9 ? "danger" : spent / budget > 0.7 ? "supervised" : "accent"} label="Monthly budget used" />
+              ) : (
+                <div className="mt-0.5 text-xs text-faint">No monthly budget</div>
+              )}
+            </div>
+            <div className="min-w-0 px-4 py-3">
               <div className="text-xs text-muted">Monthly budget</div>
-              <div className="mt-1 text-xl font-semibold tabular">{c.budget.monthly === "0.00" || c.budget.monthly === "0" ? "Not set" : money(c.budget.monthly)}</div>
+              <div className="mt-1 text-[22px] leading-7 font-semibold tracking-[-0.02em] tabular">{budget > 0 ? money(c.budget.monthly, currency, 0) : "Not set"}</div>
               <div className="mt-0.5 text-xs text-faint">Live runs stop when it is reached</div>
             </div>
           </div>
-          <div className="border-t border-line"><AmountChart daily={c.daily} /></div>
+          <div className="border-t border-line-soft">
+            <div className="flex items-center justify-between px-4 pt-3 text-xs text-muted">
+              <span>Per day</span>
+              <span className="text-faint">estimated from provider token counts</span>
+            </div>
+            <AmountChart daily={c.daily} currency={currency} />
+          </div>
         </Card>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Breakdown title="By agent" rows={c.by_agent} />
-          <Breakdown title="By model" rows={c.by_model} />
-          <Breakdown title="By provider" rows={c.by_provider} />
-          <Breakdown title="Most expensive tasks" rows={c.by_task} />
-        </div>
+        {total === 0 && c.by_agent.length === 0 ? (
+          <Card>
+            <EmptyState icon={<CircleDollarSign />} title="No cost recorded yet" description="Costs appear with the first live run. Demo runs are recorded apart and never billed." />
+          </Card>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+            <Breakdown title="By agent" rows={c.by_agent} currency={currency} total={total} />
+            <Breakdown title="By model" rows={c.by_model} currency={currency} total={total} />
+            <Breakdown title="By project" rows={c.by_project} currency={currency} total={total} />
+            <Breakdown title="By provider" rows={c.by_provider} currency={currency} total={total} />
+            <Breakdown title="Most expensive tasks" rows={c.by_task} currency={currency} total={total} />
+            <Breakdown title="Live or recorded" rows={c.by_kind} currency={currency} total={total} />
+          </div>
+        )}
       </PageBody>
     </>
   );

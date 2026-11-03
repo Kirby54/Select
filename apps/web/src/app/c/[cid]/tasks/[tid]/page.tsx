@@ -1,18 +1,18 @@
 "use client";
 
-import { Archive, Ban, Flag, Loader2, Play, Send } from "lucide-react";
+import { Archive, Ban, Flag, Loader2, Play, Send, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { use, useState } from "react";
 
-import { ActivityTimeline, ApprovalCard, TaskStatusBadge, VerificationReceipt } from "@/components/domain";
+import { ActivityTimeline, AgentAvatar, ApprovalCard, PriorityIcon, TaskStatusBadge, VerificationReceipt } from "@/components/domain";
 import { PageBody, PageHeader } from "@/components/shell/app-shell";
 import { TabPanel, Tabs } from "@/components/ui/data";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/ui/feedback";
 import { ConfirmDialog, Dialog } from "@/components/ui/overlay";
-import { Badge, Button, Card, CardHeader, Field, Select, Textarea } from "@/components/ui/primitives";
+import { Badge, Button, Card, CardHeader, DemoTag, Field, Select, Textarea } from "@/components/ui/primitives";
 import { ApiError, api } from "@/lib/api";
 import { formatDate, relative, taskTypeLabel } from "@/lib/format";
-import { useAction, useAgents, useCompany, useTask } from "@/lib/queries";
+import { useAction, useAgents, useCompany, useContracts, useTask } from "@/lib/queries";
 import type { Task, TaskDetail } from "@/lib/types";
 
 function SubmitDialog({ cid, task, open, onOpenChange }: { cid: string; task: TaskDetail; open: boolean; onOpenChange: (o: boolean) => void }) {
@@ -27,8 +27,8 @@ function SubmitDialog({ cid, task, open, onOpenChange }: { cid: string; task: Ta
     <Dialog open={open} onOpenChange={onOpenChange} wide title="Submit an output"
       description="For agents that run elsewhere (or a human acting as the agent). The output is verified exactly like a live run."
       footer={<>
-        <Button size="sm" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-        <Button size="sm" variant="primary" loading={submit.isPending} onClick={() => {
+        <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+        <Button variant="primary" loading={submit.isPending} onClick={() => {
           try {
             const parsed = JSON.parse(text) as unknown;
             if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("The output must be a JSON object.");
@@ -40,15 +40,17 @@ function SubmitDialog({ cid, task, open, onOpenChange }: { cid: string; task: Ta
         }}>Submit for verification</Button>
       </>}>
       <Field label="Output (JSON)" htmlFor="output" error={parseError ?? undefined} hint={`Contract: ${task.task_type}. Values taken from a source carry {"value", "source_ref"}.`}>
-        <Textarea id="output" value={text} onChange={(e) => setText(e.target.value)} className="min-h-72 font-mono text-xs" aria-invalid={!!parseError} spellCheck={false} />
+        <Textarea id="output" value={text} onChange={(e) => setText(e.target.value)} className="min-h-72 bg-canvas font-mono text-xs" aria-invalid={!!parseError} spellCheck={false} />
       </Field>
     </Dialog>
   );
 }
 
-function Sidebar({ cid, task, canWrite }: { cid: string; task: TaskDetail; canWrite: boolean }) {
+function Properties({ cid, task, canWrite }: { cid: string; task: TaskDetail; canWrite: boolean }) {
   const agents = useAgents(cid);
+  const contracts = useContracts(cid);
   const eligible = (agents.data ?? []).filter((a) => a.task_types.includes(task.task_type) && a.status !== "archived");
+  const contract = contracts.data?.find((c) => c.id === task.task_type);
   const patch = useAction(cid, (body: Partial<Task> & { clear_assignee?: boolean }) =>
     api<TaskDetail>(`/companies/${cid}/tasks/${task.id}`, { method: "PATCH", body: { version: task.version, ...body } }), {
     success: "Task updated",
@@ -57,9 +59,9 @@ function Sidebar({ cid, task, canWrite }: { cid: string; task: TaskDetail; canWr
   const locked = !canWrite || task.is_demo || ["awaiting_approval", "done", "cancelled"].includes(task.status);
   return (
     <Card>
-      <CardHeader title="Details" />
+      <CardHeader title="Properties" />
       <div className="space-y-4 p-4">
-        {conflict && <p role="alert" className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">Someone changed this task meanwhile. The page now shows their version.</p>}
+        {conflict && <p role="alert" className="rounded-lg border border-warning/35 bg-warning/8 px-3 py-2 text-xs text-warning">Someone changed this task meanwhile. The page now shows their version.</p>}
         <Field label="Assignee" htmlFor="d-assignee">
           <Select id="d-assignee" value={task.assignee_id ?? ""} disabled={locked || patch.isPending}
             onChange={(e) => patch.mutate(e.target.value ? { assignee_id: e.target.value } : { clear_assignee: true })}>
@@ -72,21 +74,24 @@ function Sidebar({ cid, task, canWrite }: { cid: string; task: TaskDetail; canWr
             <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option>
           </Select>
         </Field>
-        <dl className="space-y-2 text-xs">
+        <dl className="space-y-2 border-t border-line-soft pt-3 text-xs">
           {[
             ["Type", taskTypeLabel(task.task_type)],
+            ["Contract", contract ? `${contract.id} v${contract.version} · ${contract.risk} risk` : "—"],
             ["Attempts", String(task.attempts)],
             ["Due", task.due_date ? formatDate(task.due_date) : "—"],
             ["Created", `${formatDate(task.created_at)} by ${task.is_demo ? "demo" : "you"}`],
             ["Updated", relative(task.updated_at)],
           ].map(([k, v]) => (
-            <div key={k} className="flex justify-between gap-3"><dt className="text-faint">{k}</dt><dd className="text-right text-muted">{v}</dd></div>
+            <div key={k} className="flex justify-between gap-3"><dt className="text-faint">{k}</dt><dd className="truncate text-right text-muted">{v}</dd></div>
           ))}
         </dl>
       </div>
     </Card>
   );
 }
+
+const LABEL = "mb-1.5 text-2xs font-medium tracking-wide text-faint uppercase";
 
 export default function TaskPage({ params }: { params: Promise<{ cid: string; tid: string }> }) {
   const { cid, tid } = use(params);
@@ -119,11 +124,10 @@ export default function TaskPage({ params }: { params: Promise<{ cid: string; ti
       <PageHeader
         title={t.title}
         meta={<>
-          <span className="font-mono text-xs text-muted">{t.key}</span>
+          <span className="font-mono text-xs text-faint">{t.key}</span>
           <TaskStatusBadge status={t.status} />
-          {t.is_demo && <Badge tone="sampled">Demo</Badge>}
+          {t.is_demo && <DemoTag />}
           {t.run_pending && <Badge tone="accent"><Loader2 className="size-3 animate-spin" aria-hidden />Run in progress</Badge>}
-          {t.assignee_name && <Link href={`/c/${cid}/agents/${t.assignee_id}`} className="text-xs text-muted hover:text-fg">{t.assignee_name}</Link>}
         </>}
         actions={canWrite && !t.is_demo ? <>
           {open && t.status !== "awaiting_approval" && (
@@ -147,6 +151,16 @@ export default function TaskPage({ params }: { params: Promise<{ cid: string; ti
       />
       <PageBody className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:space-y-0">
         <div className="min-w-0 space-y-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-muted">
+            {t.assignee_name ? (
+              <Link href={`/c/${cid}/agents/${t.assignee_id}`} className="inline-flex items-center gap-2 rounded-md hover:text-fg">
+                <AgentAvatar name={t.assignee_name} size="sm" />{t.assignee_name}
+              </Link>
+            ) : <span className="text-faint">Unassigned</span>}
+            <span className="inline-flex items-center gap-1.5"><PriorityIcon priority={t.priority} /><span className="capitalize">{t.priority}</span></span>
+            <span>{taskTypeLabel(t.task_type)}</span>
+            <span className="text-faint">updated {relative(t.updated_at)}</span>
+          </div>
           {pending && (
             <ApprovalCard approval={pending} busy={decide.isPending} onDecide={(decision, note) => decide.mutate({ id: pending.id, decision, note })} />
           )}
@@ -158,25 +172,28 @@ export default function TaskPage({ params }: { params: Promise<{ cid: string; ti
               { value: "comments", label: "Comments", count: t.comments.length },
               { value: "history", label: "History", count: t.history.length },
             ]}>
-              <TabPanel value="result" className="space-y-4 p-4">
-                {t.description && <p className="text-sm whitespace-pre-wrap text-muted">{t.description}</p>}
+              <TabPanel value="result" className="space-y-5 p-4">
+                {t.description && <p className="text-[13px] whitespace-pre-wrap text-muted">{t.description}</p>}
                 {(t.inputs.sources ?? []).map((s) => (
                   <div key={s.id}>
-                    <p className="mb-1 text-2xs font-medium tracking-wide text-faint uppercase">Source {s.id} · untrusted input</p>
-                    <pre className="max-h-56 overflow-auto rounded-md border border-line bg-canvas p-3 font-mono text-xs whitespace-pre-wrap text-muted">{s.text}</pre>
+                    <p className={LABEL}>
+                      <ShieldAlert className="mr-1 inline size-3 align-[-2px]" aria-hidden />
+                      Source {s.id} · untrusted input, quoted never obeyed
+                    </p>
+                    <pre className="max-h-56 overflow-auto rounded-lg border border-line-soft bg-canvas p-3 font-mono text-xs whitespace-pre-wrap text-muted">{s.text}</pre>
                   </div>
                 ))}
                 <div>
-                  <p className="mb-1 text-2xs font-medium tracking-wide text-faint uppercase">Latest result</p>
+                  <p className={LABEL}>Latest result</p>
                   {t.result ? (
-                    <pre className="max-h-96 overflow-auto rounded-md border border-line bg-canvas p-3 font-mono text-xs text-fg">{JSON.stringify(t.result, null, 2)}</pre>
+                    <pre className="max-h-96 overflow-auto rounded-lg border border-line-soft bg-canvas p-3 font-mono text-xs text-fg">{JSON.stringify(t.result, null, 2)}</pre>
                   ) : (
-                    <p className="text-sm text-muted">No result yet. {agent?.connected ? "Run it with the assigned agent" : "Submit an output from your agent runtime"}, or assign an agent first.</p>
+                    <p className="rounded-lg border border-dashed border-line px-3.5 py-3 text-[13px] text-muted">No result yet. {agent?.connected ? "Run it with the assigned agent" : "Submit an output from your agent runtime"}, or assign an agent first.</p>
                   )}
                 </div>
                 {t.status === "done" && canWrite && (
-                  <div className="rounded-md border border-line p-3">
-                    <label htmlFor="problem" className="text-xs text-muted">Found a problem after the fact? Reporting it counts as an undetected error and removes the autonomy of the agent on this task type.</label>
+                  <div className="rounded-xl border border-line-soft bg-canvas/40 p-3.5">
+                    <label htmlFor="problem" className="text-xs text-muted">Found a problem after the fact? Reporting it counts as an undetected error and removes the agent&apos;s autonomy on this task type.</label>
                     <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                       <Textarea id="problem" value={problem} onChange={(e) => setProblem(e.target.value)} className="min-h-10" placeholder="What was wrong?" />
                       <Button variant="danger" size="sm" icon={<Flag className="size-3.5" aria-hidden />} disabled={!problem.trim()} loading={report.isPending} onClick={() => report.mutate(problem.trim())}>Report</Button>
@@ -185,34 +202,37 @@ export default function TaskPage({ params }: { params: Promise<{ cid: string; ti
                 )}
               </TabPanel>
               <TabPanel value="verification" className="space-y-3 p-4">
-                {t.receipts.length === 0 ? <EmptyState title="No receipt yet" description="Each result gets a receipt listing every check the system ran." /> :
+                {t.receipts.length === 0 ? <EmptyState compact title="No receipt yet" description="Each result gets a receipt listing every check the system ran." /> :
                   [...t.receipts].reverse().map((r) => <VerificationReceipt key={r.id} receipt={r} />)}
               </TabPanel>
-              <TabPanel value="runs" className="divide-y divide-line">
-                {t.runs.length === 0 ? <EmptyState title="No run yet" /> : t.runs.map((r) => (
-                  <div key={r.id} className="px-4 py-3 text-sm">
+              <TabPanel value="runs" className="divide-y divide-line-soft">
+                {t.runs.length === 0 ? <EmptyState compact title="No run yet" /> : t.runs.map((r) => (
+                  <div key={r.id} className="px-4 py-3 text-[13px]">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">Attempt {r.attempt}</span>
                       <Badge tone={r.status === "succeeded" ? "success" : r.status === "failed" ? "danger" : "accent"}>{r.status}</Badge>
                       <Badge>{r.mode}</Badge>
-                      {r.provider && <span className="text-xs text-muted">{r.provider}/{r.model}</span>}
+                      {r.provider && <span className="font-mono text-xs text-muted">{r.provider} · {r.model}</span>}
                       {r.input_tokens > 0 && <span className="text-xs text-faint tabular">{r.input_tokens} in · {r.output_tokens} out tokens</span>}
                       <span className="ml-auto text-xs text-faint">{formatDate(r.started_at)}</span>
                     </div>
                     {r.error && <p className="mt-1.5 text-xs text-danger">{r.error}</p>}
-                    {r.log.map((l, i) => <p key={i} className="mt-1 text-xs text-muted">[{l.level}] {l.message}</p>)}
+                    {r.log.map((l, i) => <p key={i} className="mt-1 font-mono text-2xs text-muted">[{l.level}] {l.message}</p>)}
                   </div>
                 ))}
               </TabPanel>
               <TabPanel value="comments" className="p-4">
                 <ul className="space-y-3">
                   {t.comments.map((c) => (
-                    <li key={c.id} className="rounded-md border border-line bg-surface p-3">
-                      <p className="text-xs text-faint">{c.author_name} · {relative(c.created_at)}</p>
-                      <p className="mt-1 text-sm whitespace-pre-wrap">{c.body}</p>
+                    <li key={c.id} className="flex gap-3">
+                      <AgentAvatar name={c.author_name} size="sm" />
+                      <div className="min-w-0 flex-1 rounded-xl border border-line-soft bg-canvas/40 px-3 py-2">
+                        <p className="text-xs text-faint"><span className="text-muted">{c.author_name}</span> · {relative(c.created_at)}</p>
+                        <p className="mt-1 text-[13px] whitespace-pre-wrap">{c.body}</p>
+                      </div>
                     </li>
                   ))}
-                  {t.comments.length === 0 && <li className="text-sm text-muted">No comment yet.</li>}
+                  {t.comments.length === 0 && <li className="text-[13px] text-muted">No comment yet.</li>}
                 </ul>
                 {canWrite && (
                   <form className="mt-4 flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); if (comment.trim()) addComment.mutate(comment.trim()); }}>
@@ -227,7 +247,7 @@ export default function TaskPage({ params }: { params: Promise<{ cid: string; ti
           </Card>
         </div>
         <div className="space-y-4">
-          <Sidebar cid={cid} task={t} canWrite={canWrite} />
+          <Properties cid={cid} task={t} canWrite={canWrite} />
           {lastReceipt && (
             <Card>
               <CardHeader title="Latest verification" />

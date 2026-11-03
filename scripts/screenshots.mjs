@@ -12,7 +12,7 @@ const out = process.argv[3] ?? "docs/screenshots";
 mkdirSync(out, { recursive: true });
 
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH ?? "/usr/bin/google-chrome" });
-const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
 
 await desktop.goto(`${base}/?demo=1`);
 await desktop.waitForURL(/\/c\/[^/]+\/overview/, { timeout: 30_000, waitUntil: "commit" });
@@ -43,7 +43,7 @@ for (const [path, name] of shots) {
   await desktop.goto(`${base}/c/${cid}/${path}`);
   await desktop.waitForLoadState("networkidle");
   await desktop.waitForTimeout(400);
-  await desktop.screenshot({ path: `${out}/${name}.png`, fullPage: path !== "organization" });
+  await desktop.screenshot({ path: `${out}/${name}.png` });
 }
 // A task with a correction and its receipts.
 const rows = await desktop.evaluate(async (c) => (await (await fetch(`/api/companies/${c}/tasks?limit=200`)).json()).items, cid);
@@ -52,7 +52,7 @@ await desktop.goto(`${base}/c/${cid}/tasks/${corrected.id}`);
 await desktop.waitForLoadState("networkidle");
 await desktop.getByRole("tab", { name: /Verification/ }).click();
 await desktop.waitForTimeout(300);
-await desktop.screenshot({ path: `${out}/task-receipts.png`, fullPage: true });
+await desktop.screenshot({ path: `${out}/task-receipts.png` });
 
 const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 for (const path of ["overview", "approvals", "tasks", "autonomy"]) {

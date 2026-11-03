@@ -1,6 +1,9 @@
 import * as RTooltip from "@radix-ui/react-tooltip";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+// Vitest runs without globals, so Testing Library cannot register its own cleanup.
+afterEach(cleanup);
 
 vi.mock("next/navigation", () => ({ useParams: () => ({ cid: "c1" }) }));
 
@@ -47,6 +50,19 @@ describe("ApprovalCard", () => {
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "Use walnut" } });
     fireEvent.click(send);
     expect(onDecide).toHaveBeenCalledWith("changes_requested", "Use walnut");
+  });
+
+  it("asks for a typed confirmation before approving legal-risk work", () => {
+    const onDecide = vi.fn();
+    render(<RTooltip.Provider><ApprovalCard approval={approval} onDecide={onDecide} busy={false} risk="legal" /></RTooltip.Provider>);
+    expect(screen.getByText("Legal risk")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Approve" }));
+    expect(onDecide).not.toHaveBeenCalled();
+    const dialog = screen.getByRole("dialog");
+    const confirm = Array.from(dialog.querySelectorAll("button")).find((b) => b.textContent === "Approve") as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText(/Type T-1 to confirm/), { target: { value: "T-1" } });
+    expect(confirm.disabled).toBe(false);
   });
 
   it("hides decision buttons for read-only members", () => {

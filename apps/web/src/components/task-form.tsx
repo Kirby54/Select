@@ -70,8 +70,8 @@ export function NewTaskDialog({ cid, open, onOpenChange }: { cid: string; open: 
       description="The task type decides which contract checks the result."
       footer={
         <>
-          <Button size="sm" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button size="sm" variant="primary" type="submit" form="new-task" loading={create.isPending}>Create task</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="primary" type="submit" form="new-task" loading={create.isPending}>Create task</Button>
         </>
       }
     >
