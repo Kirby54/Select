@@ -1,8 +1,8 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
+import { QueryClientContext, useMutation, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 
 import { api, errorMessage } from "./api";
 import type {
@@ -77,6 +77,15 @@ export const useInbox = (cid: string) =>
 
 export const useAgents = (cid: string) =>
   useQuery({ queryKey: cKey(cid, "agents"), queryFn: () => api<Agent[]>(`${base(cid)}/agents`) });
+
+/** The role of the agent called `name`, read from the cached team list (no request of its own). */
+export function useCachedAgentRole(name: string): string | undefined {
+  // The context, not useQueryClient(): an avatar rendered outside a query provider simply has no role.
+  const client = useContext(QueryClientContext);
+  const params = useParams<{ cid?: string }>();
+  if (!client || !params?.cid) return undefined;
+  return client.getQueryData<Agent[]>(cKey(params.cid, "agents"))?.find((a) => a.name === name)?.role;
+}
 
 export interface AgentDetail extends Agent {
   trust_events: TrustEvent[];

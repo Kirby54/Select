@@ -1,11 +1,11 @@
 "use client";
 
-import { ArrowUpRight, CalendarClock, Columns3, List, ListTodo, Mail, Plus, Search } from "lucide-react";
+import { ArrowUpRight, CalendarClock, Columns3, List, ListTodo, Mail, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { AgentAvatar, PriorityIcon, STATUS_ORDER, StatusIcon, TaskStatusBadge, VerificationReceipt, statusLabel } from "@/components/domain";
+import { AgentAvatar, PriorityIcon, ProjectDot, STATUS_ORDER, StatusIcon, TaskStatusBadge, VerificationReceipt, statusLabel } from "@/components/domain";
 import { PageBody, PageHeader } from "@/components/shell/app-shell";
 import { NewTaskDialog } from "@/components/task-form";
 import { Pagination } from "@/components/ui/data";
@@ -13,7 +13,7 @@ import { EmptyState, ErrorState, LoadingRows } from "@/components/ui/feedback";
 import { DetailPanel } from "@/components/ui/overlay";
 import { Button, Card, DemoTag, Input, Kbd, Segmented, Select, cx } from "@/components/ui/primitives";
 import { formatDate, relative, taskTypeLabel } from "@/lib/format";
-import { useAgents, useCompany, useCompanyId, useContracts, usePersistentState, useTask, useTasks } from "@/lib/queries";
+import { useAgents, useCompany, useCompanyId, useContracts, usePersistentState, useProjects, useTask, useTasks } from "@/lib/queries";
 import type { Task, TaskStatus } from "@/lib/types";
 
 const BOARD: TaskStatus[] = ["todo", "in_progress", "awaiting_approval", "blocked", "done"];
@@ -49,6 +49,7 @@ function TaskRow({ task, tabbable, selected, onOpen, onFocus, rowRef }: { task: 
       <PriorityIcon priority={task.priority} />
       <span className="w-12 shrink-0 font-mono text-xs text-faint">{task.key}</span>
       <StatusIcon status={task.status} />
+      {task.project_id && <ProjectDot id={task.project_id} className="size-2" />}
       <span className="min-w-0 flex-1 truncate text-fg">{task.title}</span>
       {task.origin === "mail" || task.origin === "routing" ? <Mail className="size-3.5 shrink-0 text-faint" aria-label="From an e-mail" /> : null}
       {task.origin === "routine" && <CalendarClock className="size-3.5 shrink-0 text-faint" aria-label="Created by a routine" />}
@@ -104,6 +105,9 @@ function TasksInner() {
   const company = useCompany(cid);
   const agents = useAgents(cid);
   const contracts = useContracts(cid);
+  const projects = useProjects(cid);
+  const projectFilter = params.get("project") ?? "";
+  const project = projects.data?.find((p) => p.id === projectFilter);
   const [view, setView] = usePersistentState<"list" | "board">(`tasks.view.${cid}`, "list");
   const [filters, setFilters] = usePersistentState<{ status: string; assignee: string; type: string; sort: string }>(
     `tasks.filters.${cid}`,
@@ -139,6 +143,7 @@ function TasksInner() {
     status: statusFilter,
     assignee: filters.assignee || undefined,
     task_type: filters.type || undefined,
+    project: projectFilter || undefined,
     q: q || undefined,
     sort: filters.sort,
     limit,
@@ -212,6 +217,18 @@ function TasksInner() {
               onChange={(v) => { setFilters({ ...filters, status: v }); setOffset(0); setCursor(0); }}
               options={PRESETS.map((p) => ({ value: p.value, label: p.label }))}
             />
+          )}
+          {projectFilter && (
+            <button
+              type="button"
+              onClick={() => router.replace(`/c/${cid}/tasks`)}
+              className="inline-flex h-7 items-center gap-2 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-fg transition-colors hover:border-line-strong"
+              aria-label={`Project ${project?.name ?? ""}: show all projects`}
+            >
+              <ProjectDot id={projectFilter} />
+              {project?.name ?? "Project"}
+              <X className="size-3 text-faint" aria-hidden />
+            </button>
           )}
           <label htmlFor="f-assignee" className="sr-only">Assignee</label>
           <Select id="f-assignee" value={filters.assignee} onChange={(e) => { setFilters({ ...filters, assignee: e.target.value }); setOffset(0); }} className="h-7 w-36 text-xs">

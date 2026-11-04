@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Mail, MailPlus, Paperclip, Plug, RefreshCw, Search, Send } from "lucide-react";
+import { AlertTriangle, Ban, Check, CheckCheck, EyeOff, Mail, MailPlus, Paperclip, Plug, RefreshCw, Search, Send } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState, type ReactNode } from "react";
@@ -133,8 +133,8 @@ function MessageDetailView({ cid, id, canWrite }: { cid: string; id: string; can
       {canWrite && open && (
         <div className="flex flex-wrap gap-2">
           <TaskFromMessage cid={cid} message={m} onDone={() => void detail.refetch()} />
-          <Button size="sm" loading={handled.isPending} onClick={() => handled.mutate(undefined)}>Mark handled</Button>
-          <Button size="sm" variant="ghost" loading={ignore.isPending} onClick={() => ignore.mutate(undefined)}>Ignore</Button>
+          <Button size="sm" icon={<CheckCheck className="size-3.5" aria-hidden />} loading={handled.isPending} onClick={() => handled.mutate(undefined)}>Mark handled</Button>
+          <Button size="sm" variant="ghost" icon={<EyeOff className="size-3.5" aria-hidden />} loading={ignore.isPending} onClick={() => ignore.mutate(undefined)}>Ignore</Button>
         </div>
       )}
 
@@ -237,7 +237,7 @@ function DeliveryDetail({ cid, d, canWrite }: { cid: string; d: Delivery; canWri
         <div className="flex flex-wrap gap-2">
           {d.status === "uncertain" ? (
             <>
-              <Button size="sm" onClick={() => mark.mutate("sent")} loading={mark.isPending}>It was sent</Button>
+              <Button size="sm" icon={<Check className="size-3.5" aria-hidden />} onClick={() => mark.mutate("sent")} loading={mark.isPending}>It was sent</Button>
               <ConfirmDialog
                 trigger={<Button size="sm" variant="ghost" icon={<RefreshCw className="size-3.5" aria-hidden />}>Send again</Button>}
                 title="Send this e-mail again?"
@@ -249,7 +249,7 @@ function DeliveryDetail({ cid, d, canWrite }: { cid: string; d: Delivery; canWri
           ) : (
             <Button size="sm" variant="primary" icon={<Send className="size-3.5" aria-hidden />} loading={send.isPending} onClick={() => send.mutate(false)}>Send now</Button>
           )}
-          <Button size="sm" variant="ghost" loading={mark.isPending} onClick={() => mark.mutate("cancelled")}>Don&apos;t send</Button>
+          <Button size="sm" variant="ghost" icon={<Ban className="size-3.5" aria-hidden />} loading={mark.isPending} onClick={() => mark.mutate("cancelled")}>Don&apos;t send</Button>
         </div>
       )}
       <pre className="max-h-[460px] overflow-auto rounded-lg border border-line-soft bg-canvas px-3.5 py-3 font-sans text-[13px] leading-relaxed whitespace-pre-wrap text-fg">{d.body}</pre>

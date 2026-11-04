@@ -2,14 +2,14 @@
 
 import { Building2, Check, ChevronsUpDown, OctagonX, PanelLeftClose, PanelLeftOpen, Plus, SquarePen, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { AgentAvatar } from "@/components/domain";
+import { AgentAvatar, ProjectDot } from "@/components/domain";
 import { Dropdown, Tooltip } from "@/components/ui/overlay";
 import { cx } from "@/components/ui/primitives";
-import { useAgents, useCompanies, useInbox, useMailboxes } from "@/lib/queries";
-import type { Agent, Company } from "@/lib/types";
+import { useAgents, useCompanies, useInbox, useMailboxes, useProjects } from "@/lib/queries";
+import type { Agent, Company, Project } from "@/lib/types";
 import { Logo } from "./logo";
 import { SECTIONS, sectionOf, type NavSection } from "./nav";
 
@@ -124,7 +124,7 @@ function AgentRow({ agent, companyId, collapsed, onNavigate }: { agent: Agent; c
       collapsed={collapsed}
       active={pathname === href || pathname.startsWith(`${href}/`)}
       onNavigate={onNavigate}
-      icon={<AgentAvatar name={agent.name} size="xs" />}
+      icon={<AgentAvatar name={agent.name} role={agent.role} size="xs" />}
       trailing={
         agent.working ? (
           <Working count={agent.working} collapsed={collapsed} />
@@ -132,6 +132,22 @@ function AgentRow({ agent, companyId, collapsed, onNavigate }: { agent: Agent; c
           <span className="ml-auto text-micro text-faint">paused</span>
         ) : null
       }
+    />
+  );
+}
+
+function ProjectRow({ project, companyId, collapsed, onNavigate }: { project: Project; companyId: string; collapsed: boolean; onNavigate?: () => void }) {
+  const pathname = usePathname();
+  const params = useSearchParams();
+  return (
+    <Row
+      href={`/c/${companyId}/tasks?project=${project.id}`}
+      label={project.name}
+      collapsed={collapsed}
+      active={pathname.endsWith("/tasks") && params.get("project") === project.id}
+      onNavigate={onNavigate}
+      icon={<span className="flex size-5 shrink-0 items-center justify-center"><ProjectDot id={project.id} /></span>}
+      trailing={!collapsed && project.task_count ? <span className="text-micro text-faint tabular">{project.task_count}</span> : null}
     />
   );
 }
@@ -147,6 +163,7 @@ export function Sidebar({ company, collapsed, onToggle, onNavigate, onNewTask }:
   const inbox = useInbox(company.id);
   const agents = useAgents(company.id);
   const mailboxes = useMailboxes(company.id);
+  const projects = useProjects(company.id);
   const counts = inbox.data?.counts;
   const badge: Record<string, number | undefined> = {
     approvals: counts?.approvals,
@@ -158,6 +175,7 @@ export function Sidebar({ company, collapsed, onToggle, onNavigate, onNewTask }:
   const canAdmin = company.role === "owner" || company.role === "admin";
   const visible = SECTIONS.filter((s) => !s.needsMailbox || hasMail);
   const team = (agents.data ?? []).filter((a) => a.status !== "archived");
+  const openProjects = (projects.data ?? []).filter((p) => p.status !== "done").slice(0, 8);
 
   const place = (s: NavSection) => (
     <Row
@@ -226,6 +244,24 @@ export function Sidebar({ company, collapsed, onToggle, onNavigate, onNewTask }:
             <li className="px-2 py-1 text-xs text-faint">No agent yet</li>
           )}
         </ul>
+
+        {openProjects.length > 0 && (
+          <>
+            <SectionLabel
+              collapsed={collapsed}
+              action={
+                <Link href={`/c/${company.id}/projects`} onClick={onNavigate} aria-label="All projects" className="flex size-5 items-center justify-center rounded text-faint transition-colors hover:bg-hover hover:text-fg">
+                  <Plus className="size-3.5" aria-hidden />
+                </Link>
+              }
+            >
+              Projects
+            </SectionLabel>
+            <ul className="space-y-px">
+              {openProjects.map((p) => <ProjectRow key={p.id} project={p} companyId={company.id} collapsed={collapsed} onNavigate={onNavigate} />)}
+            </ul>
+          </>
+        )}
       </div>
 
       {onToggle && (

@@ -175,7 +175,7 @@ export default function AgentPage({ params }: { params: Promise<{ cid: string; a
         <div className="space-y-4">
           <Card>
             <div className="flex items-center gap-3 border-b border-line-soft p-4">
-              <AgentAvatar name={a.name} size="lg" />
+              <AgentAvatar name={a.name} role={a.role} size="lg" />
               <div className="min-w-0">
                 <p className="truncate text-[15px] font-semibold">{a.name}</p>
                 <p className="truncate text-xs text-muted">{a.role}</p>

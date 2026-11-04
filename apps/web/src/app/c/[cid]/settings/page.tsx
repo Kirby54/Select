@@ -513,7 +513,7 @@ function SettingsInner() {
     <>
       <PageHeader title="Settings" />
       <PageBody className="grid max-w-5xl gap-6 md:grid-cols-[200px_minmax(0,1fr)] md:space-y-0">
-        <nav aria-label="Settings sections" className="md:sticky md:top-0 md:self-start">
+        <nav aria-label="Settings sections" className="min-w-0 md:sticky md:top-0 md:self-start">
           <ul className="scrollbar-none flex gap-1 overflow-x-auto md:flex-col">
             {SECTIONS.map((s) => (
               <li key={s.id}>

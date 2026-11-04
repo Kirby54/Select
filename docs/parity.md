@@ -1,33 +1,32 @@
 # Parity with Paperclip
 
-Snapshot of 3 November 2026, from a shallow clone of [paperclipai/paperclip](https://github.com/paperclipai/paperclip) (about 3,400 server files, 1,500 UI components, 3,500 test files) and its README. "Paperclip" lists what the code or documentation shows; it says nothing about quality. Select 0.1 is a young foundation; Paperclip is a mature product. **No claim of superiority is made without a measurement**, and none has been run yet.
+Snapshot of 3 November 2026, from a shallow clone of [paperclipai/paperclip](https://github.com/paperclipai/paperclip) (about 3,400 server files, 1,500 UI components, 3,500 test files), its README and its [five-minute guide](https://docs.paperclip.ing/guides/getting-started/five-minute-path/). "Paperclip" lists what the code or documentation shows; it says nothing about quality. Select 0.2 is young; Paperclip is a mature product. **No claim of superiority is made without a measurement**, and none has been run yet.
 
-| Capability | Paperclip | Select 0.1 | To build | Priority | Tests in Select |
-| --- | --- | --- | --- | --- | --- |
-| Org chart, reporting lines | Yes (OrgChart page) | Yes, persisted, loop-checked; drag a post onto its new manager | Undo | Low | `test_agent_validation_and_org_loops` |
-| Agents with roles, budgets, pause | Yes | Yes | Agent config history | Medium | governance tests |
-| Tasks (issues), comments, history | Yes, very rich (threads, documents, attachments, labels, relations) | Basic: list, board, comments, history, archive | Attachments, labels, sub-task UI | Medium | vertical slice |
-| Goals and projects | Yes | Basic CRUD | Progress roll-up | Low | — |
-| Approvals | Yes (approvals, decision queues) | Yes, with exact payload and receipt | Bulk decisions | High | vertical slice, autonomy tests |
-| **Completion contracts** | **Yes**: per-issue contracts with risk, completion authority and server arbiter (`completion_contracts`, `work_assessments`) | Per-task-type YAML contracts with deterministic rules and receipts | Model-based checks, more rules | High | 17 select-verify tests |
-| **Trust levels** | Static presets chosen by a human (`standard`, `low_trust_review`) | **Licence per agent × task type that changes with verified outcomes** | Calibration from data | Core | autonomy tests |
-| Autonomy counter with error rate | Not found | Yes | Benchmark | Core | `test_promotion_path_to_autonomous` |
-| Value provenance (`source_ref`) | Not found | Yes, enforced by `provenance` rule | Richer sources (files) | High | select-verify tests |
-| Exact money arithmetic | Finance events exist; not reviewed | Decimal everywhere, floats refused | — | — | `test_floats_are_refused` |
-| Budgets and cost tracking | Yes, detailed | Yes, estimated from tokens, hard stop | Provider-reported prices | Medium | `test_budget_hard_stop` |
-| Audit log | Yes | Yes, CSV export | Retention policy | Medium | activity test |
-| Model providers / runtimes | Many adapters (Claude Code, Codex, Cursor, Gemini, OpenClaw, HTTP, plugins) | 4 direct providers + submission API for any runtime | Adapter plugins | Medium | runner tests (network double) |
-| Sandboxed execution, workspaces | Yes (git worktrees, cloud sandboxes) | No | — | Not planned for 0.x | — |
-| Scheduled routines, heartbeats | Yes | No | Scheduled tasks | Medium | — |
-| Plugins, skills, MCP | Yes | No | Contract packs as plugins | Low | — |
-| Multi-company, members, roles | Yes | Yes (token mode) | Login screen, SSO | Medium | `test_isolation_and_roles_in_token_mode` |
-| Secrets management | Yes | Encrypted provider keys | Secret rotation | Medium | `test_secrets_are_encrypted_and_never_returned` |
-| Demo without API key | Not found | Yes, reproducible week | — | Done | `test_demo_week_runs_the_real_pipeline` |
-| Installation | One command (`npx paperclipai onboard`), embedded PostgreSQL | Docker Compose (not yet built end to end), dev script | Verify compose build in CI | High | e2e |
-| Tests | ~3,500 test files | 52 backend, 10 frontend unit, 7 end-to-end | More coverage | Ongoing | — |
+| Capability | Paperclip | Select 0.2 | To build | Tests in Select |
+| --- | --- | --- | --- | --- |
+| Installation | One command (`npx paperclipai onboard`, Node.js 24), embedded PostgreSQL | `start.sh` / `start.ps1` around Docker Compose (images not built in the development environment) | Run without Docker | `start.sh` tested with a stand-in Docker CLI |
+| Accounts, members, roles | Yes | Password sign-in, invitations, roles, API tokens; no SSO or 2FA | SSO, 2FA, reset by e-mail | `test_accounts.py`, e2e `complete.spec.ts` |
+| Org chart, agents with roles, budgets, pause | Yes | Yes; agents listed in the sidebar with role icons and a "working" pulse | Agent config history | governance tests |
+| Agent runtimes | Many adapters (Claude Code, Codex, Cursor, Gemini, OpenClaw, HTTP, plugins), workspaces | 4 model APIs + a submission API for any runtime | Coding-agent runtimes with code workspaces | runner tests (network double) |
+| Agents organising themselves | Heartbeats; a CEO agent proposes a strategy, hires and creates tasks | Work comes from people, e-mail, routines and code routing; no planning agent | Planning agent | — |
+| Tasks, comments, history | Very rich (threads, documents, attachments, labels, relations, live run transcripts) | List, board, comments, history, project colours | Attachments, labels, live transcripts | vertical slice |
+| Scheduled work | Heartbeats, routines | Routines (cron) in the company's time zone, missed runs fire once | — | `test_routine_creates_tasks_on_schedule`, e2e |
+| Approvals | Yes | Yes, with the exact outgoing content and the receipt | Bulk decisions | vertical slice, autonomy tests |
+| **Completion checks** | Per-issue contracts with risk, completion authority and a server arbiter | Per-task-type YAML contracts with deterministic rules and receipts | Model-based checks | 19 select-verify tests |
+| **Trust** | Presets chosen by a person (`standard`, `low_trust_review`) | **Licence per agent × task type that changes with verified outcomes** | Calibration from data | autonomy tests |
+| Autonomy rate next to the error rate | Not found | Yes | Benchmark | `test_promotion_path_to_autonomous` |
+| Value provenance | Not found | Every number must come from a source | Richer sources (files) | select-verify tests |
+| Business e-mail loop (read a mailbox, answer, send) | Not found in the code reviewed | IMAP in, triage, routing, verified reply or quote, SMTP out once | OAuth mailboxes, attachments | `test_mail_flow.py`, e2e with real local mail servers |
+| Country set-up (VAT, currency, time zone) | Not found | 7 country presets, catalog import | More countries | `test_setup_and_routines.py`, catalog tests |
+| Budgets and cost tracking | Yes, detailed | Estimated from tokens, hard stop | Provider-reported prices | `test_budget_hard_stop` |
+| Audit log | Yes | Yes, CSV export | Retention policy | activity test |
+| Plugins, skills, MCP | Yes | No | Contract packs as plugins | — |
+| Demo without API key | Not found | Yes, a reproducible week | — | `test_demo_week_runs_the_real_pipeline` |
+| Tests | ~3,500 test files | 79 Python, 20 frontend unit, 11 end-to-end | More coverage | — |
 
 ## What this means
 
 - Select should **not** claim to orchestrate more or better than Paperclip. It does not.
-- Select's distinct bet is narrower: **autonomy that is earned and lost from verified outcomes, with value provenance and an honest error rate**. Paperclip has contracts and trust presets, but in the code reviewed its trust is set by people, not by results.
-- The fair comparison is the benchmark described in the audit (`autonomy-bench`): same tasks, same models, autonomy rate *and* undetected-error rate side by side. It has not been run.
+- Select's bet is narrower: **autonomy that is earned and lost from verified outcomes, value provenance and an honest error rate**, applied to work that leaves the company (e-mail, quotes). Paperclip has contracts and trust presets, but in the code reviewed its trust is set by people, not by results.
+- Paperclip is ahead for agents that write code and organise themselves.
+- The fair comparison is the benchmark described in [bench/README.md](../bench/README.md): same tasks, same models, autonomy rate *and* undetected-error rate side by side. It has not been run.

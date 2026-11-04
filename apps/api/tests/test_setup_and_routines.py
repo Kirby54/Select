@@ -10,7 +10,7 @@ from helpers import ok
 def test_country_preset_sets_currency_vat_time_zone_and_language(client):
     presets = {c["code"]: c for c in ok(client.get("/api/countries"))}
     assert presets["FR"]["vat_rates"] == ["0.20", "0.10", "0.055", "0.021", "0"]
-    assert presets["CH"]["currency"] == "CHF" and presets["FR"]["checked_on"] == "2026-11-03"
+    assert presets["CH"]["currency"] == "CHF" and presets["FR"]["checked_on"] == "2026-11-04"
 
     company = ok(client.post("/api/companies", json={"name": "Menuiserie Dupont", "country": "FR"}), 201)
     assert company["currency"] == "EUR" and company["language"] == "fr" and company["timezone"] == "Europe/Paris"

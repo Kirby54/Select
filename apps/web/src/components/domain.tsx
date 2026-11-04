@@ -5,12 +5,48 @@
  * (label + 1-2-3 meter, never colour alone), task status icons, verification receipts, approval cards,
  * cost figures and the activity timeline.
  */
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, Bot, Check, CheckCircle2, ChevronDown, CircleSlash, Code2, Cog, Hash, Lock, ShieldAlert, User, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  Bot,
+  Briefcase,
+  Calculator,
+  ChartLine,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  CircleSlash,
+  Code,
+  Code2,
+  Cog,
+  Cpu,
+  Crown,
+  Handshake,
+  Hash,
+  Headset,
+  Inbox,
+  Lock,
+  Megaphone,
+  Microscope,
+  Palette,
+  PenLine,
+  RotateCcw,
+  Scale,
+  ShieldAlert,
+  ShieldCheck,
+  User,
+  Users,
+  Workflow,
+  X,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { createElement, useState, type ReactNode } from "react";
 
 import { formatDate, money, relative, taskTypeLabel } from "@/lib/format";
-import { useCompanyId } from "@/lib/queries";
+import { useCachedAgentRole, useCompanyId } from "@/lib/queries";
 import type { Agent, Approval, AuditEvent, CheckResult, ContractView, Level, Licence, Receipt, TaskStatus } from "@/lib/types";
 import { Badge, Button, DemoTag, StatusDot, Textarea, cx, type Tone } from "./ui/primitives";
 import { ConfirmDialog, Tooltip } from "./ui/overlay";
@@ -33,13 +69,66 @@ function hash(text: string): number {
   return h;
 }
 
-export function AgentAvatar({ name, size = "md" }: { name: string; size?: "xs" | "sm" | "md" | "lg" }) {
+/**
+ * An icon for a role, from words in the role in English, French or German: a crown for the CEO,
+ * a chip for the CTO, angle brackets for a developer… Unknown roles keep the initials.
+ */
+const ROLE_ICONS: [RegExp, LucideIcon][] = [
+  [/\b(ceo|pdg|chief executive|geschaftsfuhr|founder|fondat|president|directeur general|managing director|boss)/, Crown],
+  [/\b(cto|chief technology|tech lead|architect|technique|technical)/, Cpu],
+  [/(develop|engineer|ingenieur|entwickl|coder|programm|software|frontend|backend|devops|\bdev\b|codex|claude ?code)/, Code],
+  [/\b(cfo|financ|comptab|accountant|accounting|buchhalt|factur|invoice|billing|rechnung)/, Calculator],
+  [/\b(cmo|marketing|communication|kommunikation|social|content|contenu|brand|marque|seo|publication|beitrag|posts?\b)/, Megaphone],
+  [/(support|service client|customer|kunden|helpdesk|hotline|repond|answers?\b)/, Headset],
+  [/(sales|vente|commercial|vertrieb|devis|quote|angebot|account exec|business dev)/, Handshake],
+  [/(triage|courrier|mail|inbox|reception|accueil|empfang)/, Inbox],
+  [/(design|graphi|ux|ui\b|illustrat)/, Palette],
+  [/(legal|juridique|jurist|lawyer|avocat|recht|compliance|conformit)/, Scale],
+  [/(\bhr\b|\brh\b|ressources humaines|human resources|recrut|recruit|personal)/, Users],
+  [/(data|analyst|analyste|analytics|bi\b|reporting)/, ChartLine],
+  [/(research|recherche|forsch|scientist)/, Microscope],
+  [/(writer|redact|redakt|redig|copy|editor|editeur|traduct|translat)/, PenLine],
+  [/(\bqa\b|quality|qualite|qualitat|test|review|audit)/, ShieldCheck],
+  [/(ops|operation|operat|coordinat|planning|project manager|chef de projet)/, Workflow],
+  [/(assistant|secretar|office|admin)/, Briefcase],
+];
+
+export function roleIcon(role: string | undefined): LucideIcon | null {
+  if (!role) return null;
+  const text = role.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return ROLE_ICONS.find(([pattern]) => pattern.test(text))?.[1] ?? null;
+}
+
+/** The role's icon as an element (the icon component comes from a static table). */
+function RoleGlyph({ role, className }: { role: string; className: string }) {
+  const icon = roleIcon(role);
+  return icon ? createElement(icon, { className, strokeWidth: 2 }) : null;
+}
+
+export function AgentAvatar({ name, role, size = "md" }: { name: string; role?: string; size?: "xs" | "sm" | "md" | "lg" }) {
+  const cached = useCachedAgentRole(name);
+  const known = role ?? cached;
   const initials = name.split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase();
   const sizes = { xs: "size-5 rounded-md text-[9px]", sm: "size-6 rounded-[7px] text-2xs", md: "size-8 rounded-lg text-xs", lg: "size-11 rounded-xl text-sm" };
+  const icons = { xs: "size-3", sm: "size-3.5", md: "size-4", lg: "size-5" };
   return (
     <span aria-hidden className={cx("inline-flex shrink-0 items-center justify-center font-semibold ring-1 ring-white/[0.06] ring-inset", TINTS[hash(name) % TINTS.length], sizes[size])}>
-      {initials || <Bot className="size-3.5" />}
+      {known && roleIcon(known) ? <RoleGlyph role={known} className={icons[size]} /> : initials || <Bot className={icons[size]} />}
     </span>
+  );
+}
+
+/* ───────────────────────────── Projects ───────────────────────────── */
+
+const DOTS = ["bg-dot-1", "bg-dot-2", "bg-dot-3", "bg-dot-4", "bg-dot-5", "bg-dot-6", "bg-dot-7", "bg-dot-8"];
+
+/** A project's colour: stable, from its id, so the same project looks the same everywhere. */
+export function ProjectDot({ id, className, label }: { id: string; className?: string; label?: string }) {
+  return (
+    <span
+      className={cx("inline-block size-2.5 shrink-0 rounded-full", DOTS[hash(id) % DOTS.length], className)}
+      {...(label ? { role: "img", "aria-label": label, title: label } : { "aria-hidden": true })}
+    />
   );
 }
 
@@ -530,8 +619,8 @@ export function ApprovalCard({ approval, onDecide, busy, readOnly, risk, agentRo
             {mode === "idle" ? (
               <>
                 <p className="mr-auto hidden text-xs text-faint sm:block">Approving counts as a verified success for {agent} on {type}.</p>
-                <Button touch variant="ghost" onClick={() => setMode("rejected")} disabled={busy}>Reject</Button>
-                <Button touch onClick={() => setMode("changes_requested")} disabled={busy}>Request changes</Button>
+                <Button touch variant="ghost" icon={<X className="size-3.5" aria-hidden />} onClick={() => setMode("rejected")} disabled={busy}>Reject</Button>
+                <Button touch icon={<RotateCcw className="size-3.5" aria-hidden />} onClick={() => setMode("changes_requested")} disabled={busy}>Request changes</Button>
                 {highRisk ? (
                   <ConfirmDialog
                     trigger={approveButton}

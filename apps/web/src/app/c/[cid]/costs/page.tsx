@@ -15,7 +15,7 @@ import type { CostRow } from "@/lib/types";
 function Breakdown({ title, rows, currency, total }: { title: string; rows: CostRow[]; currency: string; total: number }) {
   const max = Math.max(...rows.map((r) => Number(r.amount)), 0);
   return (
-    <Card aria-label={title}>
+    <Card aria-label={title} className="min-w-0">
       <CardHeader title={title} />
       {rows.length === 0 ? (
         <p className="px-4 py-6 text-[13px] text-faint">Nothing recorded in this period.</p>
@@ -26,7 +26,7 @@ function Breakdown({ title, rows, currency, total }: { title: string; rows: Cost
             return (
               <li key={`${r.key}-${r.label}`} className="px-4 py-2.5">
                 <div className="flex items-baseline justify-between gap-3 text-[13px]">
-                  <span className="truncate text-fg">{r.label}</span>
+                  <span className="min-w-0 truncate text-fg">{r.label}</span>
                   <span className="shrink-0 tabular text-fg">{money(r.amount, currency, 4)}</span>
                 </div>
                 <div className="mt-1.5 flex items-center gap-3">

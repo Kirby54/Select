@@ -45,7 +45,7 @@ function AgentInspector({ cid, id, canAdmin, onEdit }: { cid: string; id: string
   return (
     <div className="divide-y divide-line-soft">
       <section className="flex items-center gap-3 px-5 py-4">
-        <AgentAvatar name={a.name} size="lg" />
+        <AgentAvatar name={a.name} role={a.role} size="lg" />
         <div className="min-w-0 flex-1">
           <AgentStatus agent={a} />
           <p className="mt-1 truncate font-mono text-xs text-muted">{a.is_demo_agent ? "recorded outputs" : a.provider ? `${providerLabel(a.provider)} · ${a.model}` : "no model · API submissions"}</p>
@@ -171,7 +171,7 @@ function AgentsInner() {
               onRowClick={(a) => setSelected(a.id)}
               empty={
                 <EmptyState icon={<Bot />} title={query ? "No agent matches" : "No agent yet"} description={query ? "Try another name, role or model." : "Create an agent, choose its model and the task types it may do."}
-                  action={canAdmin && !query ? <Button size="sm" variant="primary" onClick={() => setCreating(true)}>New agent</Button> : undefined} />
+                  action={canAdmin && !query ? <Button size="sm" variant="primary" icon={<Plus className="size-3.5" aria-hidden />} onClick={() => setCreating(true)}>New agent</Button> : undefined} />
               }
               columns={[
                 {
@@ -180,7 +180,7 @@ function AgentsInner() {
                   className: "w-[30%]",
                   cell: (a) => (
                     <span className="flex items-center gap-2.5">
-                      <AgentAvatar name={a.name} size="sm" />
+                      <AgentAvatar name={a.name} role={a.role} size="sm" />
                       <span className="min-w-0">
                         <span className="block truncate text-fg">{a.name}</span>
                         <span className="block truncate text-xs text-muted">{a.role}</span>

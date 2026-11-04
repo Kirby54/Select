@@ -1,6 +1,6 @@
 """Company profile: country presets (currency, VAT rates, time zone, language) and operating settings.
 
-VAT presets were checked on 3 November 2026 against public sources (see docs/configuration.md).
+VAT presets were checked on 4 November 2026 against public sources listed in docs/configuration.md.
 Rates change: the owner can edit them, and the catalog and quote checks always use the stored list.
 """
 
@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .models import Company
 
-PRESETS_CHECKED_ON = "2026-11-03"
+PRESETS_CHECKED_ON = "2026-11-04"
 LANGUAGES = ("fr", "de", "en")
 
 
@@ -35,7 +35,7 @@ COUNTRIES: dict[str, CountryPreset] = {
         CountryPreset("LU", "Luxembourg", "EUR", ("0.17", "0.14", "0.08", "0.03", "0"), "Europe/Luxembourg", "fr"),
         CountryPreset("CH", "Switzerland", "CHF", ("0.081", "0.038", "0.026", "0"), "Europe/Zurich", "fr"),
         CountryPreset("DE", "Germany", "EUR", ("0.19", "0.07", "0"), "Europe/Berlin", "de"),
-        CountryPreset("MA", "Morocco", "MAD", ("0.20", "0.10", "0"), "Africa/Casablanca", "fr"),
+        CountryPreset("MA", "Morocco", "MAD", ("0.20", "0.10", "0.07", "0"), "Africa/Casablanca", "fr"),
         CountryPreset("DZ", "Algeria", "DZD", ("0.19", "0.09", "0"), "Africa/Algiers", "fr"),
     )
 }

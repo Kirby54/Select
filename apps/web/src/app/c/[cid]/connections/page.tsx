@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Cloud, ExternalLink, Inbox, KeyRound, Mail, Plus, RefreshCw, Send, Server, XCircle } from "lucide-react";
+import { CheckCircle2, Cloud, ExternalLink, Inbox, KeyRound, Mail, Pencil, Plus, RefreshCw, Send, Server, Trash2, XCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
@@ -154,10 +154,10 @@ function Mailboxes({ cid, companyName, canAdmin, demo }: { cid: string; companyN
               <div className="flex-1 px-4 pb-3"><MailboxState m={m} /></div>
               {canAdmin && (
                 <div className="flex flex-wrap gap-2 border-t border-line-soft px-4 py-2.5">
-                  <Button size="sm" onClick={() => setEditing(m)}>Edit</Button>
+                  <Button size="sm" icon={<Pencil className="size-3.5" aria-hidden />} onClick={() => setEditing(m)}>Edit</Button>
                   {m.inbound_enabled && <Button size="sm" variant="ghost" icon={<RefreshCw className="size-3.5" aria-hidden />} loading={poll.isPending && poll.variables === m.id} onClick={() => poll.mutate(m.id)}>Read now</Button>}
                   <ConfirmDialog
-                    trigger={<Button size="sm" variant="ghost" className="ml-auto text-danger hover:text-danger">Remove</Button>}
+                    trigger={<Button size="sm" variant="ghost" icon={<Trash2 className="size-3.5" aria-hidden />} className="ml-auto text-danger hover:text-danger">Remove</Button>}
                     title={`Remove ${m.address}?`}
                     description="Select stops reading and sending through it and erases its passwords. E-mails already received stay in Messages."
                     confirmLabel="Remove"
@@ -236,10 +236,10 @@ function ConnectionsInner() {
                 </dl>
                 {canAdmin && (
                   <div className="flex flex-wrap gap-2 border-t border-line-soft px-4 py-2.5">
-                    <Button size="sm" onClick={() => setEditing(c)}>{c.configured ? "Edit" : "Configure"}</Button>
+                    <Button size="sm" icon={<Pencil className="size-3.5" aria-hidden />} onClick={() => setEditing(c)}>{c.configured ? "Edit" : "Configure"}</Button>
                     {c.configured && <Button size="sm" variant="ghost" loading={test.isPending && test.variables === c.provider} onClick={() => test.mutate(c.provider)}>Test connection</Button>}
                     {c.configured && (
-                      <ConfirmDialog trigger={<Button size="sm" variant="ghost" className="ml-auto text-danger hover:text-danger">Remove</Button>}
+                      <ConfirmDialog trigger={<Button size="sm" variant="ghost" icon={<Trash2 className="size-3.5" aria-hidden />} className="ml-auto text-danger hover:text-danger">Remove</Button>}
                         title={`Remove the ${c.label} connection?`} description="The stored key is erased. Agents using this provider stop being able to run live."
                         confirmLabel="Remove" onConfirm={() => remove.mutateAsync(c.provider)} />
                     )}

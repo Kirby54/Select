@@ -13,9 +13,19 @@ An agent is a role in your organization backed by a model you choose.
 | Monthly budget | 0 = no agent-level limit; the company budget still applies |
 | Status | `active`, `paused` (no new runs), `archived` |
 
+## Any kind of agent
+
+An agent is a role and a model: a developer, a marketer, an analyst, support or sales. Its role also picks its icon in the
+interface. **Free-form tasks** (title, details, result) may go to any agent; their contract always sends the result to a
+person, so they never leave unreviewed. Other task types must be allowed on the agent.
+
+Select calls models through their APIs: an agent writes text and structured results (a plan, a reply, a quote, a post). It
+does not run tools in a code repository yet; a coding agent that runs elsewhere (Claude Code, Codex…) can hand its result to
+Select through the submission API, and Select verifies it the same way.
+
 ## Is the agent operational?
 
-The interface says **Ready** only when the agent has a provider, a model and an enabled connection for that provider. Otherwise it says **Not connected**: you can still submit results produced elsewhere, and they are verified the same way.
+The interface says **Ready** only when the agent has a provider, a model and an enabled connection for that provider. A blue pulse next to its name in the sidebar means it has a run queued or running. Otherwise it says **Not connected**: you can still submit results produced elsewhere, and they are verified the same way.
 
 ## Two ways to produce results
 

@@ -11,6 +11,7 @@ import { Badge, Button, Card, Field, Input, Select, Textarea } from "@/component
 import { api } from "@/lib/api";
 import { useAction, useCompany, useCompanyId, useGoals, useProjects } from "@/lib/queries";
 import type { Project } from "@/lib/types";
+import { ProjectDot } from "@/components/domain";
 
 export default function ProjectsPage() {
   const cid = useCompanyId();
@@ -41,7 +42,7 @@ export default function ProjectsPage() {
             <DataTable caption="Projects" rows={projects.data} rowKey={(p) => p.id} rowLabel={(p) => p.name} onRowClick={canWrite ? open : undefined}
               empty={<EmptyState icon={<FolderKanban />} title="No project yet" description="Group tasks, for example “Kitchen renovations, spring”." />}
               columns={[
-                { key: "name", header: "Project", cell: (p) => <span className="text-fg">{p.name}</span> },
+                { key: "name", header: "Project", cell: (p) => <span className="inline-flex items-center gap-2.5 text-fg"><ProjectDot id={p.id} />{p.name}</span> },
                 { key: "status", header: "Status", cell: (p) => <Badge tone={p.status === "done" ? "success" : p.status === "paused" ? "warning" : "neutral"} dot>{p.status}</Badge> },
                 { key: "goal", header: "Goal", cell: (p) => <span className="text-muted">{goalName(p.goal_id) ?? "—"}</span>, hideOnMobile: true },
                 { key: "tasks", header: "Tasks", cell: (p) => <span className="text-muted tabular">{p.task_count}</span>, align: "right" },

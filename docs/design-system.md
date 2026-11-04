@@ -41,9 +41,20 @@ lightness, so a level is **never** shown by colour alone: it always comes with i
 
 ## Type
 
-Inter (variable) for everything, JetBrains Mono for ids, hashes and evidence. Body 14 px / 20; dense UI 13 px; labels 12 px;
-mono meta 11 px. Page titles are 14 px semibold in the topbar, panel titles 13–15 px, the one hero figure 44 px with
-`-0.035em` tracking. Every number is `tabular-nums`.
+Inter (variable, self-hosted) for every word; the system monospace (SF Mono, Menlo, Consolas…) for task keys, ids, hashes and
+evidence. One weight per job:
+
+| Weight | Use |
+| --- | --- |
+| Bold 700 | Big titles: page titles in the top bar, set-up and sign-in headings, the large figures |
+| SemiBold 600 | Card titles and section headings |
+| Regular 400 | Descriptions and body text |
+| Medium 500 | Buttons, tabs, navigation rows and badges |
+
+Sizes: body 14 px; navigation and dense rows 13 px (`text-compact`); labels 12 px; badges 11 px (`text-micro`); section labels
+10 px in capitals with wide tracking (`text-nano`, monospace). Page titles of the six places are set in capitals with
+`tracking-wider`; a detail page (a task, an agent) shows its own name in normal case after a breadcrumb. Every number is
+`tabular-nums`.
 
 ## Space, radius, depth
 
@@ -82,12 +93,20 @@ Things arrive slower than they leave. `prefers-reduced-motion` turns every anima
 
 ## Navigation and keyboard
 
-Sidebar sections: Overview, Inbox · Work (Tasks, Approvals, Projects, Goals) · Team (Organization, Agents) · Trust (Autonomy,
-Verification) · Operations (Costs, Activity), with Connections and Settings at the foot. Under 1024 px the sidebar becomes a
-drawer and phones get a five-tab bar (Overview, Inbox, Approvals, Tasks, More).
+Six places in the sidebar: Home, Approvals, Tasks, Messages (shown once a mailbox is connected), Team, Settings, after a
+**New task** button. Every other page belongs to a place: Tasks shows Routines, Projects and Goals as tabs; Team shows the org
+chart, Agents and Autonomy; Settings links Connections, Costs, Verification and the activity log; Home links the inbox and
+the activity log. Below the places, the agents (an icon for their role, a blue pulse while one works) and the open projects
+(a colour dot each, which filters Tasks). Under 1024 px the sidebar becomes a drawer and phones get a tab bar (Home,
+Approvals, Tasks, Messages or Team, More).
 
-`Ctrl/⌘ K` palette · `Ctrl/⌘ B` sidebar · `G` then a letter to jump (O, I, T, A, E, U, V, C, S) · `J`/`K` or arrows to move,
-`Enter` to preview, `O` to open, `C` for a new task, `/` to search · `?` lists all shortcuts.
+Agents get an icon from their role, read in English, French or German (a crown for a CEO, a chip for a CTO, angle brackets
+for a developer, a headset for support…); unknown roles keep their initials. Projects get one of eight colours from their
+id, always next to their name, never colour alone.
+
+`Ctrl/⌘ K` palette · `Ctrl/⌘ B` sidebar · `C` new task · `G` then a letter to jump (H home, A approvals, T tasks, M messages,
+O org chart, E agents, U autonomy, R routines, P projects, I inbox, Y activity, C costs, V verification, N connections,
+S settings) · `J`/`K` or arrows to move, `Enter` to preview, `O` to open, `/` to search · `?` lists all shortcuts.
 
 ## Accessibility
 

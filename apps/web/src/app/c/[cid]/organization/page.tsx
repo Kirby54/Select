@@ -273,7 +273,7 @@ export default function OrganizationPage() {
                       aria-label={`${a.name}, ${a.role}${level ? `, highest licence ${LEVEL_LABEL[level]}` : ""}`}
                     >
                       <span className="flex items-center gap-2.5">
-                        <AgentAvatar name={a.name} />
+                        <AgentAvatar name={a.name} role={a.role} />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-[13px] font-semibold text-fg">{a.name}</span>
                           <span className="block truncate text-xs text-muted">{a.role}</span>

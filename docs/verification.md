@@ -32,7 +32,7 @@ approval:
 
 Paths: `a.b` for a field, `lines[].quantity` for every item of a list. Contracts live in `contracts/`; `select-api check-contracts` loads and lists them. An unknown rule or a duplicate check id makes loading fail.
 
-## Rules (select-verify 0.1)
+## Rules (select-verify 0.2)
 
 | Rule | Params | Checks |
 | --- | --- | --- |
@@ -44,6 +44,7 @@ Paths: `a.b` for a field, `lines[].quantity` for every item of a list. Contracts
 | `catalog_reference` | `items` | each line's `catalog_ref` exists |
 | `catalog_price` | `items` | unit price equals the catalog price |
 | `quote_totals` | `items_field`, `totals_field` | line totals, net, VAT, gross recomputed exactly |
+| `vat_rate` | `field` (e.g. `lines[].vat_rate`) | every rate is one of the company's VAT rates; a missing rate fails |
 | `provenance` | `fields`, `computed`, `quote_check`, `allow_empty` | each value carries a resolvable `source_ref` |
 
 ## Provenance

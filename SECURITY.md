@@ -20,10 +20,11 @@ Only the latest `0.x` release receives security fixes during the pre-1.0 phase.
 - Exposure of provider API keys or tokens
 - Prompt injection that makes a deterministic check pass or an action run without its rules
 
-## Known limitations (by design in 0.1)
+## Known limitations (0.2)
 
-- `SELECT_AUTH_MODE=local` trusts anyone who can reach the server. Docker Compose binds to `127.0.0.1` for that reason. Use `token` mode before exposing Select to a network.
-- There is no outbound connector yet: approved actions are recorded as "ready to send" and are not sent.
+- `SELECT_AUTH_MODE=local` trusts anyone who can reach the server: use it only on your own machine. Docker Compose starts in `password` mode and binds its ports to `127.0.0.1`.
+- Sign-in is limited per account address, not per IP address: put IP rate limits in the reverse proxy.
+- No single sign-on, no two-factor authentication, no OAuth for mailboxes.
 - Model-based review checks are not implemented; only deterministic checks run.
 
 See [docs/security.md](docs/security.md) for the security model.

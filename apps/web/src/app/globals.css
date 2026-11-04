@@ -42,6 +42,16 @@
   --color-warning: #d9b26a;
   --color-success: #7cc59e;
 
+  /* Project dots: eight hues, told apart by name too, never by colour alone */
+  --color-dot-1: #e57fa8;
+  --color-dot-2: #6fa8f5;
+  --color-dot-3: #63c795;
+  --color-dot-4: #a993f5;
+  --color-dot-5: #e3b25a;
+  --color-dot-6: #55c2c7;
+  --color-dot-7: #ee9064;
+  --color-dot-8: #b9c46a;
+
   /* Interaction layers, valid on any surface */
   --color-hover: rgb(255 255 255 / 0.045);
   --color-press: rgb(255 255 255 / 0.075);

@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, Ban, CalendarClock, Flag, GitBranch, Loader2, Mail, Play, Send, ShieldAlert } from "lucide-react";
+import { Archive, Ban, CalendarClock, Flag, GitBranch, Loader2, Mail, MessageSquare, Play, Send, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { use, useState } from "react";
 
@@ -296,7 +296,7 @@ export default function TaskPage({ params }: { params: Promise<{ cid: string; ti
                   <form className="mt-4 flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); if (comment.trim()) addComment.mutate(comment.trim()); }}>
                     <label htmlFor="comment" className="sr-only">Add a comment</label>
                     <Textarea id="comment" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Add a note for the team or the agent's next attempt" className="min-h-16" />
-                    <Button type="submit" size="sm" className="self-end" loading={addComment.isPending} disabled={!comment.trim()}>Comment</Button>
+                    <Button type="submit" size="sm" icon={<MessageSquare className="size-3.5" aria-hidden />} className="self-end" loading={addComment.isPending} disabled={!comment.trim()}>Comment</Button>
                   </form>
                 )}
               </TabPanel>
