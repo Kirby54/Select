@@ -1,15 +1,15 @@
 "use client";
 
-import { Archive, ArrowDownRight, ArrowUpRight, Pause, Pencil, Play, PlugZap } from "lucide-react";
+import { Archive, ArrowDownRight, ArrowUpRight, MoreHorizontal, Pause, Pencil, Play, PlugZap, SquarePen } from "lucide-react";
 import Link from "next/link";
 import { use, useState } from "react";
 
 import { AgentFormDialog } from "@/components/agent-form";
 import { AgentAvatar, AgentStatus, AutonomyLevel, LicenceLadder, LicenceNextStep, TaskStatusBadge, providerLabel } from "@/components/domain";
-import { PageBody, PageHeader } from "@/components/shell/app-shell";
+import { PageBody, PageHeader, useNewTask } from "@/components/shell/app-shell";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/ui/feedback";
-import { ConfirmDialog } from "@/components/ui/overlay";
-import { Badge, Button, Card, CardHeader, DemoTag, cx } from "@/components/ui/primitives";
+import { ConfirmDialog, Dropdown } from "@/components/ui/overlay";
+import { Badge, Button, Card, CardHeader, DemoTag, IconButton, cx } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
 import { formatDate, money, relative, taskTypeLabel } from "@/lib/format";
 import { useAction, useAgent, useAgents, useAutonomy, useCompany } from "@/lib/queries";
@@ -21,6 +21,8 @@ export default function AgentPage({ params }: { params: Promise<{ cid: string; a
   const agents = useAgents(cid);
   const autonomy = useAutonomy(cid, 30);
   const [editing, setEditing] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const newTask = useNewTask();
   const setStatus = useAction(cid, (action: "pause" | "resume" | "archive") => api(`/companies/${cid}/agents/${aid}/${action}`, { method: "POST" }), {
     success: (r) => `Agent ${(r as { status: string }).status}`,
   });
@@ -30,6 +32,7 @@ export default function AgentPage({ params }: { params: Promise<{ cid: string; a
   const a = agent.data;
   const role = company.data?.role ?? "viewer";
   const canAdmin = role === "owner" || role === "admin";
+  const canWrite = role !== "viewer";
   const manager = agents.data?.find((m) => m.id === a.manager_id);
   const reports = (agents.data ?? []).filter((m) => m.manager_id === a.id);
   const licences = (autonomy.data?.licences ?? []).filter((l) => l.agent_id === a.id);
@@ -40,20 +43,38 @@ export default function AgentPage({ params }: { params: Promise<{ cid: string; a
       <PageHeader
         title={a.name}
         description={a.role}
-        meta={<AgentStatus agent={a} />}
-        actions={canAdmin && !a.is_demo_agent ? <>
-          <Button size="sm" icon={<Pencil className="size-3.5" aria-hidden />} onClick={() => setEditing(true)}>Edit</Button>
-          {a.status === "active" ? (
-            <Button size="sm" variant="ghost" icon={<Pause className="size-3.5" aria-hidden />} loading={setStatus.isPending} onClick={() => setStatus.mutate("pause")}>Pause</Button>
-          ) : a.status === "paused" ? (
-            <Button size="sm" variant="ghost" icon={<Play className="size-3.5" aria-hidden />} loading={setStatus.isPending} onClick={() => setStatus.mutate("resume")}>Resume</Button>
-          ) : null}
-          {a.status !== "archived" && (
-            <ConfirmDialog trigger={<Button size="sm" variant="ghost" icon={<Archive className="size-3.5" aria-hidden />}>Archive</Button>}
-              title={`Archive ${a.name}?`} description="The agent stops taking work. Its history, receipts and costs are kept." confirmLabel="Archive agent"
-              onConfirm={() => setStatus.mutateAsync("archive")} />
+        meta={<>
+          <AgentStatus agent={a} />
+          {a.working > 0 && <Badge tone="accent">{a.working > 1 ? `${a.working} runs in progress` : "Working"}</Badge>}
+        </>}
+        actions={<>
+          {canWrite && a.status !== "archived" && !a.is_demo_agent && (
+            <Button size="sm" variant="primary" icon={<SquarePen className="size-3.5" aria-hidden />} onClick={() => newTask(a.id)}>Give a task</Button>
           )}
-        </> : undefined}
+          {canAdmin && !a.is_demo_agent && (a.status === "active" ? (
+            <Button size="sm" icon={<Pause className="size-3.5" aria-hidden />} loading={setStatus.isPending} onClick={() => setStatus.mutate("pause")}>Pause</Button>
+          ) : a.status === "paused" ? (
+            <Button size="sm" icon={<Play className="size-3.5" aria-hidden />} loading={setStatus.isPending} onClick={() => setStatus.mutate("resume")}>Resume</Button>
+          ) : null)}
+          {canAdmin && !a.is_demo_agent && (
+            <Dropdown
+              label={`More actions for ${a.name}`}
+              trigger={<IconButton label={`More actions for ${a.name}`}><MoreHorizontal className="size-4" aria-hidden /></IconButton>}
+              items={[
+                { label: "Edit", icon: <Pencil aria-hidden />, onSelect: () => setEditing(true) },
+                ...(a.status !== "archived" ? [{ label: "Archive…", icon: <Archive aria-hidden />, onSelect: () => setArchiving(true) }] : []),
+              ]}
+            />
+          )}
+        </>}
+      />
+      <ConfirmDialog
+        open={archiving}
+        onOpenChange={setArchiving}
+        title={`Archive ${a.name}?`}
+        description="The agent stops taking work. Its history, receipts and costs are kept."
+        confirmLabel="Archive agent"
+        onConfirm={() => setStatus.mutateAsync("archive")}
       />
       <PageBody className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:space-y-0">
         <div className="min-w-0 space-y-4">
@@ -68,7 +89,7 @@ export default function AgentPage({ params }: { params: Promise<{ cid: string; a
             </div>
           )}
           <Card>
-            <CardHeader title="Licences by task type" description="Earned from verified results; capped by each contract's risk class" />
+            <CardHeader title="What it may do alone" />
             {a.task_types.length === 0 ? (
               <EmptyState compact title="No task type allowed" description="Edit the agent to choose what it may work on." />
             ) : (
@@ -93,7 +114,7 @@ export default function AgentPage({ params }: { params: Promise<{ cid: string; a
             )}
           </Card>
           <Card>
-            <CardHeader title="Licence history" description="Why the level changed, with the evidence" />
+            <CardHeader title="Why its autonomy changed" />
             {a.trust_events.length === 0 ? <EmptyState compact title="No promotion or demotion yet" /> : (
               <ol className="divide-y divide-line-soft">
                 {a.trust_events.map((e) => {
@@ -119,7 +140,7 @@ export default function AgentPage({ params }: { params: Promise<{ cid: string; a
             )}
           </Card>
           <Card>
-            <CardHeader title="Tasks" description={`${a.tasks.length} assigned`} actions={<Link href={`/c/${cid}/tasks`} className="text-xs font-medium text-accent hover:text-accent-strong">All tasks</Link>} />
+            <CardHeader title="Recent tasks" actions={<Link href={`/c/${cid}/tasks`} className="text-xs font-medium text-accent hover:text-accent-strong">All tasks</Link>} />
             {a.tasks.length === 0 ? <EmptyState compact title="No task assigned" /> : (
               <ul className="divide-y divide-line-soft">
                 {a.tasks.slice(0, 15).map((t) => (
@@ -135,7 +156,7 @@ export default function AgentPage({ params }: { params: Promise<{ cid: string; a
             )}
           </Card>
           <Card>
-            <CardHeader title="Runs" description="Last 25 executions" />
+            <CardHeader title="Recent runs" />
             {a.runs.length === 0 ? <EmptyState compact title="No run yet" /> : (
               <ul className="divide-y divide-line-soft text-[13px]">
                 {a.runs.map((r) => (

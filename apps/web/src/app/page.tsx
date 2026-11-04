@@ -57,7 +57,7 @@ function Home() {
             <p className="text-xs text-muted">Agents that earn their autonomy</p>
           </div>
         </div>
-        <h1 className="mt-8 text-xl font-semibold tracking-[-0.02em]">{name ? `Welcome, ${name}.` : "Run your company with AI agents, and keep the proof."}</h1>
+        <h1 className="mt-8 text-xl font-bold tracking-[-0.02em]">{name ? `Welcome, ${name}.` : "Run your company with AI agents, and keep the proof."}</h1>
         <p className="mt-2 text-[13px] leading-relaxed text-muted">
           Agents from any provider read your mail, prepare quotes and replies, and do the work you assign. Every result is checked by code
           against a contract; an agent only stops needing your approval once its record proves it can.

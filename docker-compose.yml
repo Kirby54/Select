@@ -1,6 +1,7 @@
 # Select: `docker compose up --build`, then open http://localhost:3000
-# Ports are bound to 127.0.0.1 because the default auth mode ("local") trusts whoever can reach the app.
-# Before exposing Select to a network, set SELECT_AUTH_MODE=token (see docs/deployment.md).
+# The first visit creates the owner account (SELECT_AUTH_MODE=password, the default here).
+# Ports are bound to 127.0.0.1: to let other people in, put an HTTPS reverse proxy in front of
+# the web service and set SELECT_PUBLIC_URL to its address (see docs/deployment.md).
 name: select
 
 services:
@@ -25,7 +26,9 @@ services:
       dockerfile: docker/api.Dockerfile
     environment:
       SELECT_DATABASE_URL: postgresql+psycopg://select:${POSTGRES_PASSWORD:-select}@db:5432/select
-      SELECT_AUTH_MODE: ${SELECT_AUTH_MODE:-local}
+      SELECT_AUTH_MODE: ${SELECT_AUTH_MODE:-password}
+      SELECT_PUBLIC_URL: ${SELECT_PUBLIC_URL:-http://localhost:3000}
+      SELECT_SESSION_DAYS: ${SELECT_SESSION_DAYS:-30}
       SELECT_SECRET_KEY: ${SELECT_SECRET_KEY:-}
       SELECT_CORS_ORIGINS: '["http://localhost:3000"]'
     volumes:
@@ -42,9 +45,11 @@ services:
       context: .
       dockerfile: docker/api.Dockerfile
     command: ["select-api", "worker"]
+    # Reads mailboxes, sends approved e-mails, fires routines and runs agents.
     environment:
       SELECT_DATABASE_URL: postgresql+psycopg://select:${POSTGRES_PASSWORD:-select}@db:5432/select
       SELECT_SECRET_KEY: ${SELECT_SECRET_KEY:-}
+      SELECT_PUBLIC_URL: ${SELECT_PUBLIC_URL:-http://localhost:3000}
     volumes:
       - api-data:/data
     healthcheck:

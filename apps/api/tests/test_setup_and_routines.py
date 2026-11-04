@@ -168,3 +168,46 @@ def test_free_form_task_is_always_reviewed(client):
         assert result["approvals"][-1]["reason"] == "contract_always"
         approval_id = result["approvals"][-1]["id"]
         ok(client.post(f"/api/companies/{cid}/approvals/{approval_id}/decide", json={"decision": "approved"}))
+
+
+def test_any_agent_takes_free_form_work_and_shows_when_it_works(client):
+    import uuid
+
+    from select_api.db import session_scope
+    from select_api.models import Run
+
+    cid = ok(client.post("/api/companies", json={"name": "Studio", "country": "FR"}), 201)["id"]
+    dev = ok(
+        client.post(
+            f"/api/companies/{cid}/agents", json={"name": "Max", "role": "Developer", "task_types": ["social_post"]}
+        ),
+        201,
+    )
+    # Free-form work goes to any agent (its contract always asks a person); other types must be allowed.
+    task = ok(
+        client.post(
+            f"/api/companies/{cid}/tasks",
+            json={"title": "Fix the sign-in page", "task_type": "general_task", "assignee_id": dev["id"]},
+        ),
+        201,
+    )
+    assert task["assignee_id"] == dev["id"]
+    refused = client.post(
+        f"/api/companies/{cid}/tasks", json={"title": "A quote", "task_type": "quote", "assignee_id": dev["id"]}
+    )
+    assert refused.status_code == 422
+
+    # "working" counts the agent's runs that are queued or running right now.
+    assert ok(client.get(f"/api/companies/{cid}/agents"))[0]["working"] == 0
+    with session_scope() as db:
+        db.add(
+            Run(
+                company_id=uuid.UUID(cid),
+                task_id=uuid.UUID(task["id"]),
+                agent_id=uuid.UUID(dev["id"]),
+                mode="live",
+                status="running",
+            )
+        )
+    assert ok(client.get(f"/api/companies/{cid}/agents"))[0]["working"] == 1
+    assert ok(client.get(f"/api/companies/{cid}/agents/{dev['id']}"))["working"] == 1

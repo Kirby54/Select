@@ -123,7 +123,7 @@ function Mailboxes({ cid, companyName, canAdmin, demo }: { cid: string; companyN
       <div className="flex items-end justify-between gap-3 px-1">
         <div>
           <h2 id="mailboxes-title" className="text-[13px] font-semibold">Mailboxes</h2>
-          <p className="mt-0.5 text-xs text-muted">Incoming mail becomes triage tasks. Approved replies, and replies an agent&apos;s licence allows, leave from here.</p>
+          <p className="mt-0.5 text-xs text-muted">New e-mail becomes tasks; approved replies leave from here.</p>
         </div>
         {canAdmin && !demo && <Button size="sm" icon={<Plus className="size-3.5" aria-hidden />} onClick={() => setEditing("new")}>Connect a mailbox</Button>}
       </div>
@@ -209,7 +209,7 @@ function ConnectionsInner() {
         <section className="space-y-2" aria-labelledby="models-title">
         <div className="px-1">
           <h2 id="models-title" className="text-[13px] font-semibold">AI models</h2>
-          <p className="mt-0.5 text-xs text-muted">Every adapter makes real calls with your key. Keys are encrypted; only their last four characters are shown.</p>
+          <p className="mt-0.5 text-xs text-muted">Keys are stored encrypted; only their last four characters are shown.</p>
         </div>
         {connections.isPending ? <LoadingRows /> : connections.isError ? <ErrorState error={connections.error} retry={() => void connections.refetch()} /> : (
           <div className="grid gap-3 md:grid-cols-2">
@@ -249,7 +249,6 @@ function ConnectionsInner() {
             ))}
           </div>
         )}
-        <p className="text-xs text-faint">A test only lists the models the provider offers: no company data is sent. Gemini and Ollama are called through their documented HTTP APIs; Anthropic and OpenAI through their official SDKs.</p>
         </section>
       </PageBody>
       {editing && <ConnectionDialog cid={cid} connection={editing} open={!!editing} onOpenChange={(o) => !o && setEditing(null)} />}

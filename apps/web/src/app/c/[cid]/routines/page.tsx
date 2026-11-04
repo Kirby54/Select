@@ -1,7 +1,6 @@
 "use client";
 
 import { CalendarClock, MoreHorizontal, Play, Plus } from "lucide-react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
@@ -11,7 +10,7 @@ import { EmptyState, ErrorState, LoadingRows } from "@/components/ui/feedback";
 import { ConfirmDialog, Dialog, Dropdown } from "@/components/ui/overlay";
 import { Badge, Button, Card, Field, IconButton, Input, Segmented, Select, Switch, Textarea } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
-import { formatDate, relative, taskTypeLabel } from "@/lib/format";
+import { formatDateIn, relative, taskTypeLabel } from "@/lib/format";
 import { useAction, useAgents, useCompany, useCompanyId, useContracts, useRoutines } from "@/lib/queries";
 import { DAYS, describeCron, fromCron, toCron, type Schedule } from "@/lib/schedule";
 import type { Priority, Routine } from "@/lib/types";
@@ -108,7 +107,7 @@ function RoutineDialog({ cid, routine, open, onOpenChange }: { cid: string; rout
             )}
           </div>
           <p className={preview && !preview.valid ? "text-xs text-danger" : "text-xs text-muted"} role="status">
-            {!preview ? "Checking the schedule…" : preview.valid ? `Next: ${preview.upcoming.map(formatDate).join(" · ")}` : preview.errors.join(" ")}
+            {!preview ? "Checking the schedule…" : preview.valid ? `Next: ${preview.upcoming.map((d) => formatDateIn(d, company.data?.timezone)).join(" · ")}` : preview.errors.join(" ")}
           </p>
         </div>
         <div className="sm:col-span-2"><Field label="Task title" htmlFor="r-title"><Input id="r-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Summarise last week's customer questions" /></Field></div>
@@ -158,7 +157,7 @@ function RoutineRow({ cid, r, canAdmin, canRun, onEdit }: { cid: string; r: Rout
       </div>
       <div className="flex items-center gap-4 sm:justify-end">
         <div className="text-right text-xs">
-          <p className="text-muted">{r.enabled && r.upcoming[0] ? <>Next <span className="text-fg">{relative(r.upcoming[0]).replace(" ago", "")}</span></> : "Not scheduled"}</p>
+          <p className="text-muted">{r.enabled && r.upcoming[0] ? <>Next <span className="text-fg" title={relative(r.upcoming[0])}>{formatDateIn(r.upcoming[0], r.timezone)}</span></> : "Not scheduled"}</p>
           <p className="text-faint">{r.runs_count ? `${r.runs_count} run${r.runs_count > 1 ? "s" : ""}, last ${relative(r.last_run_at)}` : "Never ran"}</p>
         </div>
         {canAdmin && <Switch checked={r.enabled} onCheckedChange={(v) => toggle.mutate(v)} label={`${r.name} on or off`} disabled={toggle.isPending} />}
@@ -230,10 +229,7 @@ function RoutinesInner() {
             </ul>
           </Card>
         )}
-        <p className="text-xs text-faint">
-          Routines run while the worker runs. A run missed while it was stopped happens once when it starts again, not once per missed slot.
-          During an emergency stop no task is created. See <Link href={`/c/${cid}/activity`} className="text-muted underline-offset-2 hover:underline">Activity</Link> for every run.
-        </p>
+        <p className="text-xs text-faint">A run missed while Select was stopped happens once when it restarts. Nothing runs during an emergency stop.</p>
       </PageBody>
       {creating && <RoutineDialog cid={cid} open={creating} onOpenChange={(o) => { if (!o) closeCreate(); }} />}
       {editing && <RoutineDialog key={editing.id} cid={cid} routine={editing} open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }} />}

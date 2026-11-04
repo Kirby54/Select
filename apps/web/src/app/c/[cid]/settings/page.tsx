@@ -1,6 +1,7 @@
 "use client";
 
-import { Building2, Copy, KeyRound, Lock, Package, Plus, ShieldCheck, Trash2, UserRound, Users, Workflow } from "lucide-react";
+import { Activity, BadgeCheck, Building2, CircleDollarSign, Copy, KeyRound, Lock, Package, Plug, Plus, ShieldCheck, Trash2, UserRound, Users, Workflow } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 
@@ -255,7 +256,7 @@ function PeopleSection({ company }: { company: Company }) {
             <div key={i.id} className="flex items-center gap-3 px-4 py-2.5">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13px] text-fg">{i.email}</p>
-                <p className="text-xs text-faint">Invited as {i.role} · expires {relative(i.expires_at).replace(" ago", "")}</p>
+                <p className="text-xs text-faint">Invited as {i.role} · {relative(i.expires_at).startsWith("in ") ? "expires" : "expired"} {relative(i.expires_at)}</p>
               </div>
               <Button size="sm" variant="ghost" loading={revoke.isPending && revoke.variables === i.id} onClick={() => revoke.mutate(i.id)}>Revoke</Button>
             </div>
@@ -487,6 +488,14 @@ const SECTIONS = [
 ] as const;
 type SectionId = (typeof SECTIONS)[number]["id"];
 
+/** The other pages of the Settings place. */
+const MORE = [
+  { href: "connections", label: "Connections", icon: Plug },
+  { href: "costs", label: "Costs", icon: CircleDollarSign },
+  { href: "verification", label: "Verification", icon: BadgeCheck },
+  { href: "activity", label: "Activity log", icon: Activity },
+] as const;
+
 function SettingsInner() {
   const cid = useCompanyId();
   const company = useCompany(cid);
@@ -502,7 +511,7 @@ function SettingsInner() {
   const canAdmin = c.role === "owner" || c.role === "admin";
   return (
     <>
-      <PageHeader title="Settings" description={`You are ${c.role} of this company`} />
+      <PageHeader title="Settings" />
       <PageBody className="grid max-w-5xl gap-6 md:grid-cols-[200px_minmax(0,1fr)] md:space-y-0">
         <nav aria-label="Settings sections" className="md:sticky md:top-0 md:self-start">
           <ul className="scrollbar-none flex gap-1 overflow-x-auto md:flex-col">
@@ -513,13 +522,24 @@ function SettingsInner() {
                   onClick={() => go(s.id)}
                   aria-current={section === s.id ? "page" : undefined}
                   className={cx(
-                    "flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-[13px] whitespace-nowrap transition-colors duration-[120ms]",
+                    "flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-compact font-medium whitespace-nowrap transition-colors duration-[120ms]",
                     section === s.id ? "bg-[rgb(255_255_255/0.075)] font-medium text-fg" : "text-muted hover:bg-hover hover:text-fg",
                   )}
                 >
                   <s.icon className={cx("size-4", section === s.id ? "text-accent" : "text-faint")} aria-hidden />
                   {s.label}
                 </button>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 mb-1 hidden px-2.5 font-mono text-nano font-medium tracking-widest text-muted uppercase md:block">More</p>
+          <ul className="scrollbar-none mt-1 flex gap-1 overflow-x-auto md:mt-0 md:flex-col">
+            {MORE.map((m) => (
+              <li key={m.href}>
+                <Link href={`/c/${cid}/${m.href}`} className="flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-compact whitespace-nowrap text-muted transition-colors duration-[120ms] hover:bg-hover hover:text-fg">
+                  <m.icon className="size-4 text-faint" aria-hidden />
+                  {m.label}
+                </Link>
               </li>
             ))}
           </ul>

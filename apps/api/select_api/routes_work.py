@@ -125,7 +125,7 @@ def create_task(body: TaskIn, ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
     assignee = None
     if body.assignee_id:
         assignee = _agent_in_company(db, ctx.company.id, body.assignee_id)
-        if body.task_type not in (assignee.task_types or []):
+        if not automation.may_do(assignee, body.task_type):
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
                 f"{assignee.name} is not allowed to do '{body.task_type}'. Add it on the agent first.",
@@ -222,7 +222,7 @@ def patch_task(task_id: uuid.UUID, body: TaskPatch, ctx: CompanyDep, db: DbDep) 
         data["assignee_id"] = None
     elif data.get("assignee_id"):
         agent = _agent_in_company(db, ctx.company.id, data["assignee_id"])
-        if task.task_type not in (agent.task_types or []):
+        if not automation.may_do(agent, task.task_type):
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_CONTENT, f"{agent.name} is not allowed to do '{task.task_type}'."
             )

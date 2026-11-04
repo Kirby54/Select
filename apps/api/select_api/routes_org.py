@@ -315,6 +315,16 @@ def _check_manager(db: DbDep, company_id: uuid.UUID, agent_id: uuid.UUID | None,
         current = db.get(Agent, current.manager_id) if current.manager_id else None
 
 
+def _working(db: DbDep, company_id: uuid.UUID) -> dict[uuid.UUID, int]:
+    """Runs queued or running per agent: the agents at work right now."""
+    rows = db.execute(
+        select(Run.agent_id, func.count())
+        .where(Run.company_id == company_id, Run.status.in_(("queued", "running")), Run.agent_id.is_not(None))
+        .group_by(Run.agent_id)
+    ).all()
+    return {agent_id: int(count) for agent_id, count in rows}
+
+
 @router.get("/companies/{company_id}/agents")
 def list_agents(ctx: CompanyDep, db: DbDep, include_archived: bool = False) -> list[dict[str, Any]]:
     query = select(Agent).where(Agent.company_id == ctx.company.id).order_by(Agent.position, Agent.created_at)
@@ -323,11 +333,13 @@ def list_agents(ctx: CompanyDep, db: DbDep, include_archived: bool = False) -> l
     agents = db.scalars(query).all()
     trusts = db.scalars(select(Trust).where(Trust.company_id == ctx.company.id)).all()
     providers = _connected_providers(db, ctx.company.id)
+    working = _working(db, ctx.company.id)
     return [
         agent_out(
             a,
             [t for t in trusts if t.agent_id == a.id],
             connected=bool(a.provider and a.model and a.provider in providers),
+            working=working.get(a.id, 0),
         )
         for a in agents
     ]
@@ -384,7 +396,10 @@ def get_agent(agent_id: uuid.UUID, ctx: CompanyDep, db: DbDep) -> dict[str, Any]
     providers = _connected_providers(db, ctx.company.id)
     return {
         **agent_out(
-            agent, list(trusts), connected=bool(agent.provider and agent.model and agent.provider in providers)
+            agent,
+            list(trusts),
+            connected=bool(agent.provider and agent.model and agent.provider in providers),
+            working=_working(db, ctx.company.id).get(agent.id, 0),
         ),
         "trust_events": [trust_event_out(e, agent.name) for e in events],
         "runs": [run_out(r) for r in runs],

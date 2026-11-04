@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { cx } from "@/components/ui/primitives";
-import { money, percent, ratePercent, relative, taskTypeLabel } from "./format";
+import { formatDateIn, money, percent, ratePercent, relative, taskTypeLabel } from "./format";
 
 describe("money", () => {
   it("formats decimal strings without float arithmetic", () => {
@@ -30,6 +30,8 @@ describe("relative", () => {
     expect(relative("2026-11-03T11:59:50Z", now)).toBe("just now");
     expect(relative("2026-11-03T11:30:00Z", now)).toBe("30 min ago");
     expect(relative("2026-11-01T12:00:00Z", now)).toBe("2 d ago");
+    expect(relative("2026-11-03T12:30:00Z", now)).toBe("in 30 min");
+    expect(relative("2026-11-09T07:00:00Z", now)).toBe("in 6 d");
   });
 });
 
@@ -53,5 +55,13 @@ describe("ratePercent", () => {
     expect(ratePercent("0.081")).toBe("8.1 %");
     expect(ratePercent("0")).toBe("0 %");
     expect(ratePercent("0.19")).toBe("19 %");
+  });
+});
+
+describe("formatDateIn", () => {
+  it("reads the clock of the routine's time zone, not the viewer's", () => {
+    // Monday 9 November 2026, 07:00 UTC is 08:00 in Paris and 02:00 in New York.
+    expect(formatDateIn("2026-11-09T07:00:00Z", "Europe/Paris")).toBe("Mon 09 Nov, 08:00");
+    expect(formatDateIn("2026-11-09T07:00:00Z", "America/New_York")).toBe("Mon 09 Nov, 02:00");
   });
 });

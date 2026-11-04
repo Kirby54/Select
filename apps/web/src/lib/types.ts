@@ -244,6 +244,8 @@ export interface Agent {
   version: number;
   is_demo_agent: boolean;
   connected: boolean | null;
+  /** Runs queued or running for this agent right now. */
+  working: number;
   trust: Trust[];
   created_at: string;
   updated_at: string;

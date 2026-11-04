@@ -67,8 +67,9 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
  * Confirmation for dangerous, irreversible or high-risk actions. `requireText` adds a typed confirmation
  * (for example the task key) so a high-risk decision cannot be made by a stray click.
  */
-export function ConfirmDialog({ trigger, title, description, confirmLabel, onConfirm, danger = true, children, requireText }: {
-  trigger: ReactNode;
+export function ConfirmDialog({ trigger, title, description, confirmLabel, onConfirm, danger = true, children, requireText, open: controlled, onOpenChange }: {
+  /** The button that opens it; leave it out and pass `open` to open it from elsewhere (a menu item). */
+  trigger?: ReactNode;
   title: string;
   description: string;
   confirmLabel: string;
@@ -76,15 +77,19 @@ export function ConfirmDialog({ trigger, title, description, confirmLabel, onCon
   danger?: boolean;
   children?: ReactNode;
   requireText?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [own, setOwn] = useState(false);
+  const open = controlled ?? own;
+  const setOpen = (next: boolean) => (onOpenChange ? onOpenChange(next) : setOwn(next));
   const [busy, setBusy] = useState(false);
   const [typed, setTyped] = useState("");
   const inputId = useId();
   const blocked = requireText !== undefined && typed.trim() !== requireText;
   return (
     <>
-      <span onClick={() => setOpen(true)} className="contents">{trigger}</span>
+      {trigger && <span onClick={() => setOpen(true)} className="contents">{trigger}</span>}
       <Dialog
         open={open}
         onOpenChange={(next) => { setOpen(next); if (!next) setTyped(""); }}

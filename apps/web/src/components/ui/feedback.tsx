@@ -48,7 +48,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <Info className="mt-px size-4 shrink-0 text-accent" aria-hidden />
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-medium text-fg">{t.title}</p>
+              <p className="text-[13px] font-semibold text-fg">{t.title}</p>
               {t.description && <p className="mt-0.5 text-xs text-muted">{t.description}</p>}
             </div>
             <button type="button" onClick={() => dismiss(t.id)} className="-m-1 rounded-md p-1 text-faint hover:bg-hover hover:text-fg" aria-label="Dismiss notification">

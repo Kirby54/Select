@@ -101,7 +101,7 @@ export default function CostsPage() {
             <CostMetric label="Per verified result" amount={c.cost_per_verified_result} currency={currency} kind="estimated" hint={`${c.verified_results} verified results`} />
             <div className="min-w-0 px-4 py-3">
               <div className="text-xs text-muted">Live spend this month</div>
-              <div className="mt-1 text-[22px] leading-7 font-semibold tracking-[-0.02em] tabular">{money(c.budget.spent_live_this_month, currency, 2)}</div>
+              <div className="mt-1 text-[22px] leading-7 font-bold tracking-[-0.02em] tabular">{money(c.budget.spent_live_this_month, currency, 2)}</div>
               {budget > 0 ? (
                 <Progress className="mt-2" value={spent} max={budget} tone={spent / budget > 0.9 ? "danger" : spent / budget > 0.7 ? "supervised" : "accent"} label="Monthly budget used" />
               ) : (
@@ -110,7 +110,7 @@ export default function CostsPage() {
             </div>
             <div className="min-w-0 px-4 py-3">
               <div className="text-xs text-muted">Monthly budget</div>
-              <div className="mt-1 text-[22px] leading-7 font-semibold tracking-[-0.02em] tabular">{budget > 0 ? money(c.budget.monthly, currency, 0) : "Not set"}</div>
+              <div className="mt-1 text-[22px] leading-7 font-bold tracking-[-0.02em] tabular">{budget > 0 ? money(c.budget.monthly, currency, 0) : "Not set"}</div>
               <div className="mt-0.5 text-xs text-faint">Live runs stop when it is reached</div>
             </div>
           </div>

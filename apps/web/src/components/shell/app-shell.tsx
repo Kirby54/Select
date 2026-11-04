@@ -1,7 +1,7 @@
 "use client";
 
 import * as RDialog from "@radix-ui/react-dialog";
-import { Bell, ChevronRight, ClipboardCheck, Gauge, Inbox, Keyboard, ListTodo, Loader2, LogOut, MoreHorizontal, OctagonX, Search, Settings, Sparkles, UserRound } from "lucide-react";
+import { Bell, ChevronRight, ClipboardCheck, House, Keyboard, ListTodo, Loader2, LogOut, Mail, MoreHorizontal, OctagonX, Search, Settings, Sparkles, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
@@ -10,13 +10,14 @@ import { createPortal } from "react-dom";
 import { inboxHref, relative } from "@/lib/format";
 import { api } from "@/lib/api";
 import { useMediaQuery } from "@/lib/hooks";
-import { useAction, useAuthState, useCompany, useInbox, useOverview, usePersistentState } from "@/lib/queries";
+import { useAction, useAuthState, useCompany, useInbox, useMailboxes, useOverview, usePersistentState } from "@/lib/queries";
 import type { Company } from "@/lib/types";
 import { DemoBanner, ErrorState, LoadingRows } from "../ui/feedback";
 import { ConfirmDialog, Dialog, Dropdown, Popover } from "../ui/overlay";
 import { IconButton, Kbd, cx } from "../ui/primitives";
+import { NewTaskDialog } from "../task-form";
 import { CommandPalette } from "./command-palette";
-import { NAV_FLAT } from "./nav";
+import { PAGES, pageOf, sectionOf } from "./nav";
 import { Sidebar } from "./sidebar";
 
 /* ───────────── Topbar slots: pages put their title and actions in the shell's thin topbar ───────────── */
@@ -43,17 +44,56 @@ function isTyping(target: EventTarget | null): boolean {
 function Crumbs({ company }: { company: Company }) {
   const pathname = usePathname();
   const parts = pathname.split("/").slice(3);
-  const section = NAV_FLAT.find((n) => n.href === parts[0]);
-  if (!section || parts.length < 2) return null;
+  const page = pageOf(parts[0]);
+  const place = sectionOf(parts[0]);
+  // A detail page (a task, an agent) points back to its list; a secondary page without tabs
+  // (Activity, Connections, Costs…) points back to the place it belongs to.
+  const parent = parts.length >= 2 ? page : place && !place.tabs && place.href !== parts[0] ? place : undefined;
+  if (!parent) return null;
   return (
     <>
-      <Link href={`/c/${company.id}/${section.href}`} className="shrink-0 rounded-md px-1 py-0.5 text-[13px] text-muted transition-colors hover:bg-hover hover:text-fg">
-        {section.label}
+      <Link href={`/c/${company.id}/${parent.href}`} className="shrink-0 rounded-md px-1 py-0.5 text-sm text-muted transition-colors hover:bg-hover hover:text-fg">
+        {parent.label}
       </Link>
       <ChevronRight className="size-3.5 shrink-0 text-ghost" aria-hidden />
     </>
   );
 }
+
+/** The pages of one place (Tasks: tasks, routines, projects, goals), as tabs under the top bar. */
+function PlaceTabs({ company }: { company: Company }) {
+  const pathname = usePathname();
+  const parts = pathname.split("/").slice(3);
+  const place = sectionOf(parts[0]);
+  if (!place?.tabs || parts.length !== 1) return null;
+  return (
+    <nav aria-label={`${place.label} pages`} className="shrink-0 border-b border-line-soft bg-canvas px-3 sm:px-5">
+      <ul className="scrollbar-none -mb-px flex gap-4 overflow-x-auto">
+        {place.tabs.map((tab) => {
+          const active = parts[0] === tab.href;
+          return (
+            <li key={tab.href}>
+              <Link
+                href={`/c/${company.id}/${tab.href}`}
+                aria-current={active ? "page" : undefined}
+                className={cx(
+                  "flex h-10 items-center border-b-2 text-compact font-medium whitespace-nowrap transition-colors duration-[120ms]",
+                  active ? "border-fg text-fg" : "border-transparent text-muted hover:text-fg",
+                )}
+              >
+                {tab.label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+/** Opens the one "New task" form from anywhere: the sidebar, an agent's page, the C key. */
+const NewTaskContext = createContext<(agentId?: string) => void>(() => undefined);
+export const useNewTask = () => useContext(NewTaskContext);
 
 function Notifications({ company }: { company: Company }) {
   const inbox = useInbox(company.id);
@@ -145,18 +185,8 @@ function AccountMenu({ company, onShortcuts }: { company: Company; onShortcuts: 
 const SHORTCUTS: [string, string][] = [
   ["Ctrl / ⌘ K", "Search and commands"],
   ["Ctrl / ⌘ B", "Collapse the sidebar"],
-  ["G then O", "Overview"],
-  ["G then I", "Inbox"],
-  ["G then T", "Tasks"],
-  ["G then A", "Approvals"],
-  ["G then M", "Messages"],
-  ["G then R", "Routines"],
-  ["G then E", "Agents"],
-  ["G then U", "Autonomy"],
-  ["G then V", "Verification"],
-  ["G then C", "Costs"],
-  ["G then S", "Settings"],
-  ["C", "New task (on Tasks)"],
+  ["C", "New task"],
+  ...PAGES.filter((p) => p.key).map((p): [string, string] => [`G then ${p.key!.toUpperCase()}`, p.label]),
   ["J / K or ↓ / ↑", "Move through the task list"],
   ["Enter", "Open the selected item"],
   ["?", "This list"],
@@ -165,25 +195,29 @@ const SHORTCUTS: [string, string][] = [
 function MobileTabs({ company, onMore }: { company: Company; onMore: () => void }) {
   const pathname = usePathname();
   const inbox = useInbox(company.id);
+  const mailboxes = useMailboxes(company.id);
   const counts = inbox.data?.counts;
+  const mail = (mailboxes.data?.length ?? 0) > 0;
   const tabs = [
-    { href: "overview", label: "Overview", icon: Gauge },
-    { href: "inbox", label: "Inbox", icon: Inbox, count: inbox.data?.items.length },
+    { href: "overview", label: "Home", icon: House },
     { href: "approvals", label: "Approvals", icon: ClipboardCheck, count: counts?.approvals },
     { href: "tasks", label: "Tasks", icon: ListTodo },
+    mail
+      ? { href: "messages", label: "Messages", icon: Mail, count: counts ? (counts.messages ?? 0) + (counts.deliveries ?? 0) : undefined }
+      : { href: "organization", label: "Team", icon: Users },
   ];
   return (
     <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-30 border-t border-line-soft bg-sidebar/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
       <ul className="mx-auto grid max-w-lg grid-cols-5">
         {tabs.map((tab) => {
           const href = `/c/${company.id}/${tab.href}`;
-          const active = pathname === href || pathname.startsWith(`${href}/`);
+          const active = sectionOf(pathname.split("/")[3])?.href === tab.href;
           return (
             <li key={tab.href}>
               <Link href={href} aria-current={active ? "page" : undefined} className={cx("relative flex h-14 flex-col items-center justify-center gap-0.5 text-2xs font-medium", active ? "text-fg" : "text-faint")}>
                 <tab.icon className={cx("size-5", active && "text-accent")} aria-hidden />
                 {tab.label}
-                {tab.count ? <span className="absolute top-1.5 left-[calc(50%+6px)] min-w-4 rounded-full bg-supervised px-1 text-center text-[10px] leading-4 font-semibold text-canvas tabular">{tab.count}</span> : null}
+                {tab.count ? <span className="absolute top-1.5 left-[calc(50%+6px)] min-w-4 rounded-full bg-supervised px-1 text-center text-[10px] leading-4 font-medium text-canvas tabular">{tab.count}</span> : null}
               </Link>
             </li>
           );
@@ -205,6 +239,8 @@ export function AppShell({ cid, children }: { cid: string; children: ReactNode }
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [newTask, setNewTask] = useState<{ open: boolean; agentId?: string }>({ open: false });
+  const openNewTask = useCallback((agentId?: string) => setNewTask({ open: true, agentId }), []);
   const [slots, setSlots] = useState<Slots>({ title: null, actions: null });
   // Stable callback refs: called once on mount and once on unmount, never on every render.
   const titleSlot = useCallback((el: HTMLDivElement | null) => setSlots((s) => (s.title === el ? s : { ...s, title: el })), []);
@@ -235,10 +271,16 @@ export function AppShell({ cid, children }: { cid: string; children: ReactNode }
         setHelpOpen(true);
         return;
       }
+      // The Tasks page handles C itself (its form also opens from "?new=1").
+      if (e.key.toLowerCase() === "c" && !pathname.endsWith("/tasks") && Date.now() - pendingG.current >= 900) {
+        e.preventDefault();
+        setNewTask({ open: true });
+        return;
+      }
       const now = Date.now();
       if (now - pendingG.current < 900) {
         pendingG.current = 0;
-        const target = NAV_FLAT.find((n) => n.key === e.key.toLowerCase());
+        const target = PAGES.find((n) => n.key === e.key.toLowerCase());
         if (target) {
           e.preventDefault();
           router.push(`/c/${cid}/${target.href}`);
@@ -249,7 +291,7 @@ export function AppShell({ cid, children }: { cid: string; children: ReactNode }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cid, collapsed, router, setCollapsed]);
+  }, [cid, collapsed, pathname, router, setCollapsed]);
 
   if (company.isPending) return <div className="p-6"><LoadingRows rows={8} /></div>;
   if (company.isError) {
@@ -264,10 +306,11 @@ export function AppShell({ cid, children }: { cid: string; children: ReactNode }
 
   return (
     <SlotContext.Provider value={slots}>
+    <NewTaskContext.Provider value={openNewTask}>
       <div className="flex h-dvh overflow-hidden">
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[80] focus:rounded-lg focus:bg-raised focus:px-3 focus:py-2 focus:text-[13px]">Skip to content</a>
         <aside className={cx("hidden h-full shrink-0 border-r border-line-soft lg:block", collapsed ? "w-14" : "w-[232px]")}>
-          <Sidebar company={c} collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
+          <Sidebar company={c} collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} onNewTask={() => openNewTask()} />
         </aside>
         <RDialog.Root open={mobileOpen} onOpenChange={setMobileOpen}>
           <RDialog.Portal>
@@ -275,7 +318,7 @@ export function AppShell({ cid, children }: { cid: string; children: ReactNode }
             <RDialog.Content className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] border-r border-line shadow-[var(--shadow-dialog)] data-[state=open]:animate-drawer-in data-[state=closed]:animate-drawer-out lg:hidden" aria-label="Navigation">
               <RDialog.Title className="sr-only">Navigation</RDialog.Title>
               <RDialog.Description className="sr-only">Main navigation</RDialog.Description>
-              <Sidebar company={c} collapsed={false} onNavigate={() => setMobileOpen(false)} />
+              <Sidebar company={c} collapsed={false} onNavigate={() => setMobileOpen(false)} onNewTask={() => openNewTask()} />
             </RDialog.Content>
           </RDialog.Portal>
         </RDialog.Root>
@@ -317,6 +360,7 @@ export function AppShell({ cid, children }: { cid: string; children: ReactNode }
               <AccountMenu company={c} onShortcuts={() => setHelpOpen(true)} />
             </div>
           </header>
+          <PlaceTabs company={c} />
           {c.is_demo && <DemoBanner />}
           <main id="main" tabIndex={-1} className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-[calc(56px+env(safe-area-inset-bottom))] focus:outline-none lg:pb-0">
             <div key={pathname} className="flex flex-1 animate-rise-in flex-col">{children}</div>
@@ -341,7 +385,17 @@ export function AppShell({ cid, children }: { cid: string; children: ReactNode }
             ))}
           </dl>
         </Dialog>
+        {newTask.open && (
+          <NewTaskDialog
+            key={newTask.agentId ?? "any"}
+            cid={cid}
+            open={newTask.open}
+            defaultAgentId={newTask.agentId}
+            onOpenChange={(open) => setNewTask((s) => ({ ...s, open }))}
+          />
+        )}
       </div>
+    </NewTaskContext.Provider>
     </SlotContext.Provider>
   );
 }
@@ -352,6 +406,8 @@ export function AppShell({ cid, children }: { cid: string; children: ReactNode }
  */
 export function PageHeader({ title, description, actions, meta }: { title: string; description?: string; actions?: ReactNode; meta?: ReactNode }) {
   const slots = useContext(SlotContext);
+  const pathname = usePathname();
+  const detail = pathname.split("/").length > 4;
   // Mount the actions once: in the topbar on laptops and desktops, in a row above the content on tablets and phones.
   const desktop = useMediaQuery("(min-width: 1024px)");
   return (
@@ -359,9 +415,8 @@ export function PageHeader({ title, description, actions, meta }: { title: strin
       {slots.title &&
         createPortal(
           <>
-            <h1 className="truncate text-[14px] font-semibold tracking-[-0.01em] text-fg" title={description}>{title}</h1>
+            <h1 className={cx("truncate text-sm font-bold text-fg", !detail && "tracking-wider uppercase")} title={description}>{title}</h1>
             {meta && desktop && <div className="flex shrink-0 items-center gap-1.5">{meta}</div>}
-            {description && <p className="hidden truncate text-[13px] text-faint 2xl:block">{description}</p>}
           </>,
           slots.title,
         )}

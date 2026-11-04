@@ -33,9 +33,9 @@ function hash(text: string): number {
   return h;
 }
 
-export function AgentAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg" }) {
+export function AgentAvatar({ name, size = "md" }: { name: string; size?: "xs" | "sm" | "md" | "lg" }) {
   const initials = name.split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase();
-  const sizes = { sm: "size-6 rounded-[7px] text-2xs", md: "size-8 rounded-lg text-xs", lg: "size-11 rounded-xl text-sm" };
+  const sizes = { xs: "size-5 rounded-md text-[9px]", sm: "size-6 rounded-[7px] text-2xs", md: "size-8 rounded-lg text-xs", lg: "size-11 rounded-xl text-sm" };
   return (
     <span aria-hidden className={cx("inline-flex shrink-0 items-center justify-center font-semibold ring-1 ring-white/[0.06] ring-inset", TINTS[hash(name) % TINTS.length], sizes[size])}>
       {initials || <Bot className="size-3.5" />}
@@ -509,7 +509,7 @@ export function ApprovalCard({ approval, onDecide, busy, readOnly, risk, agentRo
         <p className="mb-1.5 text-2xs font-medium tracking-wide text-faint uppercase">
           {approval.payload.email ? "Exactly the e-mail that would be sent" : action ? "Exactly what would leave Select" : "Result to accept"}
         </p>
-        <pre className="max-h-64 overflow-auto rounded-lg border border-line-soft bg-canvas px-3 py-2.5 font-mono text-xs leading-relaxed whitespace-pre-wrap text-fg">
+        <pre className="max-h-[28rem] overflow-auto rounded-lg border border-line-soft bg-canvas px-3 py-2.5 font-mono text-xs leading-relaxed whitespace-pre-wrap text-fg">
           {approval.payload.preview.join("\n")}
         </pre>
       </div>
@@ -581,7 +581,7 @@ export function CostMetric({ label, amount, currency, kind, hint }: { label: str
           </Tooltip>
         )}
       </div>
-      <div className="mt-1 text-[22px] leading-7 font-semibold tracking-[-0.02em] tabular">{money(amount, currency, 4)}</div>
+      <div className="mt-1 text-[22px] leading-7 font-bold tracking-[-0.02em] tabular">{money(amount, currency, 4)}</div>
       {hint && <div className="mt-0.5 text-xs text-faint">{hint}</div>}
     </div>
   );

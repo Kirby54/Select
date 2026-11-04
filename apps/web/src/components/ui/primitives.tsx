@@ -315,7 +315,7 @@ export function CardHeader({ title, description, actions, className }: { title: 
   return (
     <div className={cx("flex min-h-11 items-center justify-between gap-3 border-b border-line-soft px-4 py-2.5", className)}>
       <div className="min-w-0">
-        <h2 className="text-[13px] font-semibold text-fg">{title}</h2>
+        <h2 className="text-xs font-semibold tracking-wide text-muted uppercase">{title}</h2>
         {description && <p className="mt-0.5 text-xs text-muted">{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-1.5">{actions}</div>}
@@ -330,7 +330,7 @@ export function Stat({ label, value, hint, tone, className }: { label: ReactNode
       <div className="truncate text-xs text-muted">{label}</div>
       <div
         className={cx(
-          "mt-1 text-[22px] leading-7 font-semibold tracking-[-0.02em] tabular",
+          "mt-1 text-[22px] leading-7 font-bold tracking-[-0.02em] tabular",
           tone === "danger" ? "text-danger" : tone === "warning" ? "text-warning" : tone === "autonomous" ? "text-autonomous" : "text-fg",
         )}
       >

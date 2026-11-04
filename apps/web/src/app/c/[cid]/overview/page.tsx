@@ -1,21 +1,20 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertOctagon, ArrowDownRight, ArrowRight, ClipboardCheck, Mail, OctagonX, Play, RotateCcw, Send } from "lucide-react";
+import { AlertOctagon, ArrowDownRight, ArrowRight, Bot, CircleDollarSign, CircleDot, ClipboardCheck, Mail, OctagonX, Play, RotateCcw, Send, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 
-import { TaskWeek } from "@/components/charts";
-import { ActivityTimeline, LEVELS, LEVEL_LABEL, LevelMeter } from "@/components/domain";
+import { ActivityTimeline } from "@/components/domain";
 import { PageBody, PageHeader } from "@/components/shell/app-shell";
 import { EmptyState, ErrorState, LoadingRows, useToast } from "@/components/ui/feedback";
-import { ConfirmDialog, Tooltip } from "@/components/ui/overlay";
-import { Badge, Button, Card, CardHeader, DemoTag, Progress, Segmented, Skeleton, cx } from "@/components/ui/primitives";
+import { ConfirmDialog } from "@/components/ui/overlay";
+import { Button, Card, DemoTag, Progress, Skeleton, cx } from "@/components/ui/primitives";
 import { api, errorMessage } from "@/lib/api";
 import { inboxHref, money, percent, relative } from "@/lib/format";
-import { useCompany, useCompanyId, useInbox, useOverview, usePersistentState } from "@/lib/queries";
-import type { Company, InboxItem, Job, Level, Overview } from "@/lib/types";
+import { useAgents, useCompany, useCompanyId, useInbox, useOverview } from "@/lib/queries";
+import type { Company, InboxItem, Job, Overview } from "@/lib/types";
 
 function DemoControls({ company }: { company: Company }) {
   const [jobId, setJobId] = useState<string | null>(null);
@@ -91,90 +90,52 @@ function DemoControls({ company }: { company: Company }) {
   );
 }
 
-/** One cell of the status strip: a label, a tabular figure, one line of context. */
-function StripCell({ label, value, hint, tone, href }: { label: string; value: ReactNode; hint?: ReactNode; tone?: "danger" | "warning"; href?: string }) {
-  const body = (
-    <>
-      <div className="text-xs text-muted">{label}</div>
-      <div className={cx("mt-0.5 text-lg leading-6 font-semibold tracking-[-0.015em] tabular", tone === "danger" ? "text-danger" : tone === "warning" ? "text-warning" : "text-fg")}>{value}</div>
-      {hint && <div className="truncate text-xs text-faint">{hint}</div>}
-    </>
-  );
-  return href ? (
-    <Link href={href} className="block min-w-0 px-4 py-3 transition-colors duration-[120ms] hover:bg-hover">{body}</Link>
-  ) : (
-    <div className="min-w-0 px-4 py-3">{body}</div>
+/** One figure, the way an operator scans it: the number first, its name, one line of context. */
+function Metric({ href, value, label, detail, icon, tone }: { href: string; value: ReactNode; label: string; detail?: ReactNode; icon: ReactNode; tone?: "warning" | "danger" }) {
+  return (
+    <Link href={href} className="group block rounded-xl border border-line bg-surface p-4 transition-colors duration-[120ms] hover:border-line-strong sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className={cx("text-2xl font-bold tracking-tight tabular sm:text-3xl", tone === "danger" ? "text-danger" : tone === "warning" ? "text-warning" : "text-fg")}>{value}</p>
+          <p className="mt-1 text-xs font-semibold text-muted sm:text-sm">{label}</p>
+          {detail && <p className="mt-1.5 hidden truncate text-xs text-faint sm:block">{detail}</p>}
+        </div>
+        <span className="mt-1.5 shrink-0 text-faint [&_svg]:size-4" aria-hidden>{icon}</span>
+      </div>
+    </Link>
   );
 }
 
-function LevelsBar({ levels }: { levels: Record<Level, number> }) {
-  const total = LEVELS.reduce((n, l) => n + levels[l], 0);
-  const color: Record<Level, string> = { supervised: "bg-supervised/70", sampled: "bg-sampled/80", autonomous: "bg-autonomous/85" };
+/** A section heading in capitals above its list. */
+function Heading({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div>
-      <div className="flex h-1.5 gap-[3px] overflow-hidden rounded-full" role="img" aria-label={LEVELS.map((l) => `${levels[l]} ${LEVEL_LABEL[l].toLowerCase()}`).join(", ")}>
-        {total === 0 ? (
-          <span className="h-full w-full rounded-full bg-line-soft" />
-        ) : (
-          [...LEVELS].reverse().filter((l) => levels[l] > 0).map((l) => <span key={l} className={cx("h-full rounded-full", color[l])} style={{ flexGrow: levels[l] }} />)
-        )}
-      </div>
-      <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-        {[...LEVELS].reverse().map((l) => (
-          <li key={l} className="inline-flex items-center gap-1.5">
-            <LevelMeter level={l} />
-            <span className="tabular text-fg">{levels[l]}</span> {LEVEL_LABEL[l].toLowerCase()}
-          </li>
-        ))}
-      </ul>
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">{children}</h2>
+      {action}
     </div>
   );
 }
 
-function AutonomyHero({ o, cid }: { o: Overview; cid: string }) {
+/** The honest counter in one line: work finished without a person, next to the errors found afterwards. */
+function AutonomyLine({ o, cid }: { o: Overview; cid: string }) {
   const a = o.autonomy;
-  const demo = o.is_demo || a.includes_demo;
   return (
-    <Card aria-label="Autonomy">
-      <div className="grid gap-6 border-b border-line-soft p-5 sm:grid-cols-[1fr_auto] sm:items-end">
-        <div>
-          <div className="flex items-center gap-2 text-xs text-muted">
-            Autonomy, last {o.period_days} days
-            {demo && <DemoTag />}
-          </div>
-          <div className="mt-2.5 flex flex-wrap items-end gap-x-4 gap-y-1">
-            <span className="text-hero font-semibold text-fg tabular">{percent(a.autonomy_rate)}</span>
-            <span className="pb-1">
-              <span className="block text-[13px] text-muted">of finished work ran without a human</span>
-              <span className="block text-xs text-faint">
-                {a.finished ? `${a.autonomous} of ${a.finished} finished` : "No finished task yet"} · from the event log
-              </span>
-            </span>
-          </div>
-        </div>
-        <Tooltip content="Share of the tasks reviewed by a human after the fact where the human found an error. Always shown next to the autonomy rate.">
-          <div tabIndex={0} className="rounded-xl border border-line-soft bg-canvas/40 px-4 py-3 sm:min-w-52">
-            <div className="text-xs text-muted">Errors found afterwards</div>
-            <div className={cx("mt-1 text-[22px] leading-7 font-semibold tracking-[-0.02em] tabular", a.undetected_errors ? "text-danger" : "text-fg")}>
-              {a.undetected_error_measurable ? percent(a.undetected_error_rate, 1) : "Not yet measurable"}
-            </div>
-            <div className="mt-0.5 text-xs text-faint">
-              {a.undetected_error_measurable ? `${a.undetected_errors} in ${a.reviewed} reviewed` : `${a.reviewed} reviewed; 5 needed`}
-            </div>
-          </div>
-        </Tooltip>
-      </div>
-      <TaskWeek series={o.series.slice(-7)} />
-      <div className="flex flex-col gap-3 border-t border-line-soft px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0 flex-1 sm:max-w-md">
-          <div className="mb-2 text-xs text-muted">Licences by level</div>
-          <LevelsBar levels={o.levels} />
-        </div>
-        <Link href={`/c/${cid}/autonomy`} className="inline-flex items-center gap-1 self-start text-xs font-medium text-accent hover:text-accent-strong sm:self-end">
-          Open Autonomy <ArrowRight className="size-3.5" aria-hidden />
-        </Link>
-      </div>
-    </Card>
+    <Link href={`/c/${cid}/autonomy`} className="flex flex-wrap items-center gap-x-6 gap-y-1 rounded-xl border border-line bg-surface px-4 py-3 text-compact transition-colors duration-[120ms] hover:border-line-strong">
+      <span className="inline-flex items-center gap-2 text-muted">
+        <ShieldCheck className="size-4 text-faint" aria-hidden />
+        Last {o.period_days} days
+        {(o.is_demo || a.includes_demo) && <DemoTag />}
+      </span>
+      <span>
+        <span className="font-semibold text-fg tabular">{percent(a.autonomy_rate)}</span>{" "}
+        <span className="text-muted">{a.finished ? `finished without a person (${a.autonomous} of ${a.finished} finished)` : "finished without a person · no finished task yet"}</span>
+      </span>
+      <span>
+        <span className={cx("font-semibold tabular", a.undetected_errors ? "text-danger" : "text-fg")}>{a.undetected_error_measurable ? percent(a.undetected_error_rate, 1) : "—"}</span>{" "}
+        <span className="text-muted">{a.undetected_error_measurable ? `errors found afterwards (${a.undetected_errors} in ${a.reviewed} reviewed)` : `errors found afterwards · measurable after 5 reviews (${a.reviewed} so far)`}</span>
+      </span>
+      <ArrowRight className="ml-auto size-4 text-faint" aria-hidden />
+    </Link>
   );
 }
 
@@ -190,109 +151,74 @@ function NeedsYou({ cid }: { cid: string }) {
   const inbox = useInbox(cid);
   const items = inbox.data?.items ?? [];
   return (
-    <Card aria-label="Needs you" className="flex flex-col">
-      <CardHeader
-        title="Needs you"
-        description={items.length ? `${items.length} decision${items.length > 1 ? "s" : ""} only a human can make` : undefined}
-        actions={items.length > 0 ? <Link href={`/c/${cid}/approvals`} className="text-xs font-medium text-accent hover:text-accent-strong">Review</Link> : null}
-      />
-      {inbox.isPending ? (
-        <div className="space-y-2 p-4">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-10" />)}</div>
-      ) : items.length === 0 ? (
-        <EmptyState compact icon={<ClipboardCheck />} title="Nothing waits for you" description="Approvals, blocked tasks and demotions show up here." />
-      ) : (
-        <ul className="divide-y divide-line-soft">
-          {items.slice(0, 6).map((item) => (
-            <li key={`${item.kind}-${item.id}`}>
-              <Link
-                href={inboxHref(cid, item)}
-                className="flex items-start gap-3 px-4 py-2.5 transition-colors duration-[120ms] hover:bg-hover"
-              >
-                <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-surface-2">{INBOX_ICON[item.kind]}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] text-fg">{item.title}</span>
-                  <span className="block truncate text-xs text-faint">{item.detail} · {relative(item.created_at)}</span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-      {items.length > 6 && (
-        <Link href={`/c/${cid}/inbox`} className="mt-auto block border-t border-line-soft px-4 py-2 text-xs text-muted hover:text-fg">
-          {items.length - 6} more in Inbox
-        </Link>
-      )}
-    </Card>
+    <section aria-label="Needs you">
+      <Heading action={items.length > 6 ? <Link href={`/c/${cid}/inbox`} className="text-xs font-medium text-accent hover:text-accent-strong">All {items.length}</Link> : null}>Needs you</Heading>
+      <Card>
+        {inbox.isPending ? (
+          <div className="space-y-2 p-4">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-10" />)}</div>
+        ) : items.length === 0 ? (
+          <EmptyState compact icon={<ClipboardCheck />} title="Nothing waits for you" />
+        ) : (
+          <ul className="divide-y divide-line-soft">
+            {items.slice(0, 6).map((item) => (
+              <li key={`${item.kind}-${item.id}`}>
+                <Link href={inboxHref(cid, item)} className="flex items-start gap-3 px-4 py-2.5 transition-colors duration-[120ms] hover:bg-hover">
+                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-surface-2">{INBOX_ICON[item.kind]}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm text-fg">{item.title}</span>
+                    <span className="block truncate text-xs text-faint">{item.detail}</span>
+                  </span>
+                  <span className="shrink-0 text-xs text-faint">{relative(item.created_at)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </section>
   );
 }
 
-function Spend({ o, company }: { o: Overview; company: Company }) {
-  const budget = Number(o.costs.monthly_budget);
-  const spent = Number(o.costs.month_live);
+function RecentActivity({ o, company: c }: { o: Overview; company: Company }) {
+  const cid = c.id;
   return (
-    <Card aria-label="Spend">
-      <CardHeader title="Spend" description="Live runs, estimated from token counts" actions={<Link href={`/c/${company.id}/costs`} className="text-xs font-medium text-accent hover:text-accent-strong">Costs</Link>} />
-      <div className="space-y-4 px-4 py-4">
-        <div>
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="text-xs text-muted">This month</span>
-            <span className="text-xs text-faint tabular">{budget > 0 ? `budget ${money(o.costs.monthly_budget, "USD")}` : "no budget set"}</span>
-          </div>
-          <div className="mt-1 text-[22px] leading-7 font-semibold tracking-[-0.02em] tabular">{money(o.costs.month_live, "USD", 2)}</div>
-          {budget > 0 && <Progress className="mt-2" value={spent} max={budget} tone={spent / budget > 0.9 ? "danger" : spent / budget > 0.7 ? "supervised" : "accent"} label="Monthly budget used" />}
-          {o.costs.budget_remaining !== null && <p className="mt-1.5 text-xs text-faint">{money(o.costs.budget_remaining, "USD")} left · runs stop at the budget</p>}
-        </div>
-        <dl className="grid grid-cols-2 gap-3 border-t border-line-soft pt-3 text-xs">
-          <div>
-            <dt className="text-muted">Last {o.period_days} days</dt>
-            <dd className="mt-0.5 text-[13px] text-fg tabular">{money(o.costs.period_live, "USD", 4)}</dd>
-          </div>
-          {o.is_demo && (
-            <div>
-              <dt className="flex items-center gap-1.5 text-muted">Recorded <DemoTag /></dt>
-              <dd className="mt-0.5 text-[13px] text-fg tabular">{money(o.costs.period_demo, "USD", 4)}</dd>
-            </div>
-          )}
-        </dl>
-      </div>
-    </Card>
+    <section aria-label="Recent activity">
+      <Heading action={<Link href={`/c/${cid}/activity`} className="text-xs font-medium text-accent hover:text-accent-strong">All activity</Link>}>Recent activity</Heading>
+      <Card>
+        {o.recent.length === 0 ? (
+          <EmptyState
+            compact
+            title="Nothing has happened yet"
+            description={c.is_demo ? "Press “Run demo week” to replay a week in the workshop." : undefined}
+            action={!c.is_demo ? <Link href={`/c/${cid}/agents?new=1`} className="text-sm font-medium text-accent hover:text-accent-strong">Add your first agent</Link> : undefined}
+          />
+        ) : (
+          <ActivityTimeline events={o.recent.slice(0, 8)} dense />
+        )}
+      </Card>
+    </section>
   );
 }
 
 function OverviewInner() {
   const cid = useCompanyId();
   const company = useCompany(cid);
-  const [days, setDays] = usePersistentState<number>("overview.days", 7);
-  const overview = useOverview(cid, days);
+  const overview = useOverview(cid, 30);
+  const inbox = useInbox(cid);
+  const agents = useAgents(cid);
 
-  const header = (c?: Company) => (
-    <PageHeader
-      title="Overview"
-      description="What runs on its own, what needs you"
-      actions={
-        <>
-          <Segmented
-            label="Period"
-            value={String(days)}
-            onChange={(v) => setDays(Number(v))}
-            options={[{ value: "7", label: "7 days" }, { value: "30", label: "30 days" }, { value: "90", label: "90 days" }]}
-          />
-          {c?.is_demo && <DemoControls company={c} />}
-        </>
-      }
-    />
-  );
+  const header = (c?: Company) => <PageHeader title="Home" actions={c?.is_demo ? <DemoControls company={c} /> : undefined} />;
 
   if (overview.isPending || company.isPending) {
     return (
       <>
         {header(company.data)}
         <PageBody>
-          <Skeleton className="h-16 w-full rounded-xl" />
-          <div className="grid gap-4 lg:grid-cols-3">
-            <Skeleton className="h-96 rounded-xl lg:col-span-2" />
-            <Skeleton className="h-96 rounded-xl" />
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>
+          <Skeleton className="h-12 rounded-xl" />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Skeleton className="h-72 rounded-xl" />
+            <Skeleton className="h-72 rounded-xl" />
           </div>
         </PageBody>
       </>
@@ -302,68 +228,49 @@ function OverviewInner() {
   if (company.isError) return <ErrorState error={company.error} />;
   const o = overview.data;
   const c = company.data;
+  const working = (agents.data ?? []).filter((a) => a.working > 0).length;
+  const waiting = inbox.data?.items.length ?? o.approvals_pending;
+  const budget = Number(o.costs.monthly_budget);
+  const waitingDetail = [
+    `${o.approvals_pending} approval${o.approvals_pending === 1 ? "" : "s"}`,
+    o.mail.needs_attention ? `${o.mail.needs_attention} e-mail${o.mail.needs_attention === 1 ? "" : "s"}` : null,
+    o.tasks.blocked ? `${o.tasks.blocked} blocked` : null,
+  ].filter(Boolean).join(" · ");
 
   return (
     <>
       {header(c)}
-      <PageBody>
+      <PageBody className="space-y-6">
         {o.emergency_stop && (
-          <div role="alert" className="flex items-center gap-2.5 rounded-xl border border-danger/35 bg-danger/8 px-4 py-3 text-[13px] text-danger">
+          <div role="alert" className="flex items-center gap-2.5 rounded-xl border border-danger/35 bg-danger/8 px-4 py-3 text-sm text-danger">
             <OctagonX className="size-4 shrink-0" aria-hidden />
-            Emergency stop is on. No run or submission is accepted until it is lifted from the top bar.
+            Emergency stop is on: no agent runs until it is lifted from the top bar.
           </div>
         )}
 
-        <Card aria-label="Company status">
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 [&>*]:border-line-soft max-sm:[&>*:nth-child(odd)]:border-r sm:max-xl:[&>*:not(:nth-child(3n))]:border-r xl:[&>*:not(:last-child)]:border-r max-sm:[&>*:nth-child(n+3)]:border-t sm:max-xl:[&>*:nth-child(n+4)]:border-t">
-            <StripCell label="Agents active" value={`${o.agents.active}/${o.agents.total}`} hint={o.agents.paused ? `${o.agents.paused} paused` : "all on duty"} href={`/c/${cid}/agents`} />
-            <StripCell label="In progress" value={o.tasks.in_progress} hint={`${o.tasks.todo} to do`} href={`/c/${cid}/tasks`} />
-            <StripCell label="Approvals pending" value={o.approvals_pending} tone={o.approvals_pending ? "warning" : undefined} hint="actions waiting" href={`/c/${cid}/approvals`} />
-            <StripCell label="Blocked" value={o.tasks.blocked} tone={o.tasks.blocked ? "danger" : undefined} hint="need a human" href={`/c/${cid}/tasks`} />
-            <StripCell label="Verified results" value={o.receipts.verified} hint={`${o.receipts.failed} failed · ${o.receipts.blocked} missing info`} href={`/c/${cid}/verification`} />
-            <StripCell label="AI spend this month" value={money(o.costs.month_live, "USD", 2)} hint={Number(o.costs.monthly_budget) > 0 ? `of ${money(o.costs.monthly_budget, "USD", 0)} · estimated` : "estimated · no budget"} href={`/c/${cid}/costs`} />
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <Metric href={`/c/${cid}/agents`} value={o.agents.active} label={o.agents.active === 1 ? "Agent active" : "Agents active"} detail={`${working} working now · ${o.agents.paused} paused`} icon={<Bot />} />
+            <Metric href={`/c/${cid}/tasks`} value={o.tasks.in_progress} label="Tasks in progress" detail={`${o.tasks.todo} to do · ${o.tasks.blocked} blocked`} icon={<CircleDot />} />
+            <Metric href={`/c/${cid}/approvals`} value={waiting} label="Waiting for you" detail={waitingDetail} icon={<ClipboardCheck />} tone={waiting ? "warning" : undefined} />
+            <Metric
+              href={`/c/${cid}/costs`}
+              value={money(o.costs.month_live, "USD", 2)}
+              label="AI spend this month"
+              detail={budget > 0 ? `of ${money(o.costs.monthly_budget, "USD", 0)} budget · estimated` : "No budget limit · estimated"}
+              icon={<CircleDollarSign />}
+              tone={budget > 0 && Number(o.costs.month_live) / budget > 0.9 ? "danger" : undefined}
+            />
           </div>
-        </Card>
+          <AutonomyLine o={o} cid={cid} />
+        </div>
 
-        <div className="grid items-start gap-4 lg:grid-cols-3">
-          <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
-            <AutonomyHero o={o} cid={cid} />
-            <RecentActivity o={o} company={c} />
-          </div>
-          <div className="flex min-w-0 flex-col gap-4">
-            <NeedsYou cid={cid} />
-            <Spend o={o} company={c} />
-          </div>
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          <NeedsYou cid={cid} />
+          <RecentActivity o={o} company={c} />
         </div>
       </PageBody>
     </>
-  );
-}
-
-function RecentActivity({ o, company: c }: { o: Overview; company: Company }) {
-  const cid = c.id;
-  return (
-        <Card aria-label="Recent activity">
-          <CardHeader
-            title="Recent activity"
-            actions={
-              <>
-                {o.is_demo && <Badge>Replayed demo events included</Badge>}
-                <Link href={`/c/${cid}/activity`} className="text-xs font-medium text-accent hover:text-accent-strong">All activity</Link>
-              </>
-            }
-          />
-          {o.recent.length === 0 ? (
-            <EmptyState
-              compact
-              title="Nothing has happened yet"
-              description={c.is_demo ? "Press “Run demo week” to replay a week in the workshop." : "Add an agent, give it a task, and every step will be recorded here."}
-              action={!c.is_demo ? <Link href={`/c/${cid}/agents?new=1`} className="text-[13px] font-medium text-accent hover:text-accent-strong">Add your first agent</Link> : undefined}
-            />
-          ) : (
-            <ActivityTimeline events={o.recent.slice(0, 8)} dense />
-          )}
-        </Card>
   );
 }
 

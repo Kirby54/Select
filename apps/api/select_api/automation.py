@@ -162,6 +162,15 @@ def connected_providers(db: Session, company_id: uuid.UUID) -> set[str]:
     return {c.provider for c in rows if c.secret_encrypted or c.provider == "ollama"}
 
 
+# Free-form work any agent may take. Its contract sends every result to a person, whatever the
+# agent's autonomy, so allowing it everywhere never lets anything leave unreviewed.
+ANY_AGENT_TASK_TYPES = frozenset({"general_task"})
+
+
+def may_do(agent: Agent, task_type: str) -> bool:
+    return task_type in ANY_AGENT_TASK_TYPES or task_type in (agent.task_types or [])
+
+
 def pick_agent(db: Session, company_id: uuid.UUID, task_type: str) -> Agent | None:
     """The active agent allowed to do ``task_type`` that is connected and least busy."""
     candidates = [

@@ -11,17 +11,30 @@ export function formatDay(value: string | null | undefined): string {
   return dayFmt.format(new Date(value));
 }
 
+/** Past dates read "5 min ago", future ones "in 5 min" (next runs of a routine). */
 export function relative(value: string | null | undefined, now = Date.now()): string {
   if (!value) return "—";
   const seconds = Math.round((now - new Date(value).getTime()) / 1000);
-  if (seconds < 45) return "just now";
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes} min ago`;
+  if (Math.abs(seconds) < 45) return "just now";
+  const say = (amount: string) => (seconds < 0 ? `in ${amount}` : `${amount} ago`);
+  const minutes = Math.round(Math.abs(seconds) / 60);
+  if (minutes < 60) return say(`${minutes} min`);
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} h ago`;
+  if (hours < 24) return say(`${hours} h`);
   const days = Math.round(hours / 24);
-  if (days < 30) return `${days} d ago`;
+  if (days < 30) return say(`${days} d`);
   return formatDay(value);
+}
+
+/** A date and time as the clock reads in `timeZone` (a routine's or the company's), e.g. "Mon 09 Nov, 08:00". */
+export function formatDateIn(value: string | null | undefined, timeZone: string | undefined): string {
+  if (!value) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone }).format(new Date(value));
+  } catch {
+    // An unknown time zone name (RangeError): fall back to the viewer's own clock.
+    return formatDate(value);
+  }
 }
 
 /** Money arrives as a decimal string; format it without converting to float arithmetic. */

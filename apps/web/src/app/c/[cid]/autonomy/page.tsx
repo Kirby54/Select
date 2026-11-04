@@ -48,13 +48,13 @@ function CounterCard({ v, days }: { v: AutonomyView; days: number }) {
             Finished without a human, last {days} days {c.includes_demo && <DemoTag />}
           </div>
           <div className="mt-2 flex items-baseline gap-3">
-            <span className="text-hero font-semibold tabular">{percent(c.autonomy_rate)}</span>
+            <span className="text-hero font-bold tabular">{percent(c.autonomy_rate)}</span>
             <span className="text-[13px] text-muted">{c.finished ? `${c.autonomous} of ${c.finished} tasks` : "no finished task yet"}</span>
           </div>
         </div>
         <div className="rounded-xl border border-line-soft bg-canvas/40 px-4 py-3 sm:min-w-56">
           <div className="text-xs text-muted">Errors found afterwards</div>
-          <div className={cx("mt-1 text-[22px] leading-7 font-semibold tracking-[-0.02em] tabular", c.undetected_errors ? "text-danger" : "text-fg")}>
+          <div className={cx("mt-1 text-[22px] leading-7 font-bold tracking-[-0.02em] tabular", c.undetected_errors ? "text-danger" : "text-fg")}>
             {c.undetected_error_measurable ? percent(c.undetected_error_rate, 1) : "Not yet measurable"}
           </div>
           <div className="mt-0.5 text-xs text-faint">{c.undetected_errors} in {c.reviewed} human-reviewed{!c.undetected_error_measurable && "; 5 needed"}</div>

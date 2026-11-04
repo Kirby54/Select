@@ -17,7 +17,7 @@ export function AuthFrame({ title, description, children, footer }: { title: str
             <p className="text-xs text-muted">Agents that earn their autonomy</p>
           </div>
         </div>
-        <h1 className="mt-8 text-xl font-semibold tracking-[-0.02em]">{title}</h1>
+        <h1 className="mt-8 text-xl font-bold tracking-[-0.02em]">{title}</h1>
         {description && <p className="mt-2 text-[13px] leading-relaxed text-muted">{description}</p>}
         <Card className="mt-6 p-4 sm:p-5">{children}</Card>
         {footer && <div className="mt-4 text-center text-xs text-muted">{footer}</div>}

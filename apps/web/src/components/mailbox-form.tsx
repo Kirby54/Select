@@ -240,9 +240,11 @@ export function MailboxForm({ cid, companyName, mailbox, onSaved, submitLabel = 
               </Field>
             </div>
             <Field label="Folder" htmlFor="imap-folder"><Input id="imap-folder" value={draft.imap_folder} onChange={(e) => set("imap_folder", e.target.value)} /></Field>
-            <Field label="Also import the last days" htmlFor="imap-days" hint="0 = only mail that arrives from now on (at most 14)">
-              <Input id="imap-days" inputMode="numeric" value={draft.import_days} onChange={(e) => set("import_days", e.target.value)} className="tabular" />
-            </Field>
+            <div className="sm:col-span-2">
+              <Field label="Also import the last days" htmlFor="imap-days" hint="0 = only mail that arrives from now on (at most 14)">
+                <Input id="imap-days" inputMode="numeric" value={draft.import_days} onChange={(e) => set("import_days", e.target.value)} className="tabular sm:w-24" />
+              </Field>
+            </div>
           </div>
         )}
       </Section>

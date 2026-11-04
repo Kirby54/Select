@@ -8,9 +8,11 @@
  * called by this test.
  *
  *   E2E_PASSWORD_BASE_URL=http://localhost:3101 E2E_SENT_DIR=/path/to/sent npx playwright test complete
+ *
+ * With E2E_SCREENSHOTS_DIR set, the run also saves real captures of these pages (README images).
  */
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,14 +23,16 @@ const IMAP_PORT = process.env.E2E_IMAP_PORT ?? "1143";
 const SMTP_PORT = process.env.E2E_SMTP_PORT ?? "1025";
 const SENT_DIR = process.env.E2E_SENT_DIR;
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
+const SHOTS = process.env.E2E_SCREENSHOTS_DIR;
 const CSRF = { "x-select-csrf": "1" };
 const stamp = Date.now();
-const COMPANY = `Menuiserie Martin ${stamp}`;
+const COMPANY = SHOTS ? "Menuiserie Martin" : `Menuiserie Martin ${stamp}`;
+const MAILBOX = SHOTS ? "contact@menuiserie-martin.test" : `contact-${stamp}@menuiserie-martin.test`;
 const OWNER = { name: "Ahmed", email: `owner-${stamp}@example.com`, password: "a long owner password" };
 const s = (value: string, ref: string) => ({ value, source_ref: ref });
 
 test.skip(!BASE, "needs a stack in password mode (E2E_PASSWORD_BASE_URL) and scripts/dev-mail.py serve");
-test.use({ baseURL: BASE });
+test.use({ baseURL: BASE, ...(SHOTS ? { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 } : {}) });
 test.describe.configure({ mode: "serial" });
 
 let cid = "";
@@ -40,10 +44,25 @@ function dropMail(subject: string, body: string) {
   });
 }
 
+async function shot(page: Page, name: string) {
+  if (!SHOTS) return;
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(400); // let entrance transitions finish
+  await page.screenshot({ path: join(SHOTS, `${name}.png`) });
+}
+
 async function json<T>(page: Page, path: string): Promise<T> {
   const response = await page.request.get(`/api${path}`);
   expect(response.ok(), await response.text()).toBeTruthy();
   return (await response.json()) as T;
+}
+
+async function signIn(page: Page) {
+  await page.goto("/login");
+  await page.getByLabel("E-mail").fill(OWNER.email);
+  await page.getByLabel("Password").fill(OWNER.password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
 }
 
 async function submit(page: Page, taskId: string, output: unknown) {
@@ -64,19 +83,21 @@ test("first visit creates the owner and opens the guided setup", async ({ page }
   // Company: France fills EUR, the French VAT rates, Europe/Paris and French.
   await page.getByLabel("Company name").fill(COMPANY);
   await expect(page.getByLabel("VAT rates (%)")).toHaveValue("20, 10, 5.5, 2.1, 0");
+  await shot(page, "setup-company");
   await page.getByRole("button", { name: "Create the company" }).click();
   await page.waitForURL(/step=team/);
   cid = new URL(page.url()).searchParams.get("c")!;
 
   // Team: the craft template, in French.
   await expect(page.getByRole("radio", { name: /Artisan ou atelier/ })).toBeVisible();
+  await shot(page, "setup-team");
   await page.getByRole("button", { name: "Create this team" }).click();
   await page.waitForURL(/step=model/);
   await page.getByRole("button", { name: "Later" }).click();
 
   // Mailbox: the local IMAP and SMTP servers; the test logs in and sends nothing.
   await page.waitForURL(/step=mailbox/);
-  await page.getByLabel("E-mail address").fill(`contact-${stamp}@menuiserie-martin.test`);
+  await page.getByLabel("E-mail address").fill(MAILBOX);
   await page.locator("#imap-sec").selectOption("none");
   await page.locator("#imap-host").fill("127.0.0.1");
   await page.locator("#imap-port").fill(IMAP_PORT);
@@ -89,6 +110,7 @@ test("first visit creates the owner and opens the guided setup", async ({ page }
   await page.getByRole("button", { name: "Connect and test" }).click();
   await expect(page.getByText(/Reading \(IMAP\):.*message\(s\) in INBOX/)).toBeVisible();
   await expect(page.getByText("Sending (SMTP): signed in; nothing was sent")).toBeVisible();
+  await shot(page, "setup-mailbox");
   await page.getByRole("button", { name: "Continue" }).click();
 
   // Catalog pasted from a French spreadsheet.
@@ -102,15 +124,16 @@ test("first visit creates the owner and opens the guided setup", async ({ page }
   await expect(page.getByText("2 catalog items", { exact: true })).toBeVisible();
   await expect(page.getByText("No model connected")).toBeVisible();
   await page.getByRole("button", { name: `Open ${COMPANY}` }).click();
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
+  // The craft template's three agents are listed in the sidebar, with Messages since a mailbox is connected.
+  const nav = page.getByRole("navigation", { name: "Main" });
+  await expect(nav.getByRole("link", { name: "Devis" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: /^Messages/ })).toBeVisible();
+  await shot(page, "home");
 });
 
 test("an e-mail is read, triaged, routed, quoted, approved and sent once", async ({ page }) => {
-  await page.goto("/login");
-  await page.getByLabel("E-mail").fill(OWNER.email);
-  await page.getByLabel("Password").fill(OWNER.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
+  await signIn(page);
 
   // Wait until the worker has read the mailbox once: mail older than that is never answered.
   await expect.poll(async () => (await json<{ last_poll_at: string | null }[]>(page, `/companies/${cid}/mailboxes`))[0]?.last_poll_at, { timeout: 60_000 }).not.toBeNull();
@@ -146,30 +169,72 @@ test("an e-mail is read, triaged, routed, quoted, approved and sent once", async
   await page.goto(`/c/${cid}/approvals`);
   await expect(page.getByText("Exactly the e-mail that would be sent")).toBeVisible();
   await expect(page.getByText(/Total TTC\s*: 880,56 €/)).toBeVisible();
-  await expect(page.getByText(/Sent once by e-mail from contact-/)).toBeVisible();
+  await expect(page.getByText(`Sent once by e-mail from ${MAILBOX}.`)).toBeVisible();
+  await shot(page, "approval-email");
+  const approvedAt = Date.now() - 1_000;
   await page.getByRole("button", { name: "Approve" }).click();
   await expect(page.getByText("Decision recorded")).toBeVisible();
 
   await page.goto(`/c/${cid}/messages?view=outbox`);
   await expect(page.getByLabel("Sent e-mails").getByText("Sent", { exact: true })).toBeVisible({ timeout: 30_000 });
   if (SENT_DIR) {
-    const read = () => readdirSync(SENT_DIR).map((f) => readFileSync(join(SENT_DIR, f), "utf8")).filter((m) => m.includes(`contact-${stamp}`));
+    // Files written by the local SMTP server since the approval, from this company's mailbox.
+    const read = () =>
+      readdirSync(SENT_DIR)
+        .filter((f) => statSync(join(SENT_DIR, f)).mtimeMs >= approvedAt)
+        .map((f) => readFileSync(join(SENT_DIR, f), "utf8"))
+        .filter((m) => m.includes(MAILBOX));
     await expect.poll(() => read().length).toBe(1);
     const sent = read();
     expect(sent[0]).toContain("Subject: Re: Devis plan de travail");
     expect(sent[0]).toContain("X-Select-Review: human-approved");
   }
+  await shot(page, "messages-sent");
   await page.goto(`/c/${cid}/messages`);
   await page.getByRole("radio", { name: "All" }).click();
   await expect(page.getByText("Handled").first()).toBeVisible();
+  await shot(page, "messages");
+});
+
+test.describe("seen from another time zone", () => {
+  // The viewer's browser is in New York; the company works on Paris time.
+  test.use({ timezoneId: "America/New_York" });
+
+  test("a routine creates a task every week, in the company's time zone", async ({ page }) => {
+    await signIn(page);
+    await page.goto(`/c/${cid}/routines`);
+    await page.getByRole("button", { name: "New routine" }).first().click();
+    const dialog = page.getByRole("dialog", { name: "New routine" });
+    await expect(dialog.getByText(/in Europe\/Paris/)).toBeVisible();
+    await dialog.getByLabel("Name").fill("Relance des devis");
+    await dialog.getByLabel("Time").fill("08:00");
+    await expect(dialog.getByText(/^Next: Mon \d{2} [A-Z][a-z]{2}, 08:00 · /)).toBeVisible();
+    await dialog.getByLabel("Task title").fill("Relancer les devis sans réponse");
+    await dialog.getByLabel("Instructions for the task").fill("Liste les devis envoyés il y a plus de 7 jours sans réponse du client.");
+    await dialog.getByLabel("Agent").selectOption({ label: "Courrier · Tri des e-mails entrants" });
+    await dialog.getByRole("button", { name: "Create routine" }).click();
+
+    await expect(page.getByText("Every Monday at 08:00 · Europe/Paris")).toBeVisible();
+    // The next run reads on the company's clock: a Monday at 08:00, whatever the viewer's time zone.
+    await expect(page.getByText(/^Mon \d{2} [A-Z][a-z]{2}, 08:00$/)).toBeVisible();
+    await expect(page.getByRole("switch", { name: "Relance des devis on or off" })).toHaveAttribute("aria-checked", "true");
+    const routines = await json<{ cron: string; enabled: boolean }[]>(page, `/companies/${cid}/routines`);
+    expect(routines.map((r) => [r.cron, r.enabled])).toEqual([["0 8 * * 1", true]]);
+
+    // "Run now" creates the task without moving the schedule. No model is connected, so it waits.
+    await page.getByRole("button", { name: "Actions for Relance des devis" }).click();
+    await page.getByRole("menuitem", { name: "Run now" }).click();
+    await expect(page.getByText(/T-\d+ created/)).toBeVisible();
+    const tasks = await json<{ items: { title: string; assignee_name: string; origin: string }[] }>(page, `/companies/${cid}/tasks?task_type=general_task`);
+    expect(tasks.items.map((t) => [t.title, t.assignee_name, t.origin])).toEqual([["Relancer les devis sans réponse", "Courrier", "routine"]]);
+    await page.reload();
+    await expect(page.getByText(/1 run, last/)).toBeVisible();
+    await shot(page, "routines");
+  });
 });
 
 test("an invited colleague chooses a password and joins", async ({ page, browser }) => {
-  await page.goto("/login");
-  await page.getByLabel("E-mail").fill(OWNER.email);
-  await page.getByLabel("Password").fill(OWNER.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
+  await signIn(page);
   await page.goto(`/c/${cid}/settings?section=people`);
   await page.getByLabel("E-mail address to invite").fill(`lea-${stamp}@example.com`);
   await page.getByRole("button", { name: "Create link" }).click();

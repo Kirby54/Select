@@ -344,7 +344,9 @@ def company_out(c: Company, role: str) -> dict[str, Any]:
     }
 
 
-def agent_out(a: Agent, trust: list[Trust] | None = None, connected: bool | None = None) -> dict[str, Any]:
+def agent_out(
+    a: Agent, trust: list[Trust] | None = None, connected: bool | None = None, working: int = 0
+) -> dict[str, Any]:
     return {
         "id": str(a.id),
         "name": a.name,
@@ -364,6 +366,8 @@ def agent_out(a: Agent, trust: list[Trust] | None = None, connected: bool | None
         "is_demo_agent": bool((a.config or {}).get("demo_key")),
         # "connected" is only true when a live run could actually start.
         "connected": connected,
+        # Runs queued or running for this agent now (the "working" dot in the interface).
+        "working": working,
         "trust": [trust_out(t) for t in (trust or [])],
         "created_at": iso(a.created_at),
         "updated_at": iso(a.updated_at),

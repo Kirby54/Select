@@ -344,7 +344,7 @@ def task_from_message(message_id: uuid.UUID, body: MessageTaskIn, ctx: CompanyDe
         agent = db.get(Agent, body.assignee_id)
         if agent is None or agent.company_id != ctx.company.id:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Unknown agent.")
-        if body.task_type not in (agent.task_types or []):
+        if not automation.may_do(agent, body.task_type):
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_CONTENT, f"{agent.name} is not allowed to do '{body.task_type}'."
             )
@@ -511,7 +511,7 @@ def _check_routine(db: DbDep, company_id: uuid.UUID, cron: str, tz: str, task_ty
     agent = db.get(Agent, agent_id)
     if agent is None or agent.company_id != company_id:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Unknown agent.")
-    if task_type not in (agent.task_types or []):
+    if not automation.may_do(agent, task_type):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"{agent.name} is not allowed to do '{task_type}'.")
     return agent
 

@@ -42,7 +42,7 @@ test("full vertical slice through the interface", async ({ page }) => {
   const name = `E2E Atelier ${Date.now()}`;
   // 1-3. Start, open the dashboard and create a company with the guided setup.
   const cid = await createCompany(page, name);
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
   // Catalog through the API (the settings screen has its own test below).
   const put = await page.request.put(`/api/companies/${cid}/catalog`, { data: CATALOG });
   expect(put.ok()).toBeTruthy();
@@ -58,13 +58,13 @@ test("full vertical slice through the interface", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Lea" })).toBeVisible();
   await expect(page.getByText("Not connected")).toBeVisible();
 
-  // 5. Create a task.
-  await page.goto(`/c/${cid}/tasks`);
-  await page.getByRole("button", { name: "New task" }).first().click();
+  // 5. Create a task from the sidebar: a title and an agent, the task type under "More options".
+  await page.getByRole("navigation", { name: "Main" }).getByRole("button", { name: "New task" }).click();
   const taskDialog = page.getByRole("dialog");
   await taskDialog.getByLabel("Title").fill("Quote for Jonas");
+  await taskDialog.getByRole("button", { name: "More options" }).click();
   await taskDialog.getByLabel("Task type").selectOption("quote");
-  await taskDialog.getByLabel("Assignee").selectOption({ label: "Lea · Sales" });
+  await taskDialog.getByLabel("Agent").selectOption({ label: "Lea · Sales" });
   await taskDialog.getByLabel(/Source material/).fill(REQUEST);
   await taskDialog.getByRole("button", { name: "Create task" }).click();
   await expect(page.getByRole("heading", { name: "Quote for Jonas" })).toBeVisible();
@@ -90,10 +90,10 @@ test("full vertical slice through the interface", async ({ page }) => {
   await expect(page.getByText(/approved T-1/)).toBeVisible();
   await expect(page.getByText("T-1 quote v2: verified")).toBeVisible();
 
-  // 12. Indicators updated.
+  // 12. Indicators updated: no approval left; the approved e-mail waits for a mailbox, and Home says so.
   await page.goto(`/c/${cid}/overview`);
   await expect(page.getByText("0 of 1 finished")).toBeVisible();
-  await expect(page.getByText("Verified results")).toBeVisible();
+  await expect(page.getByText("0 approvals · 1 e-mail")).toBeVisible();
   await page.goto(`/c/${cid}/autonomy`);
   await expect(page.getByRole("cell", { name: "Lea" })).toBeVisible();
   await expect(page.getByText("1 ok · 0 failed")).toBeVisible();
@@ -132,7 +132,7 @@ test("keyboard: Ctrl+K opens the command palette and navigates", async ({ page }
   await page.goto("/?demo=1");
   await companyId(page);
   // Wait for the shell to be interactive before using its shortcuts.
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
   await page.keyboard.press("Control+K");
   await page.getByPlaceholder("Search tasks, agents, pages…").fill("autonomy");
   await page.keyboard.press("Enter");

@@ -71,7 +71,7 @@ function StepFrame({ title, description, children, footer }: { title: string; de
   return (
     <Card className="flex flex-col">
       <div className="border-b border-line-soft px-4 py-4 sm:px-5">
-        <h1 className="text-[17px] font-semibold tracking-[-0.015em]">{title}</h1>
+        <h1 className="text-[17px] font-bold tracking-[-0.015em]">{title}</h1>
         <p className="mt-1 text-[13px] leading-relaxed text-muted">{description}</p>
       </div>
       <div className="px-4 py-4 sm:px-5">{children}</div>
