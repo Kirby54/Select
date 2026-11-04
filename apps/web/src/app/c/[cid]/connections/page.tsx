@@ -1,16 +1,18 @@
 "use client";
 
-import { CheckCircle2, Cloud, ExternalLink, KeyRound, Server, XCircle } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, Cloud, ExternalLink, Inbox, KeyRound, Mail, Plus, RefreshCw, Send, Server, XCircle } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
+import { MailboxForm } from "@/components/mailbox-form";
 import { PageBody, PageHeader } from "@/components/shell/app-shell";
-import { ErrorState, LoadingRows } from "@/components/ui/feedback";
+import { EmptyState, ErrorState, LoadingRows } from "@/components/ui/feedback";
 import { ConfirmDialog, Dialog } from "@/components/ui/overlay";
 import { Badge, Button, Card, Field, Input, Switch, Textarea } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
 import { relative } from "@/lib/format";
-import { useAction, useCompany, useCompanyId, useConnections } from "@/lib/queries";
-import type { Connection } from "@/lib/types";
+import { useAction, useCompany, useCompanyId, useConnections, useMailboxes } from "@/lib/queries";
+import type { Connection, Mailbox } from "@/lib/types";
 
 function pricesToText(prices: Connection["prices"]): string {
   return Object.entries(prices ?? {}).map(([m, p]) => `${m} ${p.input} ${p.output}`).join("\n");
@@ -83,7 +85,112 @@ function StatusBadge({ c }: { c: Connection }) {
   return <Badge tone="accent">Not tested yet</Badge>;
 }
 
-export default function ConnectionsPage() {
+function MailboxState({ m }: { m: Mailbox }) {
+  return (
+    <dl className="space-y-1 text-xs">
+      <div className="flex items-start gap-1.5">
+        <Inbox className="mt-px size-3 shrink-0 text-faint" aria-hidden />
+        <dt className="sr-only">Reading</dt>
+        <dd className={m.inbound_enabled && m.last_poll_ok === false ? "text-danger" : "text-muted"}>
+          {!m.inbound_enabled ? "Reading off" :
+            m.last_poll_ok === false ? `Reading failed: ${m.last_poll_error}` :
+            m.last_poll_at ? `Reading ${m.imap_folder} · checked ${relative(m.last_poll_at)}` : "Reading on · first check within two minutes"}
+        </dd>
+      </div>
+      <div className="flex items-start gap-1.5">
+        <Send className="mt-px size-3 shrink-0 text-faint" aria-hidden />
+        <dt className="sr-only">Sending</dt>
+        <dd className={m.outbound_enabled && m.last_smtp_test_ok === false ? "text-danger" : "text-muted"}>
+          {!m.outbound_enabled ? "Sending off: approved replies wait, ready to copy" :
+            m.last_smtp_test_ok === false ? `Sending test failed: ${m.last_smtp_error}` :
+            m.last_smtp_test_ok ? `Sending through ${m.smtp_host} · tested ${relative(m.last_smtp_test_at)}` : `Sending through ${m.smtp_host} · not tested yet`}
+        </dd>
+      </div>
+    </dl>
+  );
+}
+
+function Mailboxes({ cid, companyName, canAdmin, demo }: { cid: string; companyName: string; canAdmin: boolean; demo: boolean }) {
+  const mailboxes = useMailboxes(cid);
+  const params = useSearchParams();
+  const router = useRouter();
+  const [editing, setEditing] = useState<Mailbox | "new" | null>(params.get("mailbox") === "new" && canAdmin && !demo ? "new" : null);
+  const poll = useAction(cid, (id: string) => api(`/companies/${cid}/mailboxes/${id}/poll`, { method: "POST" }), { success: "Reading now; new mail appears in Messages" });
+  const remove = useAction(cid, (id: string) => api(`/companies/${cid}/mailboxes/${id}`, { method: "DELETE" }), { success: "Mailbox removed; its passwords were erased" });
+  const close = () => { setEditing(null); if (params.get("mailbox")) router.replace(`/c/${cid}/connections`, { scroll: false }); };
+  return (
+    <section className="space-y-2" aria-labelledby="mailboxes-title">
+      <div className="flex items-end justify-between gap-3 px-1">
+        <div>
+          <h2 id="mailboxes-title" className="text-[13px] font-semibold">Mailboxes</h2>
+          <p className="mt-0.5 text-xs text-muted">Incoming mail becomes triage tasks. Approved replies, and replies an agent&apos;s licence allows, leave from here.</p>
+        </div>
+        {canAdmin && !demo && <Button size="sm" icon={<Plus className="size-3.5" aria-hidden />} onClick={() => setEditing("new")}>Connect a mailbox</Button>}
+      </div>
+      {demo ? (
+        <Card><p className="px-4 py-3 text-[13px] text-muted">The demo company cannot read or send real e-mail.</p></Card>
+      ) : mailboxes.isPending ? (
+        <Card><LoadingRows rows={2} /></Card>
+      ) : mailboxes.isError ? (
+        <Card><ErrorState error={mailboxes.error} retry={() => void mailboxes.refetch()} compact /></Card>
+      ) : mailboxes.data.length === 0 ? (
+        <Card><EmptyState compact icon={<Mail />} title="No mailbox yet" description="Without one, tasks are created by hand and approved replies stay ready to copy." /></Card>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {mailboxes.data.map((m) => (
+            <Card key={m.id} className="flex flex-col">
+              <div className="flex items-start justify-between gap-3 p-4">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface-2 text-muted" aria-hidden><Mail className="size-4" /></span>
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-semibold">{m.address}</p>
+                    <p className="truncate text-xs text-muted">{m.label}{m.display_name ? ` · sends as “${m.display_name}”` : ""}</p>
+                  </div>
+                </div>
+                {(m.inbound_enabled && m.last_poll_ok === false) || (m.outbound_enabled && m.last_smtp_test_ok === false)
+                  ? <Badge tone="danger"><XCircle className="size-3" aria-hidden />Problem</Badge>
+                  : m.inbound_enabled || m.outbound_enabled ? <Badge tone="success"><CheckCircle2 className="size-3" aria-hidden />On</Badge> : <Badge>Off</Badge>}
+              </div>
+              <div className="flex-1 px-4 pb-3"><MailboxState m={m} /></div>
+              {canAdmin && (
+                <div className="flex flex-wrap gap-2 border-t border-line-soft px-4 py-2.5">
+                  <Button size="sm" onClick={() => setEditing(m)}>Edit</Button>
+                  {m.inbound_enabled && <Button size="sm" variant="ghost" icon={<RefreshCw className="size-3.5" aria-hidden />} loading={poll.isPending && poll.variables === m.id} onClick={() => poll.mutate(m.id)}>Read now</Button>}
+                  <ConfirmDialog
+                    trigger={<Button size="sm" variant="ghost" className="ml-auto text-danger hover:text-danger">Remove</Button>}
+                    title={`Remove ${m.address}?`}
+                    description="Select stops reading and sending through it and erases its passwords. E-mails already received stay in Messages."
+                    confirmLabel="Remove"
+                    onConfirm={() => remove.mutateAsync(m.id)}
+                  />
+                </div>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+      {editing && (
+        <Dialog
+          open={!!editing}
+          onOpenChange={(o) => { if (!o) close(); }}
+          wide
+          title={editing === "new" ? "Connect a mailbox" : `Edit ${editing.address}`}
+          description="Passwords are encrypted at rest and never shown again. Saving tests the connection: Select logs in and sends nothing."
+        >
+          <MailboxForm
+            key={editing === "new" ? "new" : editing.id}
+            cid={cid}
+            companyName={companyName}
+            mailbox={editing === "new" ? undefined : editing}
+            onSaved={() => void mailboxes.refetch()}
+          />
+        </Dialog>
+      )}
+    </section>
+  );
+}
+
+function ConnectionsInner() {
   const cid = useCompanyId();
   const company = useCompany(cid);
   const connections = useConnections(cid);
@@ -96,8 +203,14 @@ export default function ConnectionsPage() {
 
   return (
     <>
-      <PageHeader title="Connections" description="Model providers your agents can use; every adapter makes real calls" />
-      <PageBody className="max-w-5xl">
+      <PageHeader title="Connections" description="Model providers your agents use and the mailboxes they read and send from" />
+      <PageBody className="max-w-5xl space-y-8">
+        {company.data && <Mailboxes cid={cid} companyName={company.data.name} canAdmin={canAdmin} demo={company.data.is_demo} />}
+        <section className="space-y-2" aria-labelledby="models-title">
+        <div className="px-1">
+          <h2 id="models-title" className="text-[13px] font-semibold">AI models</h2>
+          <p className="mt-0.5 text-xs text-muted">Every adapter makes real calls with your key. Keys are encrypted; only their last four characters are shown.</p>
+        </div>
         {connections.isPending ? <LoadingRows /> : connections.isError ? <ErrorState error={connections.error} retry={() => void connections.refetch()} /> : (
           <div className="grid gap-3 md:grid-cols-2">
             {connections.data.map((c) => (
@@ -137,8 +250,17 @@ export default function ConnectionsPage() {
           </div>
         )}
         <p className="text-xs text-faint">A test only lists the models the provider offers: no company data is sent. Gemini and Ollama are called through their documented HTTP APIs; Anthropic and OpenAI through their official SDKs.</p>
+        </section>
       </PageBody>
       {editing && <ConnectionDialog cid={cid} connection={editing} open={!!editing} onOpenChange={(o) => !o && setEditing(null)} />}
     </>
+  );
+}
+
+export default function ConnectionsPage() {
+  return (
+    <Suspense fallback={<LoadingRows rows={6} />}>
+      <ConnectionsInner />
+    </Suspense>
   );
 }

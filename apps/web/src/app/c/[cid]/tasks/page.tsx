@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, Columns3, List, ListTodo, Plus, Search } from "lucide-react";
+import { ArrowUpRight, CalendarClock, Columns3, List, ListTodo, Mail, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -50,6 +50,8 @@ function TaskRow({ task, tabbable, selected, onOpen, onFocus, rowRef }: { task: 
       <span className="w-12 shrink-0 font-mono text-xs text-faint">{task.key}</span>
       <StatusIcon status={task.status} />
       <span className="min-w-0 flex-1 truncate text-fg">{task.title}</span>
+      {task.origin === "mail" || task.origin === "routing" ? <Mail className="size-3.5 shrink-0 text-faint" aria-label="From an e-mail" /> : null}
+      {task.origin === "routine" && <CalendarClock className="size-3.5 shrink-0 text-faint" aria-label="Created by a routine" />}
       {task.is_demo && <DemoTag className="hidden sm:inline-flex" />}
       <span className="hidden w-28 shrink-0 truncate text-xs text-muted lg:block">{taskTypeLabel(task.task_type)}</span>
       <span className="hidden w-32 shrink-0 items-center gap-2 truncate text-xs text-muted md:flex">

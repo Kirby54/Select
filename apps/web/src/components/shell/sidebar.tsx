@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronsUpDown, OctagonX, PanelLeftClose, PanelLeftOpen, Plus, Sparkles } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, OctagonX, PanelLeftClose, PanelLeftOpen, Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -45,8 +45,9 @@ function CompanySwitcher({ company, collapsed }: { company: Company; collapsed: 
         { label: company.name, icon: <Check aria-hidden />, onSelect: () => undefined },
         ...others.map((c) => ({ label: c.name, onSelect: () => router.push(`/c/${c.id}/overview`) })),
         "separator" as const,
+        { label: "New company…", icon: <Plus aria-hidden />, onSelect: () => router.push("/new") },
         { label: "Open the demo company", icon: <Sparkles aria-hidden />, onSelect: () => router.push("/?demo=1") },
-        { label: "All companies…", icon: <Plus aria-hidden />, onSelect: () => router.push("/") },
+        { label: "All companies…", icon: <Building2 aria-hidden />, onSelect: () => router.push("/") },
       ]}
     />
   );
@@ -89,6 +90,7 @@ export function Sidebar({ company, collapsed, onToggle, onNavigate }: {
   const badge: Record<string, number | undefined> = {
     inbox: inbox.data ? inbox.data.items.length : undefined,
     approvals: counts?.approvals,
+    messages: counts ? (counts.messages ?? 0) + (counts.deliveries ?? 0) : undefined,
   };
   return (
     <nav aria-label="Main" className="flex h-full flex-col bg-sidebar">

@@ -7,7 +7,8 @@ import type { NextRequest } from "next/server";
 export const dynamic = "force-dynamic";
 
 const API = process.env.SELECT_API_URL ?? "http://127.0.0.1:8000";
-const FORWARDED = ["authorization", "content-type", "accept"];
+// The session cookie and the anti-forgery header must reach the API; nothing else is needed.
+const FORWARDED = ["authorization", "content-type", "accept", "cookie", "x-select-csrf", "user-agent"];
 
 async function forward(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
@@ -32,6 +33,9 @@ async function forward(request: NextRequest, context: { params: Promise<{ path: 
       const value = upstream.headers.get(name);
       if (value) responseHeaders.set(name, value);
     }
+    // Sign-in and sign-out set or clear the session cookie; pass each Set-Cookie through unchanged.
+    for (const cookie of upstream.headers.getSetCookie()) responseHeaders.append("set-cookie", cookie);
+    responseHeaders.set("cache-control", "no-store");
     return new Response(upstream.body, { status: upstream.status, headers: responseHeaders });
   } catch {
     return Response.json(

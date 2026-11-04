@@ -3,7 +3,7 @@
 import * as RDialog from "@radix-ui/react-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { Command } from "cmdk";
-import { Bot, ClipboardCheck, CornerDownLeft, Keyboard, ListTodo, OctagonX, PanelLeft, Play, Plus, Search, UserPlus } from "lucide-react";
+import { Bot, CalendarClock, ClipboardCheck, CornerDownLeft, Keyboard, ListTodo, Mail, OctagonX, PanelLeft, Play, Plus, Search, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -63,6 +63,9 @@ export function CommandPalette({ company, open, onOpenChange, onToggleStop, onTo
     { id: "new-task", label: "New task", icon: <Plus aria-hidden />, words: ["new task", "create task"], hint: "C", show: canWrite, onSelect: () => go(`/c/${company.id}/tasks?new=1`) },
     { id: "new-agent", label: "New agent", icon: <UserPlus aria-hidden />, words: ["new agent", "hire", "add agent"], show: canWrite, onSelect: () => go(`/c/${company.id}/agents?new=1`) },
     { id: "approvals", label: "Review pending approvals", icon: <ClipboardCheck aria-hidden />, words: ["approve", "review", "approvals"], show: true, onSelect: () => go(`/c/${company.id}/approvals`) },
+    { id: "new-routine", label: "New routine", icon: <CalendarClock aria-hidden />, words: ["new routine", "schedule", "recurring"], show: canWrite && !company.is_demo, onSelect: () => go(`/c/${company.id}/routines?new=1`) },
+    { id: "mailbox", label: "Connect a mailbox", icon: <Mail aria-hidden />, words: ["mailbox", "email", "imap", "smtp"], show: canWrite && !company.is_demo, onSelect: () => go(`/c/${company.id}/connections?mailbox=new`) },
+    { id: "invite", label: "Invite someone", icon: <UserPlus aria-hidden />, words: ["invite", "member", "people", "team"], show: !company.is_demo && (company.role === "owner" || company.role === "admin"), onSelect: () => go(`/c/${company.id}/settings?section=people`) },
     { id: "demo", label: "Run demo week", icon: <Play aria-hidden />, words: ["run demo week", "demo"], show: company.is_demo && canWrite, onSelect: () => go(`/c/${company.id}/overview?demo=run`) },
     { id: "sidebar", label: "Collapse or expand the sidebar", icon: <PanelLeft aria-hidden />, words: ["sidebar", "collapse"], hint: "Ctrl B", show: true, onSelect: () => run(onToggleSidebar) },
     { id: "shortcuts", label: "Keyboard shortcuts", icon: <Keyboard aria-hidden />, words: ["keyboard", "shortcuts", "help"], hint: "?", show: true, onSelect: () => run(onShowShortcuts) },

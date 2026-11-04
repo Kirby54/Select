@@ -3,7 +3,7 @@
 import { ClipboardCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { AgentAvatar, ApprovalCard } from "@/components/domain";
+import { AgentAvatar, ApprovalCard, REASON_SHORT } from "@/components/domain";
 import { PageBody, PageHeader } from "@/components/shell/app-shell";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/ui/feedback";
 import { DetailPanel } from "@/components/ui/overlay";
@@ -11,10 +11,8 @@ import { Badge, Card, DemoTag, Segmented, cx } from "@/components/ui/primitives"
 import { api } from "@/lib/api";
 import { relative, taskTypeLabel } from "@/lib/format";
 import { useIsDesktop } from "@/lib/hooks";
-import { useAction, useAgents, useApprovals, useCompany, useCompanyId, useContracts } from "@/lib/queries";
+import { useAction, useAgents, useApprovals, useCompany, useCompanyId, useContracts, useMailboxes } from "@/lib/queries";
 import type { Approval, ContractView } from "@/lib/types";
-
-const REASON_SHORT: Record<string, string> = { supervised: "Supervised", sampled: "Random review", contract_always: "Always reviewed", risk_cap: "Risk cap" };
 
 function QueueItem({ approval, selected, onSelect, risk }: { approval: Approval; selected: boolean; onSelect: () => void; risk?: ContractView["risk"] }) {
   return (
@@ -56,6 +54,8 @@ export default function ApprovalsPage() {
   const approvals = useApprovals(cid, view);
   const contracts = useContracts(cid);
   const agents = useAgents(cid);
+  const mailboxes = useMailboxes(cid);
+  const outgoing = (mailboxes.data ?? []).find((m) => m.outbound_enabled && m.smtp_host)?.address ?? null;
   const desktop = useIsDesktop();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -91,6 +91,7 @@ export default function ApprovalsPage() {
       readOnly={viewer}
       risk={risk.get(a.task_type ?? "")}
       agentRole={a.agent_id ? roles.get(a.agent_id) : null}
+      outgoing={outgoing}
       busy={decide.isPending && busyId === a.id}
       onDecide={(decision, note) => {
         if (viewer) return;

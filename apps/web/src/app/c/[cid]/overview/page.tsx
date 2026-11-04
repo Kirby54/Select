@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertOctagon, ArrowDownRight, ArrowRight, ClipboardCheck, OctagonX, Play, RotateCcw } from "lucide-react";
+import { AlertOctagon, ArrowDownRight, ArrowRight, ClipboardCheck, Mail, OctagonX, Play, RotateCcw, Send } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
@@ -13,7 +13,7 @@ import { EmptyState, ErrorState, LoadingRows, useToast } from "@/components/ui/f
 import { ConfirmDialog, Tooltip } from "@/components/ui/overlay";
 import { Badge, Button, Card, CardHeader, DemoTag, Progress, Segmented, Skeleton, cx } from "@/components/ui/primitives";
 import { api, errorMessage } from "@/lib/api";
-import { money, percent, relative } from "@/lib/format";
+import { inboxHref, money, percent, relative } from "@/lib/format";
 import { useCompany, useCompanyId, useInbox, useOverview, usePersistentState } from "@/lib/queries";
 import type { Company, InboxItem, Job, Level, Overview } from "@/lib/types";
 
@@ -182,6 +182,8 @@ const INBOX_ICON: Record<InboxItem["kind"], ReactNode> = {
   approval: <ClipboardCheck className="size-3.5 text-supervised" aria-hidden />,
   blocked: <AlertOctagon className="size-3.5 text-danger" aria-hidden />,
   demotion: <ArrowDownRight className="size-3.5 text-danger" aria-hidden />,
+  message: <Mail className="size-3.5 text-accent" aria-hidden />,
+  delivery: <Send className="size-3.5 text-warning" aria-hidden />,
 };
 
 function NeedsYou({ cid }: { cid: string }) {
@@ -203,7 +205,7 @@ function NeedsYou({ cid }: { cid: string }) {
           {items.slice(0, 6).map((item) => (
             <li key={`${item.kind}-${item.id}`}>
               <Link
-                href={item.kind === "approval" ? `/c/${cid}/approvals` : item.task_id ? `/c/${cid}/tasks/${item.task_id}` : item.agent_id ? `/c/${cid}/agents/${item.agent_id}` : `/c/${cid}/inbox`}
+                href={inboxHref(cid, item)}
                 className="flex items-start gap-3 px-4 py-2.5 transition-colors duration-[120ms] hover:bg-hover"
               >
                 <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-surface-2">{INBOX_ICON[item.kind]}</span>
@@ -235,21 +237,21 @@ function Spend({ o, company }: { o: Overview; company: Company }) {
         <div>
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-xs text-muted">This month</span>
-            <span className="text-xs text-faint tabular">{budget > 0 ? `budget ${money(o.costs.monthly_budget, company.currency)}` : "no budget set"}</span>
+            <span className="text-xs text-faint tabular">{budget > 0 ? `budget ${money(o.costs.monthly_budget, "USD")}` : "no budget set"}</span>
           </div>
-          <div className="mt-1 text-[22px] leading-7 font-semibold tracking-[-0.02em] tabular">{money(o.costs.month_live, company.currency, 2)}</div>
+          <div className="mt-1 text-[22px] leading-7 font-semibold tracking-[-0.02em] tabular">{money(o.costs.month_live, "USD", 2)}</div>
           {budget > 0 && <Progress className="mt-2" value={spent} max={budget} tone={spent / budget > 0.9 ? "danger" : spent / budget > 0.7 ? "supervised" : "accent"} label="Monthly budget used" />}
-          {o.costs.budget_remaining !== null && <p className="mt-1.5 text-xs text-faint">{money(o.costs.budget_remaining, company.currency)} left · runs stop at the budget</p>}
+          {o.costs.budget_remaining !== null && <p className="mt-1.5 text-xs text-faint">{money(o.costs.budget_remaining, "USD")} left · runs stop at the budget</p>}
         </div>
         <dl className="grid grid-cols-2 gap-3 border-t border-line-soft pt-3 text-xs">
           <div>
             <dt className="text-muted">Last {o.period_days} days</dt>
-            <dd className="mt-0.5 text-[13px] text-fg tabular">{money(o.costs.period_live, company.currency, 4)}</dd>
+            <dd className="mt-0.5 text-[13px] text-fg tabular">{money(o.costs.period_live, "USD", 4)}</dd>
           </div>
           {o.is_demo && (
             <div>
               <dt className="flex items-center gap-1.5 text-muted">Recorded <DemoTag /></dt>
-              <dd className="mt-0.5 text-[13px] text-fg tabular">{money(o.costs.period_demo, company.currency, 4)}</dd>
+              <dd className="mt-0.5 text-[13px] text-fg tabular">{money(o.costs.period_demo, "USD", 4)}</dd>
             </div>
           )}
         </dl>
@@ -319,7 +321,7 @@ function OverviewInner() {
             <StripCell label="Approvals pending" value={o.approvals_pending} tone={o.approvals_pending ? "warning" : undefined} hint="actions waiting" href={`/c/${cid}/approvals`} />
             <StripCell label="Blocked" value={o.tasks.blocked} tone={o.tasks.blocked ? "danger" : undefined} hint="need a human" href={`/c/${cid}/tasks`} />
             <StripCell label="Verified results" value={o.receipts.verified} hint={`${o.receipts.failed} failed · ${o.receipts.blocked} missing info`} href={`/c/${cid}/verification`} />
-            <StripCell label="Spend this month" value={money(o.costs.month_live, c.currency, 2)} hint={Number(o.costs.monthly_budget) > 0 ? `of ${money(o.costs.monthly_budget, c.currency, 0)}` : "no budget"} href={`/c/${cid}/costs`} />
+            <StripCell label="AI spend this month" value={money(o.costs.month_live, "USD", 2)} hint={Number(o.costs.monthly_budget) > 0 ? `of ${money(o.costs.monthly_budget, "USD", 0)} · estimated` : "estimated · no budget"} href={`/c/${cid}/costs`} />
           </div>
         </Card>
 

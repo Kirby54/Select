@@ -22,6 +22,17 @@ export interface Policy {
   max_level_by_risk?: Record<string, Level>;
 }
 
+export type Language = "fr" | "de" | "en";
+
+export interface CompanySettings {
+  auto_run: boolean;
+  routing: Record<"quote_request" | "support" | "invoice_question" | "spam" | "other", string>;
+  outbound_per_hour: number;
+  signature: string;
+  quote_validity_days: number;
+  ai_disclosure: "autonomous" | "always" | "never";
+}
+
 export interface Company {
   id: string;
   name: string;
@@ -32,7 +43,174 @@ export interface Company {
   emergency_stop: boolean;
   policy: Policy;
   catalog: CatalogItem[];
+  country: string;
+  timezone: string;
+  language: Language;
+  vat_rates: string[];
+  settings: CompanySettings;
   role: Role;
+  created_at: string;
+}
+
+export interface CountryPreset {
+  code: string;
+  name: string;
+  currency: string;
+  vat_rates: string[];
+  timezone: string;
+  language: Language;
+  checked_on: string;
+}
+
+export interface TemplateSummary {
+  id: string;
+  name: string;
+  description: string;
+  agents: { name: string; role: string; task_types: string[] }[];
+  routines: string[];
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  has_password: boolean;
+}
+
+export interface AuthState {
+  mode: "local" | "password" | "token";
+  needs_setup: boolean;
+  user: User | null;
+}
+
+export interface Member {
+  id: string;
+  email: string;
+  name: string;
+  role: Role;
+  is_you: boolean;
+}
+
+export interface Invitation {
+  id: string;
+  email: string;
+  role: Exclude<Role, "owner">;
+  created_at: string;
+  expires_at: string;
+  accepted_at: string | null;
+  link?: string;
+}
+
+export interface ApiTokenRow {
+  id: string;
+  name: string;
+  created_at: string;
+  last_used_at: string | null;
+  token?: string;
+}
+
+export type MailSecurity = "ssl" | "starttls" | "none";
+
+export interface Mailbox {
+  id: string;
+  label: string;
+  address: string;
+  display_name: string;
+  imap_host: string | null;
+  imap_port: number;
+  imap_security: MailSecurity;
+  imap_username: string;
+  imap_folder: string;
+  has_imap_password: boolean;
+  smtp_host: string | null;
+  smtp_port: number;
+  smtp_security: MailSecurity;
+  smtp_username: string;
+  has_smtp_password: boolean;
+  inbound_enabled: boolean;
+  outbound_enabled: boolean;
+  poll_seconds: number;
+  import_days: number;
+  reading_since_set: boolean;
+  last_poll_at: string | null;
+  last_poll_ok: boolean | null;
+  last_poll_error: string | null;
+  last_smtp_test_at: string | null;
+  last_smtp_test_ok: boolean | null;
+  last_smtp_error: string | null;
+  created_at: string;
+}
+
+export type MessageStatus = "new" | "triage" | "routed" | "needs_human" | "handled" | "ignored" | "failed";
+
+export interface MailMessage {
+  id: string;
+  mailbox_id: string | null;
+  mailbox: string | null;
+  from_address: string;
+  from_name: string;
+  reply_to: string | null;
+  to: string;
+  subject: string;
+  snippet: string;
+  attachments: { filename: string; content_type: string; size: number }[];
+  automatic: boolean;
+  status: MessageStatus;
+  status_note: string | null;
+  received_at: string;
+  created_at: string;
+  text?: string;
+  message_id?: string;
+}
+
+export type DeliveryStatus = "ready" | "held" | "queued" | "sending" | "sent" | "failed" | "uncertain" | "cancelled";
+
+export interface Delivery {
+  id: string;
+  task_id: string;
+  task_key: string | null;
+  task_title: string | null;
+  approval_id: string | null;
+  mailbox: string | null;
+  action: string;
+  to: string;
+  subject: string;
+  body: string;
+  message_id: string;
+  status: DeliveryStatus;
+  status_note: string | null;
+  attempts: number;
+  last_error: string | null;
+  approved_by: string;
+  created_at: string;
+  updated_at: string;
+  sent_at: string | null;
+}
+
+export interface MessageDetail extends MailMessage {
+  tasks: Task[];
+  deliveries: Delivery[];
+}
+
+export interface Routine {
+  id: string;
+  name: string;
+  cron: string;
+  timezone: string;
+  enabled: boolean;
+  title: string;
+  description: string;
+  task_type: string;
+  assignee_id: string | null;
+  assignee_name: string | null;
+  project_id: string | null;
+  priority: Priority;
+  next_run_at: string | null;
+  last_run_at: string | null;
+  last_task_id: string | null;
+  runs_count: number;
+  upcoming: string[];
+  created_by: string;
   created_at: string;
 }
 
@@ -150,7 +328,13 @@ export interface Approval {
   agent_name: string | null;
   reason: string;
   action: string | null;
-  payload: { action: string | null; preview: string[]; content: Record<string, unknown>; level: Level };
+  payload: {
+    action: string | null;
+    preview: string[];
+    content: Record<string, unknown>;
+    level: Level;
+    email?: { action: string; to: string; subject: string; body: string; in_reply_to: string | null };
+  };
   status: "pending" | "approved" | "rejected" | "changes_requested" | "superseded";
   decided_by: string | null;
   decided_at: string | null;
@@ -202,6 +386,10 @@ export interface Task {
   attempts: number;
   version: number;
   is_demo: boolean;
+  created_by: string;
+  origin: "user" | "mail" | "routing" | "routine" | "api" | "demo";
+  message_id: string | null;
+  routine_id: string | null;
   archived: boolean;
   created_at: string;
   updated_at: string;
@@ -213,6 +401,8 @@ export interface TaskDetail extends Task {
   receipts: Receipt[];
   approvals: Approval[];
   history: AuditEvent[];
+  deliveries: Delivery[];
+  message: MailMessage | null;
   run_pending: boolean;
 }
 
@@ -254,6 +444,7 @@ export interface Overview {
   };
   series: { day: string; finished: number; autonomous: number; errors: number }[];
   recent: AuditEvent[];
+  mail: { received: number; sent: number; needs_attention: number };
 }
 
 export interface Licence extends Trust {
@@ -337,12 +528,13 @@ export interface Connection {
 }
 
 export interface InboxItem {
-  kind: "approval" | "blocked" | "demotion";
+  kind: "approval" | "blocked" | "demotion" | "message" | "delivery";
   id: string;
   title: string;
   detail: string;
   task_id?: string;
   agent_id?: string;
+  message_id?: string;
   created_at: string;
   is_demo: boolean;
 }

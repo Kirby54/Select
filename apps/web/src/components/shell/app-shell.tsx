@@ -1,16 +1,16 @@
 "use client";
 
 import * as RDialog from "@radix-ui/react-dialog";
-import { Bell, ChevronRight, ClipboardCheck, Gauge, Inbox, Keyboard, ListTodo, Loader2, MoreHorizontal, OctagonX, Search, Settings, Sparkles } from "lucide-react";
+import { Bell, ChevronRight, ClipboardCheck, Gauge, Inbox, Keyboard, ListTodo, Loader2, LogOut, MoreHorizontal, OctagonX, Search, Settings, Sparkles, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
-import { relative } from "@/lib/format";
+import { inboxHref, relative } from "@/lib/format";
 import { api } from "@/lib/api";
 import { useMediaQuery } from "@/lib/hooks";
-import { useAction, useCompany, useInbox, useOverview, usePersistentState } from "@/lib/queries";
+import { useAction, useAuthState, useCompany, useInbox, useOverview, usePersistentState } from "@/lib/queries";
 import type { Company } from "@/lib/types";
 import { DemoBanner, ErrorState, LoadingRows } from "../ui/feedback";
 import { ConfirmDialog, Dialog, Dropdown, Popover } from "../ui/overlay";
@@ -77,7 +77,7 @@ function Notifications({ company }: { company: Company }) {
         {items.slice(0, 8).map((item) => (
           <li key={`${item.kind}-${item.id}`}>
             <Link
-              href={item.task_id ? `/c/${company.id}/tasks/${item.task_id}` : item.agent_id ? `/c/${company.id}/agents/${item.agent_id}` : `/c/${company.id}/inbox`}
+              href={inboxHref(company.id, item)}
               className="block rounded-md px-2.5 py-2 hover:bg-hover"
             >
               <p className="truncate text-[13px] text-fg">{item.title}</p>
@@ -103,6 +103,45 @@ function RunningIndicator({ company }: { company: Company }) {
   );
 }
 
+/** Who is signed in and in which role, with the way to the account settings and out. */
+function AccountMenu({ company, onShortcuts }: { company: Company; onShortcuts: () => void }) {
+  const auth = useAuthState();
+  const router = useRouter();
+  const user = auth.data?.mode === "password" ? auth.data.user : null;
+  const signOut = async () => {
+    try {
+      await api("/auth/logout", { method: "POST" });
+    } finally {
+      // A full load after signing out, so nothing from the session stays in memory.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.assign("/login");
+    }
+  };
+  return (
+    <Dropdown
+      label="Account"
+      trigger={
+        <button
+          type="button"
+          className="ml-1 flex size-7 items-center justify-center rounded-full bg-surface-2 text-2xs font-semibold text-muted ring-1 ring-line transition-colors hover:text-fg"
+          aria-label={user ? `Signed in as ${user.name}. Account menu` : "Account menu"}
+        >
+          {(user?.name ?? company.role).slice(0, 1).toUpperCase()}
+        </button>
+      }
+      items={[
+        { label: user ? `${user.email} · ${company.role}` : `Signed in as ${company.role}`, onSelect: () => undefined, disabled: true },
+        "separator",
+        { label: "Your account", icon: <UserRound aria-hidden />, onSelect: () => router.push(`/c/${company.id}/settings?section=account`) },
+        { label: "Settings", icon: <Settings aria-hidden />, onSelect: () => router.push(`/c/${company.id}/settings`) },
+        { label: "Keyboard shortcuts", icon: <Keyboard aria-hidden />, hint: "?", onSelect: onShortcuts },
+        { label: "Open the demo company", icon: <Sparkles aria-hidden />, onSelect: () => router.push("/?demo=1") },
+        ...(user ? ["separator" as const, { label: "Sign out", icon: <LogOut aria-hidden />, onSelect: () => void signOut() }] : []),
+      ]}
+    />
+  );
+}
+
 const SHORTCUTS: [string, string][] = [
   ["Ctrl / ⌘ K", "Search and commands"],
   ["Ctrl / ⌘ B", "Collapse the sidebar"],
@@ -110,6 +149,8 @@ const SHORTCUTS: [string, string][] = [
   ["G then I", "Inbox"],
   ["G then T", "Tasks"],
   ["G then A", "Approvals"],
+  ["G then M", "Messages"],
+  ["G then R", "Routines"],
   ["G then E", "Agents"],
   ["G then U", "Autonomy"],
   ["G then V", "Verification"],
@@ -273,21 +314,7 @@ export function AppShell({ cid, children }: { cid: string; children: ReactNode }
                 />
               )}
               <Notifications company={c} />
-              <Dropdown
-                label="Account"
-                trigger={
-                  <button type="button" className="ml-1 flex size-7 items-center justify-center rounded-full bg-surface-2 text-2xs font-semibold text-muted ring-1 ring-line transition-colors hover:text-fg" aria-label="Account menu">
-                    {c.role.slice(0, 1).toUpperCase()}
-                  </button>
-                }
-                items={[
-                  { label: `Signed in as ${c.role}`, onSelect: () => undefined, disabled: true },
-                  "separator",
-                  { label: "Settings & API token", icon: <Settings aria-hidden />, onSelect: () => router.push(`/c/${c.id}/settings`) },
-                  { label: "Keyboard shortcuts", icon: <Keyboard aria-hidden />, hint: "?", onSelect: () => setHelpOpen(true) },
-                  { label: "Open the demo company", icon: <Sparkles aria-hidden />, onSelect: () => router.push("/?demo=1") },
-                ]}
-              />
+              <AccountMenu company={c} onShortcuts={() => setHelpOpen(true)} />
             </div>
           </header>
           {c.is_demo && <DemoBanner />}

@@ -20,14 +20,28 @@ async function companyId(page: Page) {
   return page.url().split("/c/")[1]!.split("/")[0]!;
 }
 
+/** The guided setup with every optional step skipped: a German company with no team yet. */
+async function createCompany(page: Page, name: string) {
+  await page.goto("/");
+  await page.getByRole("link", { name: "Start" }).click();
+  await page.getByLabel("Company name").fill(name);
+  await page.getByLabel("Country").selectOption("DE");
+  await page.getByRole("button", { name: "Create the company" }).click();
+  await page.waitForURL(/step=team/);
+  await page.getByRole("radio", { name: /Leer beginnen|Start from scratch/ }).click();
+  await page.getByRole("button", { name: "Continue without agents" }).click();
+  await page.getByRole("button", { name: "Later" }).click(); // model
+  await page.getByRole("button", { name: "Later" }).click(); // mailbox
+  await page.getByRole("button", { name: "Later" }).click(); // catalog
+  await expect(page.getByRole("heading", { name: `${name} is set up` })).toBeVisible();
+  await page.getByRole("button", { name: `Open ${name}` }).click();
+  return companyId(page);
+}
+
 test("full vertical slice through the interface", async ({ page }) => {
   const name = `E2E Atelier ${Date.now()}`;
-  // 1-2. Start and open the dashboard.
-  await page.goto("/");
-  // 3. Create a company.
-  await page.getByLabel("Name").fill(name);
-  await page.getByRole("button", { name: "Create", exact: true }).click();
-  const cid = await companyId(page);
+  // 1-3. Start, open the dashboard and create a company with the guided setup.
+  const cid = await createCompany(page, name);
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   // Catalog through the API (the settings screen has its own test below).
   const put = await page.request.put(`/api/companies/${cid}/catalog`, { data: CATALOG });
@@ -65,14 +79,16 @@ test("full vertical slice through the interface", async ({ page }) => {
 
   // 9-10. Approval requested (agent is supervised), decision recorded.
   await page.goto(`/c/${cid}/approvals`);
-  await expect(page.getByText("Total 873.22 EUR")).toBeVisible();
+  // The approval shows the exact e-mail, in the company's language (German here).
+  await expect(page.getByText("Gesamtbetrag brutto: 873,22 €")).toBeVisible();
+  await expect(page.getByText("Kept ready to send: no outgoing mailbox is connected yet.")).toBeVisible();
   await page.getByRole("button", { name: "Approve" }).click();
   await expect(page.getByText("Decision recorded")).toBeVisible();
 
   // 11. History of the task.
   await page.goto(`/c/${cid}/activity`);
   await expect(page.getByText(/approved T-1/)).toBeVisible();
-  await expect(page.getByText("T-1 quote v1: verified")).toBeVisible();
+  await expect(page.getByText("T-1 quote v2: verified")).toBeVisible();
 
   // 12. Indicators updated.
   await page.goto(`/c/${cid}/overview`);
@@ -84,10 +100,8 @@ test("full vertical slice through the interface", async ({ page }) => {
 });
 
 test("an invented price never reaches the approval queue", async ({ page }) => {
-  await page.goto("/");
-  await page.getByLabel("Name").fill(`E2E Injection ${Date.now()}`);
-  await page.getByRole("button", { name: "Create", exact: true }).click();
-  const cid = await companyId(page);
+  const company = await (await page.request.post("/api/companies", { data: { name: `E2E Injection ${Date.now()}`, country: "DE" } })).json();
+  const cid = company.id as string;
   await page.request.put(`/api/companies/${cid}/catalog`, { data: CATALOG });
   const agent = await (await page.request.post(`/api/companies/${cid}/agents`, { data: { name: "Lea", role: "Sales", task_types: ["quote"] } })).json();
   const task = await (await page.request.post(`/api/companies/${cid}/tasks`, {
@@ -117,6 +131,8 @@ test("demo week runs and shows a demotion", async ({ page }) => {
 test("keyboard: Ctrl+K opens the command palette and navigates", async ({ page }) => {
   await page.goto("/?demo=1");
   await companyId(page);
+  // Wait for the shell to be interactive before using its shortcuts.
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await page.keyboard.press("Control+K");
   await page.getByPlaceholder("Search tasks, agents, pages…").fill("autonomy");
   await page.keyboard.press("Enter");
@@ -147,8 +163,9 @@ test("phone: the tab bar reaches approvals, which open full screen", async ({ br
   await page.goto(`/c/${cid}/overview`);
   await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: /Approvals/ }).click();
   await page.waitForURL(/\/approvals/);
-  const queue = page.getByRole("list").first();
-  if (await queue.getByRole("button").count()) {
+  const queue = page.getByLabel("Approval queue");
+  await expect(queue.or(page.getByText("Nothing waits for your approval"))).toBeVisible();
+  if (await queue.count()) {
     await queue.getByRole("button").first().click();
     await expect(page.getByRole("dialog").getByRole("button", { name: "Approve" })).toBeVisible();
   } else {

@@ -56,7 +56,8 @@ export async function api<T>(path: string, init: { method?: string; body?: Json;
     if (Array.isArray(value)) value.forEach((v) => url.searchParams.append(key, String(v)));
     else url.searchParams.set(key, String(value));
   }
-  const headers: Record<string, string> = { accept: "application/json" };
+  // The anti-forgery header: a page on another site cannot add it to a request sent with our cookie.
+  const headers: Record<string, string> = { accept: "application/json", "x-select-csrf": "1" };
   const token = getToken();
   if (token) headers.authorization = `Bearer ${token}`;
   if (init.body !== undefined) headers["content-type"] = "application/json";
@@ -88,10 +89,32 @@ export async function api<T>(path: string, init: { method?: string; body?: Json;
       message = detail.message ?? message;
       current = detail.current;
     }
-    if (response.status === 401) message = "You are not signed in. Paste an API token in Settings.";
+    if (response.status === 401 && (body.code === "auth_required" || body.code === "setup_required")) {
+      redirectToSignIn(body.code === "setup_required" ? "/setup" : "/login");
+    } else if (response.status === 401 && body.code === "token_required") {
+      message = "You are not signed in. Paste an API token in Settings.";
+    }
     throw new ApiError(message, response.status, body.fields ?? [], current, body.code);
   }
   return data as T;
+}
+
+const PUBLIC_PATHS = ["/login", "/setup", "/invite/"];
+
+/** Sends the browser to sign-in (or first-account setup), then back to where it was. */
+export function redirectToSignIn(target: "/login" | "/setup") {
+  if (typeof window === "undefined") return;
+  const here = window.location.pathname;
+  if (PUBLIC_PATHS.some((p) => here === p || here.startsWith(p))) return;
+  const next = encodeURIComponent(here + window.location.search);
+  // A full load, not a client navigation: no query cache or page state survives the lost session.
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+  window.location.assign(`${target}?next=${next}`);
+}
+
+/** Only same-site paths are accepted as a destination after sign-in. */
+export function safeNext(value: string | null): string {
+  return value && value.startsWith("/") && !value.startsWith("//") ? value : "/";
 }
 
 export const errorMessage = (error: unknown) =>

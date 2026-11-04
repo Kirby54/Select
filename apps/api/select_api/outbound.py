@@ -26,11 +26,13 @@ TEXT: dict[str, dict[str, str]] = {
         "quote_subject": "Votre devis – {company}",
         "greeting": "Bonjour {name},",
         "greeting_anon": "Bonjour,",
-        "quote_intro": "Merci pour votre demande. Voici notre proposition :",
+        "quote_intro": "Merci pour votre demande. Voici notre proposition\u202f:",
         "net": "Total HT",
         "vat": "TVA",
         "gross": "Total TTC",
         "validity": "Ce devis est valable {days} jours.",
+        "colon": "\u202f:",
+        "at": "à",
         "disclosure": (
             "Ce message a été préparé par un assistant IA et vérifié automatiquement, sans relecture humaine."
         ),
@@ -44,6 +46,8 @@ TEXT: dict[str, dict[str, str]] = {
         "vat": "MwSt.",
         "gross": "Gesamtbetrag brutto",
         "validity": "Dieses Angebot ist {days} Tage gültig.",
+        "colon": ":",
+        "at": "à",
         "disclosure": (
             "Diese Nachricht wurde von einem KI-Assistenten erstellt und automatisch geprüft, "
             "ohne menschliche Durchsicht."
@@ -58,6 +62,8 @@ TEXT: dict[str, dict[str, str]] = {
         "vat": "VAT",
         "gross": "Total",
         "validity": "This quote is valid for {days} days.",
+        "colon": ":",
+        "at": "at",
         "disclosure": "This message was prepared by an AI assistant and checked automatically, without human review.",
     },
 }
@@ -112,6 +118,27 @@ def format_amount(value: Any, currency: str, language: str) -> str:
     return f"{symbol}{text}" if language == "en" and symbol in ("€", "$", "£") else f"{text} {symbol}"
 
 
+def format_rate(value: Any, language: str) -> str:
+    """0.055 -> "5,5 %" in French, "5,5 %" in German, "5.5%" in English."""
+    try:
+        percent = (Decimal(unwrap(value)) * 100).normalize()
+    except (InvalidOperation, ValueError):
+        return unwrap(value)
+    text = format(percent, "f")
+    if language == "fr":
+        return text.replace(".", ",") + "\u202f%"
+    if language == "de":
+        return text.replace(".", ",") + "\u00a0%"
+    return f"{text}%"
+
+
+def _rate(line: dict[str, Any]) -> Decimal | None:
+    try:
+        return Decimal(unwrap(line.get("vat_rate")))
+    except (InvalidOperation, ValueError):
+        return None
+
+
 def _quantity(value: Any, language: str) -> str:
     raw = unwrap(value)
     return raw.replace(".", ",") if language in ("fr", "de") and re.fullmatch(r"\d+\.\d+", raw) else raw
@@ -129,24 +156,30 @@ def _quote_body(company: Company, deliverable: dict[str, Any], words: dict[str, 
     validity = int(settings_for(company)["quote_validity_days"])
     catalog = {str(item.get("ref")): item for item in company.catalog or []}
     lines = [words["greeting"].format(name=name) if name else words["greeting_anon"], "", words["quote_intro"], ""]
-    for line in deliverable.get("lines") or []:
-        if not isinstance(line, dict):
-            continue
+    items = [line for line in deliverable.get("lines") or [] if isinstance(line, dict)]
+    # One rate for every line: it is shown on the VAT total. Several rates: each line shows its own,
+    # and the VAT total stays the single verified amount (no per-rate rounding of our own).
+    rates = {_rate(line) for line in items}
+    single = next(iter(rates)) if len(rates) == 1 else None
+    for line in items:
         item = catalog.get(str(line.get("catalog_ref")), {})
         unit = str(line.get("unit") or item.get("unit") or "")
         label = str(line.get("label") or item.get("label") or line.get("catalog_ref") or "")
         quantity = f"{_quantity(line.get('quantity'), language)} {unit}".strip()
+        own = _rate(line)
+        rate = "" if single is not None or own is None else f" ({words['vat']} {format_rate(own, language)})"
         lines.append(
             f"- {quantity} × {label} "
-            f"@ {format_amount(line.get('unit_price'), currency, language)} "
-            f"= {format_amount(line.get('line_total'), currency, language)}"
+            f"{words['at']} {format_amount(line.get('unit_price'), currency, language)} "
+            f"= {format_amount(line.get('line_total'), currency, language)}{rate}"
         )
     totals = deliverable.get("totals") or {}
+    vat_label = words["vat"] if single is None else f"{words['vat']} {format_rate(single, language)}"
     lines += [
         "",
-        f"{words['net']}: {format_amount(totals.get('net'), currency, language)}",
-        f"{words['vat']}: {format_amount(totals.get('vat'), currency, language)}",
-        f"{words['gross']}: {format_amount(totals.get('gross'), currency, language)}",
+        f"{words['net']}{words['colon']} {format_amount(totals.get('net'), currency, language)}",
+        f"{vat_label}{words['colon']} {format_amount(totals.get('vat'), currency, language)}",
+        f"{words['gross']}{words['colon']} {format_amount(totals.get('gross'), currency, language)}",
         "",
         words["validity"].format(days=validity),
     ]

@@ -1,13 +1,13 @@
 "use client";
 
-import { ArrowDownRight, ChevronRight, CircleSlash, ClipboardCheck, Inbox } from "lucide-react";
+import { ArrowDownRight, ChevronRight, CircleSlash, ClipboardCheck, Inbox, Mail, Send } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 import { PageBody, PageHeader } from "@/components/shell/app-shell";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/ui/feedback";
 import { Card, DemoTag, Segmented, cx } from "@/components/ui/primitives";
-import { relative } from "@/lib/format";
+import { inboxHref, relative } from "@/lib/format";
 import { useCompanyId, useInbox } from "@/lib/queries";
 import type { InboxItem } from "@/lib/types";
 
@@ -15,20 +15,24 @@ const KIND: Record<InboxItem["kind"], { icon: typeof ClipboardCheck; tone: strin
   approval: { icon: ClipboardCheck, tone: "bg-supervised/12 text-supervised", label: "Approval", plural: "Approvals waiting" },
   blocked: { icon: CircleSlash, tone: "bg-danger/12 text-danger", label: "Blocked", plural: "Blocked tasks" },
   demotion: { icon: ArrowDownRight, tone: "bg-danger/12 text-danger", label: "Demotion", plural: "Lost autonomy this week" },
+  message: { icon: Mail, tone: "bg-accent/12 text-accent", label: "E-mail", plural: "E-mails for a person" },
+  delivery: { icon: Send, tone: "bg-warning/12 text-warning", label: "Outgoing", plural: "E-mails not sent yet" },
 };
-const ORDER: InboxItem["kind"][] = ["approval", "blocked", "demotion"];
+const ORDER: InboxItem["kind"][] = ["approval", "message", "delivery", "blocked", "demotion"];
 
 export default function InboxPage() {
   const cid = useCompanyId();
   const inbox = useInbox(cid);
   const [filter, setFilter] = useState<"all" | InboxItem["kind"]>("all");
-  const items = (inbox.data?.items ?? []).filter((i) => filter === "all" || i.kind === filter);
+  const items = (inbox.data?.items ?? []).filter(
+    (i) => filter === "all" || i.kind === filter || (filter === "message" && i.kind === "delivery"),
+  );
   const count = (k: InboxItem["kind"]) => (inbox.data?.items ?? []).filter((i) => i.kind === k).length;
   return (
     <>
       <PageHeader
         title="Inbox"
-        description="Decisions only a human can make, blocked work and agents that lost autonomy"
+        description="Decisions only a human can make: approvals, e-mails for a person, blocked work, lost autonomy"
         actions={
           <Segmented
             label="Show"
@@ -37,6 +41,7 @@ export default function InboxPage() {
             options={[
               { value: "all", label: "All" },
               { value: "approval", label: <>Approvals <span className="text-faint tabular">{count("approval")}</span></> },
+              { value: "message", label: <>E-mails <span className="text-faint tabular">{count("message") + count("delivery")}</span></> },
               { value: "blocked", label: <>Blocked <span className="text-faint tabular">{count("blocked")}</span></> },
               { value: "demotion", label: <>Demotions <span className="text-faint tabular">{count("demotion")}</span></> },
             ]}
@@ -49,7 +54,7 @@ export default function InboxPage() {
         ) : inbox.isError ? (
           <Card><ErrorState error={inbox.error} retry={() => void inbox.refetch()} /></Card>
         ) : items.length === 0 ? (
-          <Card><EmptyState icon={<Inbox />} title="Nothing needs you" description="Approvals, blocked tasks and demotions appear here as soon as they happen." /></Card>
+          <Card><EmptyState icon={<Inbox />} title="Nothing needs you" description="Approvals, e-mails for a person, blocked tasks and demotions appear here as soon as they happen." /></Card>
         ) : (
           ORDER.filter((k) => items.some((i) => i.kind === k)).map((k) => {
             const meta = KIND[k];
@@ -59,7 +64,7 @@ export default function InboxPage() {
                 <Card className="overflow-hidden">
                   <ul className="divide-y divide-line-soft">
                     {items.filter((i) => i.kind === k).map((item) => {
-                      const href = item.kind === "approval" ? `/c/${cid}/approvals` : item.task_id ? `/c/${cid}/tasks/${item.task_id}` : `/c/${cid}/agents/${item.agent_id}`;
+                      const href = inboxHref(cid, item);
                       return (
                         <li key={`${item.kind}-${item.id}`}>
                           <Link href={href} className="group flex items-start gap-3 px-4 py-3 transition-colors duration-[120ms] hover:bg-hover">

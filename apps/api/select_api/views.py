@@ -422,6 +422,7 @@ def task_out(t: Task, assignee: Agent | None = None) -> dict[str, Any]:
         "attempts": t.attempts,
         "version": t.version,
         "is_demo": t.is_demo,
+        "created_by": t.created_by,
         "origin": t.origin,
         "message_id": str(t.message_id) if t.message_id else None,
         "routine_id": str(t.routine_id) if t.routine_id else None,

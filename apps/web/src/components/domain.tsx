@@ -392,13 +392,28 @@ const REASON: Record<string, string> = {
   sampled: "The agent is sampled for this task type and this result was picked for a random review.",
   contract_always: "This contract always needs a human, whatever the agent's record.",
   risk_cap: "The contract's risk class caps autonomy here.",
+  new_recipient: "The recipient never wrote to the company. Writing to a new address is a human decision, whatever the agent's record.",
 };
-const REASON_SHORT: Record<string, string> = {
+export const REASON_SHORT: Record<string, string> = {
   supervised: "Supervised",
   sampled: "Random review",
   contract_always: "Always reviewed",
   risk_cap: "Risk cap",
+  new_recipient: "New recipient",
 };
+
+/** What approving actually does, said plainly: what leaves Select and what never does. */
+export function afterApproval(action: string | null, typeLabel: string, outgoing: string | null | undefined, demo: boolean): string {
+  if (!action) return `${typeLabel} accepted and the task closes.`;
+  if (demo) return "Demo: recorded as approved; nothing leaves Select.";
+  if (action === "send_email" || action === "send_quote_email") {
+    return outgoing ? `Sent once by e-mail from ${outgoing}.` : "Kept ready to send: no outgoing mailbox is connected yet.";
+  }
+  if (action === "publish_post") return "Marked ready to publish. Select does not post to social networks: copy it from the task.";
+  if (action === "send_invoice_email") return "Marked ready. Select does not send invoices: this is a draft, not an e-invoice.";
+  if (action === "none_payments_are_manual") return "Nothing is paid by Select: you make the payment in your bank.";
+  return `Marked ready to ${action.replaceAll("_", " ")}.`;
+}
 
 const RISK_TONE: Record<string, Tone> = { low: "neutral", medium: "neutral", high: "warning", legal: "danger" };
 
@@ -406,13 +421,15 @@ const RISK_TONE: Record<string, Tone> = { low: "neutral", medium: "neutral", hig
  * One pending decision, readable in five seconds: who asks, what would happen, why a human is asked,
  * which checks ran, the exact content, and what approving or rejecting changes.
  */
-export function ApprovalCard({ approval, onDecide, busy, readOnly, risk, agentRole }: {
+export function ApprovalCard({ approval, onDecide, busy, readOnly, risk, agentRole, outgoing }: {
   approval: Approval;
   onDecide: (decision: "approved" | "rejected" | "changes_requested", note: string) => void;
   busy: boolean;
   readOnly?: boolean;
   risk?: ContractView["risk"] | null;
   agentRole?: string | null;
+  /** The address approved e-mails leave from, or null when no mailbox can send. */
+  outgoing?: string | null;
 }) {
   const [mode, setMode] = useState<"idle" | "changes_requested" | "rejected">("idle");
   const [note, setNote] = useState("");
@@ -477,7 +494,7 @@ export function ApprovalCard({ approval, onDecide, busy, readOnly, risk, agentRo
         <div className="bg-surface px-4 py-2.5">
           <dt className="text-2xs font-medium tracking-wide text-faint uppercase">After approval</dt>
           <dd className="mt-0.5 text-xs text-muted">
-            {action ? `Marked ready to ${action}. No outbound connector yet, so nothing leaves Select.` : `${type} accepted and the task closes.`}
+            {afterApproval(approval.action, type, outgoing, approval.is_demo)}
           </dd>
         </div>
       </dl>
@@ -490,7 +507,7 @@ export function ApprovalCard({ approval, onDecide, busy, readOnly, risk, agentRo
 
       <div className="px-4 py-3">
         <p className="mb-1.5 text-2xs font-medium tracking-wide text-faint uppercase">
-          {action ? `Exactly what would be sent` : "Result to accept"}
+          {approval.payload.email ? "Exactly the e-mail that would be sent" : action ? "Exactly what would leave Select" : "Result to accept"}
         </p>
         <pre className="max-h-64 overflow-auto rounded-lg border border-line-soft bg-canvas px-3 py-2.5 font-mono text-xs leading-relaxed whitespace-pre-wrap text-fg">
           {approval.payload.preview.join("\n")}

@@ -53,6 +53,37 @@ export const TASK_TYPE_LABEL: Record<string, string> = {
   social_post: "Social post",
   invoice_draft: "Invoice draft",
   payment_request: "Payment request",
+  general_task: "Free-form task",
 };
 
 export const taskTypeLabel = (id: string) => TASK_TYPE_LABEL[id] ?? humanize(id);
+
+/** Where an inbox item leads: the approval queue, the e-mail, the task or the agent. */
+export function inboxHref(cid: string, item: { kind: string; task_id?: string; agent_id?: string; message_id?: string; id: string }): string {
+  if (item.kind === "approval") return `/c/${cid}/approvals`;
+  if (item.kind === "message") return `/c/${cid}/messages?m=${item.message_id ?? item.id}`;
+  if (item.kind === "delivery") return `/c/${cid}/messages?view=outbox`;
+  if (item.task_id) return `/c/${cid}/tasks/${item.task_id}`;
+  if (item.agent_id) return `/c/${cid}/agents/${item.agent_id}`;
+  return `/c/${cid}/inbox`;
+}
+
+/** "0.055" -> "5.5 %": VAT rates are stored as fractions. */
+export function ratePercent(rate: string): string {
+  const [whole = "0", fraction = ""] = rate.split(".");
+  const digits = `${whole}${fraction.padEnd(2, "0")}`;
+  const integer = digits.slice(0, whole.length + 2).replace(/^0+(?=\d)/, "");
+  const rest = digits.slice(whole.length + 2).replace(/0+$/, "");
+  return `${integer}${rest ? `.${rest}` : ""} %`;
+}
+
+/** "5.5" (percent) -> "0.055" (fraction), with string arithmetic only. Returns null if not a percentage. */
+export function fractionFromPercent(value: string): string | null {
+  const text = value.trim().replace(",", ".").replace(/\s*%$/, "");
+  const match = /^(\d{1,2})(?:\.(\d{1,2}))?$/.exec(text);
+  if (!match) return null;
+  const [, whole = "0", fraction = ""] = match;
+  const digits = `${whole.padStart(2, "0")}${fraction}`.replace(/0+$/, "");
+  if (!digits || /^0+$/.test(digits)) return "0";
+  return `0.${digits.padEnd(2, "0")}`;
+}

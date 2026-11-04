@@ -30,7 +30,8 @@ def test_vertical_slice(client):
     # The approval shows the exact e-mail that would leave Select, in the company's language.
     preview = approval["payload"]["preview"]
     assert preview[0] == "To: jonas.weber@example.org"
-    assert "- 3,2 m × Oak worktop @ 189,00 € = 604,80 €" in preview
+    assert "- 3,2 m × Oak worktop à 189,00 € = 604,80 €" in preview
+    assert "MwSt. 19\u00a0%: 139,42 €" in preview
     assert "Gesamtbetrag brutto: 873,22 €" in preview
     assert approval["payload"]["email"]["to"] == "jonas.weber@example.org"
 

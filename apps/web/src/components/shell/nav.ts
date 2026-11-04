@@ -2,12 +2,14 @@ import {
   Activity,
   BadgeCheck,
   Bot,
+  CalendarClock,
   CircleDollarSign,
   ClipboardCheck,
   FolderKanban,
   Gauge,
   Inbox,
   ListTodo,
+  Mail,
   Network,
   Plug,
   Settings,
@@ -42,6 +44,8 @@ export const NAV: { group: string | null; items: NavItem[] }[] = [
     items: [
       { href: "tasks", label: "Tasks", icon: ListTodo, description: "All work, list or board", key: "t" },
       { href: "approvals", label: "Approvals", icon: ClipboardCheck, description: "Actions waiting for a human", key: "a" },
+      { href: "messages", label: "Messages", icon: Mail, description: "E-mail received and sent", key: "m" },
+      { href: "routines", label: "Routines", icon: CalendarClock, description: "Work created on a schedule", key: "r" },
       { href: "projects", label: "Projects", icon: FolderKanban, description: "Groups of related tasks", key: "p" },
       { href: "goals", label: "Goals", icon: Target, description: "What the company aims for" },
     ],
@@ -70,8 +74,8 @@ export const NAV: { group: string | null; items: NavItem[] }[] = [
 ];
 
 export const NAV_FOOT: NavItem[] = [
-  { href: "connections", label: "Connections", icon: Plug, description: "Model providers" },
-  { href: "settings", label: "Settings", icon: Settings, description: "Company, policy, catalog", key: "s" },
+  { href: "connections", label: "Connections", icon: Plug, description: "Model providers and mailboxes" },
+  { href: "settings", label: "Settings", icon: Settings, description: "Company, people, policy, catalog", key: "s" },
 ];
 
 export const NAV_FLAT: NavItem[] = [...NAV.flatMap((g) => g.items), ...NAV_FOOT];

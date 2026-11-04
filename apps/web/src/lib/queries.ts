@@ -7,21 +7,33 @@ import { useCallback, useEffect, useState } from "react";
 import { api, errorMessage } from "./api";
 import type {
   Agent,
+  ApiTokenRow,
   Approval,
   AuditEvent,
+  AuthState,
   AutonomyView,
   Company,
   Connection,
   ContractView,
   Costs,
+  CountryPreset,
+  Delivery,
   Goal,
   InboxItem,
+  Invitation,
+  Language,
+  MailMessage,
+  Mailbox,
+  Member,
+  MessageDetail,
   Overview,
   Page,
   Project,
   Receipt,
+  Routine,
   Task,
   TaskDetail,
+  TemplateSummary,
   TrustEvent,
   Run,
 } from "./types";
@@ -46,8 +58,8 @@ function cKey(cid: string, ...rest: unknown[]): QueryKey {
 
 export const useCompanies = () => useQuery({ queryKey: ["companies"], queryFn: () => api<Company[]>("/companies") });
 
-export const useCompany = (cid: string) =>
-  useQuery({ queryKey: cKey(cid, "company"), queryFn: () => api<Company>(base(cid)) });
+export const useCompany = (cid: string, enabled = true) =>
+  useQuery({ queryKey: cKey(cid, "company"), queryFn: () => api<Company>(base(cid)), enabled });
 
 export const useOverview = (cid: string, days: number) =>
   useQuery({
@@ -153,6 +165,68 @@ export const useGoals = (cid: string) =>
 
 export const useProjects = (cid: string) =>
   useQuery({ queryKey: cKey(cid, "projects"), queryFn: () => api<Project[]>(`${base(cid)}/projects`) });
+
+// ---------------------------------------------------------------- accounts
+
+export const useAuthState = () =>
+  useQuery({ queryKey: ["auth"], queryFn: () => api<AuthState>("/auth/state"), staleTime: 30_000 });
+
+export const useMembers = (cid: string) =>
+  useQuery({ queryKey: cKey(cid, "members"), queryFn: () => api<Member[]>(`${base(cid)}/members`) });
+
+export const useInvitations = (cid: string, enabled: boolean) =>
+  useQuery({ queryKey: cKey(cid, "invitations"), queryFn: () => api<Invitation[]>(`${base(cid)}/invitations`), enabled });
+
+export const useTokens = (enabled: boolean) =>
+  useQuery({ queryKey: ["tokens"], queryFn: () => api<ApiTokenRow[]>("/auth/tokens"), enabled });
+
+// ---------------------------------------------------------------- setup
+
+export const useCountries = () =>
+  useQuery({ queryKey: ["countries"], queryFn: () => api<CountryPreset[]>("/countries"), staleTime: Infinity });
+
+export const useTemplates = (language: Language) =>
+  useQuery({
+    queryKey: ["templates", language],
+    queryFn: () => api<TemplateSummary[]>("/templates", { query: { language } }),
+    staleTime: Infinity,
+  });
+
+// ---------------------------------------------------------------- mail and routines
+
+export const useMailboxes = (cid: string) =>
+  useQuery({ queryKey: cKey(cid, "mailboxes"), queryFn: () => api<Mailbox[]>(`${base(cid)}/mailboxes`), refetchInterval: 15_000 });
+
+export interface MessageFilters {
+  status?: string;
+  q?: string;
+  offset?: number;
+}
+
+export const useMessages = (cid: string, filters: MessageFilters) =>
+  useQuery({
+    queryKey: cKey(cid, "messages", filters),
+    queryFn: () =>
+      api<Page<MailMessage> & { counts: Record<string, number> }>(`${base(cid)}/messages`, { query: { ...filters, limit: 50 } }),
+    refetchInterval: 8000,
+  });
+
+export const useMessage = (cid: string, id: string | null) =>
+  useQuery({
+    queryKey: cKey(cid, "message", id),
+    queryFn: () => api<MessageDetail>(`${base(cid)}/messages/${id}`),
+    enabled: !!id,
+  });
+
+export const useDeliveries = (cid: string, status?: string) =>
+  useQuery({
+    queryKey: cKey(cid, "deliveries", status),
+    queryFn: () => api<Page<Delivery>>(`${base(cid)}/deliveries`, { query: { status, limit: 100 } }),
+    refetchInterval: 8000,
+  });
+
+export const useRoutines = (cid: string) =>
+  useQuery({ queryKey: cKey(cid, "routines"), queryFn: () => api<Routine[]>(`${base(cid)}/routines`) });
 
 /**
  * A mutation that shows progress, reports errors in a toast, refreshes the company's data

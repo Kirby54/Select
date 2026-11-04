@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { cx } from "@/components/ui/primitives";
-import { money, percent, relative, taskTypeLabel } from "./format";
+import { money, percent, ratePercent, relative, taskTypeLabel } from "./format";
 
 describe("money", () => {
   it("formats decimal strings without float arithmetic", () => {
@@ -43,4 +43,15 @@ describe("cx", () => {
 it("labels task types", () => {
   expect(taskTypeLabel("support_reply")).toBe("Support reply");
   expect(taskTypeLabel("custom_type")).toBe("Custom type");
+});
+
+describe("ratePercent", () => {
+  it("writes stored fractions as percentages without float arithmetic", () => {
+    expect(ratePercent("0.20")).toBe("20 %");
+    expect(ratePercent("0.055")).toBe("5.5 %");
+    expect(ratePercent("0.021")).toBe("2.1 %");
+    expect(ratePercent("0.081")).toBe("8.1 %");
+    expect(ratePercent("0")).toBe("0 %");
+    expect(ratePercent("0.19")).toBe("19 %");
+  });
 });

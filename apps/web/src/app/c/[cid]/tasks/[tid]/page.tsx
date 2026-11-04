@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, Ban, Flag, Loader2, Play, Send, ShieldAlert } from "lucide-react";
+import { Archive, Ban, CalendarClock, Flag, GitBranch, Loader2, Mail, Play, Send, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { use, useState } from "react";
 
@@ -12,8 +12,64 @@ import { ConfirmDialog, Dialog } from "@/components/ui/overlay";
 import { Badge, Button, Card, CardHeader, DemoTag, Field, Select, Textarea } from "@/components/ui/primitives";
 import { ApiError, api } from "@/lib/api";
 import { formatDate, relative, taskTypeLabel } from "@/lib/format";
-import { useAction, useAgents, useCompany, useContracts, useTask } from "@/lib/queries";
-import type { Task, TaskDetail } from "@/lib/types";
+import { useAction, useAgents, useCompany, useContracts, useMailboxes, useTask } from "@/lib/queries";
+import type { DeliveryStatus, Task, TaskDetail } from "@/lib/types";
+
+const ORIGIN: Record<Task["origin"], string> = {
+  user: "Created by a person",
+  mail: "From an e-mail",
+  routing: "Routed after triage",
+  routine: "Created by a routine",
+  api: "Created through the API",
+  demo: "Demo",
+};
+
+const SENT_LABEL: Record<DeliveryStatus, string> = {
+  ready: "Ready to send: no outgoing mailbox",
+  held: "Held for a person",
+  queued: "Queued for sending",
+  sending: "Sending",
+  sent: "Sent",
+  failed: "Not sent: failed",
+  uncertain: "Uncertain: check the Sent folder",
+  cancelled: "Not sent: cancelled",
+};
+
+function Origin({ cid, task }: { cid: string; task: TaskDetail }) {
+  if (!task.message && task.origin !== "routine" && !task.parent_id && task.deliveries.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader title="Origin and e-mail" />
+      <div className="space-y-3 p-4 text-xs">
+        <p className="text-muted">{ORIGIN[task.origin]}</p>
+        {task.message && (
+          <Link href={`/c/${cid}/messages?m=${task.message.id}`} className="flex items-start gap-2 rounded-lg border border-line-soft px-3 py-2 hover:bg-hover">
+            <Mail className="mt-px size-3.5 shrink-0 text-faint" aria-hidden />
+            <span className="min-w-0">
+              <span className="block truncate text-[13px] text-fg">{task.message.subject || "(no subject)"}</span>
+              <span className="block truncate text-faint">{task.message.from_name || task.message.from_address} · {relative(task.message.received_at)}</span>
+            </span>
+          </Link>
+        )}
+        {task.parent_id && (
+          <Link href={`/c/${cid}/tasks/${task.parent_id}`} className="flex items-center gap-2 text-muted hover:text-fg"><GitBranch className="size-3.5 text-faint" aria-hidden />Triage task that routed it</Link>
+        )}
+        {task.origin === "routine" && task.routine_id && (
+          <Link href={`/c/${cid}/routines`} className="flex items-center gap-2 text-muted hover:text-fg"><CalendarClock className="size-3.5 text-faint" aria-hidden />{task.created_by}</Link>
+        )}
+        {task.deliveries.map((d) => (
+          <Link key={d.id} href={`/c/${cid}/messages?view=outbox`} className="block rounded-lg border border-line-soft px-3 py-2 hover:bg-hover">
+            <span className="flex items-center gap-2">
+              <Send className="size-3.5 shrink-0 text-faint" aria-hidden />
+              <span className={d.status === "sent" ? "text-success" : ["failed", "uncertain"].includes(d.status) ? "text-danger" : "text-warning"}>{SENT_LABEL[d.status]}</span>
+            </span>
+            <span className="mt-0.5 block truncate text-faint">to {d.to}{d.sent_at ? ` · ${formatDate(d.sent_at)}` : ""}</span>
+          </Link>
+        ))}
+      </div>
+    </Card>
+  );
+}
 
 function SubmitDialog({ cid, task, open, onOpenChange }: { cid: string; task: TaskDetail; open: boolean; onOpenChange: (o: boolean) => void }) {
   const [text, setText] = useState(() => JSON.stringify(task.result ?? {}, null, 2));
@@ -80,7 +136,7 @@ function Properties({ cid, task, canWrite }: { cid: string; task: TaskDetail; ca
             ["Contract", contract ? `${contract.id} v${contract.version} · ${contract.risk} risk` : "—"],
             ["Attempts", String(task.attempts)],
             ["Due", task.due_date ? formatDate(task.due_date) : "—"],
-            ["Created", `${formatDate(task.created_at)} by ${task.is_demo ? "demo" : "you"}`],
+            ["Created", `${formatDate(task.created_at)} · ${task.is_demo ? "demo" : task.created_by}`],
             ["Updated", relative(task.updated_at)],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-3"><dt className="text-faint">{k}</dt><dd className="truncate text-right text-muted">{v}</dd></div>
@@ -109,6 +165,8 @@ export default function TaskPage({ params }: { params: Promise<{ cid: string; ti
   const report = useAction(cid, (note: string) => api(`/companies/${cid}/tasks/${tid}/report-problem`, { method: "POST", body: { note } }), { success: "Problem recorded; the agent is supervised again" });
   const decide = useAction(cid, (v: { id: string; decision: string; note: string }) =>
     api(`/companies/${cid}/approvals/${v.id}/decide`, { method: "POST", body: { decision: v.decision, note: v.note } }), { success: "Decision recorded" });
+  const mailboxes = useMailboxes(cid);
+  const outgoing = (mailboxes.data ?? []).find((m) => m.outbound_enabled && m.smtp_host)?.address ?? null;
 
   if (task.isPending) return <LoadingRows rows={10} />;
   if (task.isError) return <ErrorState error={task.error} retry={() => void task.refetch()} />;
@@ -162,7 +220,7 @@ export default function TaskPage({ params }: { params: Promise<{ cid: string; ti
             <span className="text-faint">updated {relative(t.updated_at)}</span>
           </div>
           {pending && (
-            <ApprovalCard approval={pending} busy={decide.isPending} onDecide={(decision, note) => decide.mutate({ id: pending.id, decision, note })} />
+            <ApprovalCard approval={pending} outgoing={outgoing} busy={decide.isPending} onDecide={(decision, note) => decide.mutate({ id: pending.id, decision, note })} />
           )}
           <Card>
             <Tabs value={tab} onValueChange={setTab} label="Task sections" tabs={[
@@ -248,6 +306,7 @@ export default function TaskPage({ params }: { params: Promise<{ cid: string; ti
         </div>
         <div className="space-y-4">
           <Properties cid={cid} task={t} canWrite={canWrite} />
+          <Origin cid={cid} task={t} />
           {lastReceipt && (
             <Card>
               <CardHeader title="Latest verification" />
