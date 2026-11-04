@@ -11,10 +11,13 @@ from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
 from . import __version__
+from .auth import AuthProblem
 from .config import get_settings
 from .contracts import registry
 from .db import get_engine
+from .routes_auth import router as auth_router
 from .routes_insight import router as insight_router
+from .routes_ops import router as ops_router
 from .routes_org import router as org_router
 from .routes_settings import router as settings_router
 from .routes_work import router as work_router
@@ -29,10 +32,15 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"],
-        allow_headers=["authorization", "content-type"],
+        allow_headers=["authorization", "content-type", "x-select-csrf"],
+        allow_credentials=True,
     )
-    for router in (org_router, work_router, insight_router, settings_router):
+    for router in (auth_router, org_router, work_router, insight_router, settings_router, ops_router):
         app.include_router(router)
+
+    @app.exception_handler(AuthProblem)
+    async def auth_problem(_request: Request, exc: AuthProblem) -> JSONResponse:
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail, "code": exc.code})
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(_request: Request, exc: RequestValidationError) -> JSONResponse:

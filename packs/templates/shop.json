@@ -1,0 +1,67 @@
+{
+  "id": "shop",
+  "order": 3,
+  "name": { "fr": "Boutique ou e-commerce", "de": "Laden oder Onlineshop", "en": "Shop or online store" },
+  "description": {
+    "fr": "Les questions des clients sont triées et reçoivent une réponse ; une publication par semaine est préparée pour relecture.",
+    "de": "Kundenfragen werden sortiert und beantwortet; ein Beitrag pro Woche wird zur Durchsicht vorbereitet.",
+    "en": "Customer questions are triaged and answered; one post a week is prepared for review."
+  },
+  "agents": [
+    {
+      "key": "inbox",
+      "manager": null,
+      "name": { "fr": "Courrier", "de": "Posteingang", "en": "Inbox" },
+      "role": { "fr": "Tri des e-mails entrants", "de": "Sortiert eingehende E-Mails", "en": "Triages incoming e-mail" },
+      "task_types": ["message_triage", "general_task"],
+      "permissions": ["read_messages"],
+      "instructions": {
+        "fr": "Classe chaque message : question d'un client (commande, livraison, produit), question sur une facture, spam ou autre. Résume le besoin en une phrase.",
+        "de": "Ordne jede Nachricht ein: Kundenfrage (Bestellung, Lieferung, Produkt), Frage zu einer Rechnung, Spam oder Sonstiges. Fasse das Anliegen in einem Satz zusammen.",
+        "en": "Classify each message: customer question (order, delivery, product), invoice question, spam or other. Summarise the need in one sentence."
+      }
+    },
+    {
+      "key": "support",
+      "manager": "inbox",
+      "name": { "fr": "Service client", "de": "Kundenservice", "en": "Customer service" },
+      "role": { "fr": "Répond aux clients", "de": "Beantwortet Kundenfragen", "en": "Answers customers" },
+      "task_types": ["support_reply"],
+      "permissions": ["read_messages", "draft_external"],
+      "instructions": {
+        "fr": "Réponds avec chaleur et précision. Ne promets ni remboursement, ni remise, ni date de livraison : une personne de l'équipe confirme ces points.",
+        "de": "Antworte freundlich und genau. Versprich weder Erstattung noch Rabatt noch Liefertermin: das bestätigt jemand aus dem Team.",
+        "en": "Answer warmly and precisely. Never promise a refund, a discount or a delivery date: someone from the team confirms those."
+      }
+    },
+    {
+      "key": "comms",
+      "manager": null,
+      "name": { "fr": "Communication", "de": "Kommunikation", "en": "Communications" },
+      "role": { "fr": "Rédige les publications", "de": "Schreibt Beiträge", "en": "Writes posts" },
+      "task_types": ["social_post", "general_task"],
+      "permissions": ["draft_external"],
+      "instructions": {
+        "fr": "Écris des publications courtes et concrètes. Aucune promesse, aucun chiffre sans source.",
+        "de": "Schreibe kurze, konkrete Beiträge. Keine Versprechen, keine Zahl ohne Quelle.",
+        "en": "Write short, concrete posts. No promises, no figure without a source."
+      }
+    }
+  ],
+  "routing": { "quote_request": "human", "support": "support_reply", "invoice_question": "human", "spam": "ignore", "other": "human" },
+  "routines": [
+    {
+      "agent": "comms",
+      "cron": "0 10 * * 3",
+      "enabled": false,
+      "task_type": "social_post",
+      "name": { "fr": "Publication de la semaine", "de": "Beitrag der Woche", "en": "Post of the week" },
+      "title": { "fr": "Publication Instagram de la semaine", "de": "Instagram-Beitrag der Woche", "en": "Instagram post of the week" },
+      "description": {
+        "fr": "Une publication courte qui met en avant un produit. Pas de prix ni de chiffre sans source.",
+        "de": "Ein kurzer Beitrag über ein Produkt. Kein Preis und keine Zahl ohne Quelle.",
+        "en": "A short post featuring one product. No price or figure without a source."
+      }
+    }
+  ]
+}

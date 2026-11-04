@@ -33,7 +33,9 @@ def _sourced(value: str, ref: str) -> dict[str, str]:
     return {"value": value, "source_ref": ref}
 
 
-def build_quote(extraction: dict[str, Any], catalog: dict[str, CatalogItem]) -> dict[str, Any]:
+def build_quote(
+    extraction: dict[str, Any], catalog: dict[str, CatalogItem], *, currency: str = "EUR"
+) -> dict[str, Any]:
     customer = extraction.get("customer") or {}
     lines: list[dict[str, Any]] = []
     net = Decimal("0")
@@ -69,7 +71,7 @@ def build_quote(extraction: dict[str, Any], catalog: dict[str, CatalogItem]) -> 
     quote: dict[str, Any] = {
         "customer": {"name": customer.get("name", ""), "email": customer.get("email", "")},
         "lines": lines,
-        "currency": "EUR",
+        "currency": currency,
         "missing": list(extraction.get("missing") or []),
     }
     if computable and lines:

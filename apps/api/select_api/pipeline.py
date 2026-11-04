@@ -2,8 +2,9 @@
 
 output -> select-verify receipt -> (blocked | failed -> correction | verified)
 verified -> approval needed?  yes -> approval queue  /  no -> done, autonomy credited
-Every step writes an audit event. External effects are never performed here: v0.1 has no
-outbound connector, so an approved action is recorded as "ready to send".
+done -> follow-ups by code (automation.on_done): route a triaged message, queue an e-mail.
+Every step writes an audit event. Nothing is sent from here: an e-mail becomes a Delivery
+that the worker sends once, after the approval rules.
 """
 
 from __future__ import annotations
@@ -17,11 +18,12 @@ from select_verify import Contract, Receipt, verify
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import autonomy
+from . import automation, autonomy
 from .audit import record
 from .auth import SYSTEM, Actor
 from .contracts import build_context, get_contract
 from .models import Agent, Approval, Company, Outcome, ReceiptRow, Run, Task, TaskComment
+from .outbound import OutgoingEmail, known_senders, render_email
 
 
 class PipelineError(RuntimeError):
@@ -40,8 +42,8 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def render_preview(contract: Contract, deliverable: dict[str, Any]) -> list[str]:
-    """Plain lines describing exactly what would leave Select."""
+def render_preview(contract: Contract, deliverable: dict[str, Any], currency: str = "EUR") -> list[str]:
+    """Plain lines describing a result that is not sent as an e-mail (or a demo result)."""
 
     def v(x: Any) -> str:
         return str(x.get("value")) if isinstance(x, dict) and "value" in x else str(x)
@@ -57,7 +59,9 @@ def render_preview(contract: Contract, deliverable: dict[str, Any]) -> list[str]
                 f"@ {v(line.get('unit_price'))} = {v(line.get('line_total'))}"
             )
         totals = deliverable.get("totals", {})
-        lines.append(f"Net {v(totals.get('net'))} · VAT {v(totals.get('vat'))} · Total {v(totals.get('gross'))} EUR")
+        lines.append(
+            f"Net {v(totals.get('net'))} · VAT {v(totals.get('vat'))} · Total {v(totals.get('gross'))} {currency}"
+        )
         return lines
     if contract.id == "support_reply":
         return [
@@ -180,6 +184,13 @@ def process_output(db: Session, task: Task, run: Run, output: dict[str, Any], ac
         decision = autonomy.ApprovalDecision(True, "supervised", "supervised")
     else:
         decision = autonomy.approval_needed(trust, contract, task.id, policy)
+    email = (
+        None if task.is_demo else render_email(db, company, task, contract, output, autonomous=not decision.required)
+    )
+    if not decision.required and email is not None and email.to.lower() not in known_senders(db, task):
+        # Writing to an address that never wrote to us is a human decision, whatever the licence.
+        decision = autonomy.ApprovalDecision(True, "new_recipient", decision.effective_level)
+        email = render_email(db, company, task, contract, output, autonomous=False)
     if decision.required:
         approval = Approval(
             company_id=task.company_id,
@@ -191,9 +202,10 @@ def process_output(db: Session, task: Task, run: Run, output: dict[str, Any], ac
             action=contract.approval.external_action,
             payload={
                 "action": contract.approval.external_action,
-                "preview": render_preview(contract, output),
+                "preview": email.preview() if email else render_preview(contract, output, company.currency),
                 "content": output,
                 "level": decision.effective_level,
+                **({"email": email.as_dict()} if email else {}),
             },
             is_demo=task.is_demo,
         )
@@ -229,9 +241,6 @@ def process_output(db: Session, task: Task, run: Run, output: dict[str, Any], ac
                 {"task_type": trust.task_type},
                 is_demo=task.is_demo,
             )
-    note = (
-        "ready to send; no outbound connector configured" if contract.approval.external_action else "no external effect"
-    )
     record(
         db,
         task.company_id,
@@ -239,9 +248,12 @@ def process_output(db: Session, task: Task, run: Run, output: dict[str, Any], ac
         "task.completed_autonomously",
         "task",
         task.id,
-        f"T-{task.number} finished without human review ({decision.reason}); {note}",
+        f"T-{task.number} finished without human review ({decision.reason})",
         {"action": contract.approval.external_action},
         is_demo=task.is_demo,
+    )
+    automation.on_done(
+        db, task, run_id=run.id, approval=None, email=email, approved_by=f"autonomous ({decision.effective_level})"
     )
     return Result("done", row)
 
@@ -288,10 +300,7 @@ def decide(db: Session, approval: Approval, decision: str, note: str, actor: Act
                     {"task_type": trust.task_type},
                     is_demo=task.is_demo,
                 )
-        action = approval.action or "none"
-        summary = f"{actor.name} approved T-{task.number}" + (
-            f"; '{action}' ready to send, no outbound connector configured" if approval.action else ""
-        )
+        summary = f"{actor.name} approved T-{task.number}"
     else:
         # The checks passed but a human found a problem: that is an undetected error.
         _outcome(db, task, level, autonomous=False, verified=True, reviewed=True, undetected=True)
@@ -330,6 +339,16 @@ def decide(db: Session, approval: Approval, decision: str, note: str, actor: Act
         {"task_id": str(task.id), "note": note},
         is_demo=task.is_demo,
     )
+    if decision == "approved":
+        stored = approval.payload.get("email")
+        automation.on_done(
+            db,
+            task,
+            run_id=approval.run_id,
+            approval=approval,
+            email=OutgoingEmail.from_dict(stored) if isinstance(stored, dict) else None,
+            approved_by=actor.name,
+        )
     return approval
 
 

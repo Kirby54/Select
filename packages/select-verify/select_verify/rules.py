@@ -170,7 +170,10 @@ def quote_totals(data: dict[str, Any], params: dict[str, Any], ctx: VerifyContex
         for index, line in enumerate(lines):
             qty = to_decimal(unwrap(line.get("quantity")), field=f"lines[{index}].quantity")
             price = to_decimal(unwrap(line.get("unit_price")), field=f"lines[{index}].unit_price")
-            rate = to_decimal(unwrap(line.get("vat_rate", "0.19")), field=f"lines[{index}].vat_rate")
+            if "vat_rate" not in line:
+                problems.append({"field": f"lines[{index}].vat_rate", "found": "missing", "expected": "a VAT rate"})
+                continue
+            rate = to_decimal(unwrap(line.get("vat_rate")), field=f"lines[{index}].vat_rate")
             if rate not in ctx.allowed_vat_rates:
                 problems.append({"field": f"lines[{index}].vat_rate", "found": str(rate), "expected": "allowed rate"})
             expected = round_money(qty * price)
@@ -195,6 +198,35 @@ def quote_totals(data: dict[str, Any], params: dict[str, Any], ctx: VerifyContex
             False, f"{len(problems)} amount(s) do not add up", {"problems": problems, "recomputed": evidence}
         )
     return Outcome(True, "every line and total recomputed exactly", {"recomputed": evidence})
+
+
+@rule("vat_rate")
+def vat_rate(data: dict[str, Any], params: dict[str, Any], ctx: VerifyContext) -> Outcome:
+    """Every rate at ``field`` is one of the company's VAT rates (from the system-built context)."""
+    bad: list[dict[str, Any]] = []
+    checked = 0
+    for concrete, value in iter_path(data, _param(params, "field")):
+        raw = unwrap(value)
+        checked += 1
+        try:
+            rate = to_decimal(None if raw is MISSING else raw, field=concrete)
+        except MoneyError:
+            bad.append({"field": concrete, "value": None if raw is MISSING else str(raw)})
+            continue
+        if rate not in ctx.allowed_vat_rates:
+            bad.append({"field": concrete, "value": str(raw)})
+    allowed = ", ".join(fmt_rate(r) for r in ctx.allowed_vat_rates)
+    if checked == 0:
+        return Outcome(False, "no VAT rate to check")
+    if bad:
+        return Outcome(False, f"VAT rate not used by this company (allowed: {allowed})", {"invalid": bad})
+    return Outcome(True, f"every VAT rate is one of the company's rates ({allowed})")
+
+
+def fmt_rate(rate: Decimal) -> str:
+    """0.055 -> "5.5 %"."""
+    percent = (rate * 100).normalize()
+    return f"{format(percent, 'f')} %"
 
 
 _NUMBER_RE = re.compile(r"\d+(?:[.,]\d+)?")

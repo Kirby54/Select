@@ -10,9 +10,11 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import func, select
 
-from . import autonomy, jobs
+from . import autonomy, delivery, jobs
 from .audit import record
 from .auth import CompanyDep, DbDep, PrincipalDep
+from .company_profile import COUNTRIES, normalize_rates, rate_allowed, validate_settings, validate_timezone
+from .config import get_settings
 from .contracts import registry
 from .models import (
     Agent,
@@ -50,6 +52,11 @@ from .views import (
 router = APIRouter(prefix="/api")
 
 
+def _rate(value: str) -> str:
+    rates, _ = normalize_rates([value])
+    return rates[0] if rates else value
+
+
 def _slug(name: str) -> str:
     base = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40] or "company"
     return f"{base}-{uuid.uuid4().hex[:6]}"
@@ -66,15 +73,40 @@ def list_companies(principal: PrincipalDep, db: DbDep) -> list[dict[str, Any]]:
     return [company_out(c, role) for c, role in rows]
 
 
+def _profile_errors(country: str, currency: str | None, rates: list[str] | None, tz: str | None) -> list[str]:
+    errors = []
+    if country not in COUNTRIES and (currency is None or rates is None or tz is None):
+        errors.append(f"{country} has no preset: give the currency, the VAT rates and the time zone")
+    if tz is not None and (error := validate_timezone(tz)):
+        errors.append(error)
+    return errors
+
+
 @router.post("/companies", status_code=201)
 def create_company(body: CompanyIn, principal: PrincipalDep, db: DbDep) -> dict[str, Any]:
+    errors = _profile_errors(body.country, body.currency, body.vat_rates, body.timezone)
+    if errors:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "; ".join(errors))
+    preset = COUNTRIES.get(body.country)
+    currency = body.currency or (preset.currency if preset else "EUR")
+    timezone = body.timezone or (preset.timezone if preset else "UTC")
+    rates, rate_errors = normalize_rates(
+        body.vat_rates if body.vat_rates is not None else list(preset.vat_rates if preset else ())
+    )
+    if rate_errors:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "; ".join(rate_errors))
     company = Company(
         name=body.name,
         slug=_slug(body.name),
-        currency=body.currency,
+        country=body.country,
+        currency=currency,
+        vat_rates=rates,
+        timezone=timezone,
+        language=body.language or (preset.language if preset else "en"),
         monthly_budget=body.monthly_budget,
         policy={},
         catalog=[],
+        settings={},
     )
     db.add(company)
     db.flush()
@@ -107,6 +139,36 @@ def patch_company(body: CompanyPatch, ctx: CompanyDep, db: DbDep) -> dict[str, A
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "; ".join(errors))
         company.policy = body.policy
         changes["policy"] = body.policy
+    if body.country is not None and body.country != company.country:
+        company.country = body.country
+        changes["country"] = body.country
+    if body.currency is not None and body.currency != company.currency:
+        company.currency = body.currency
+        changes["currency"] = body.currency
+    if body.timezone is not None and body.timezone != company.timezone:
+        if error := validate_timezone(body.timezone):
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, error)
+        company.timezone = body.timezone
+        changes["timezone"] = body.timezone
+    if body.language is not None and body.language != company.language:
+        company.language = body.language
+        changes["language"] = body.language
+    if body.vat_rates is not None:
+        rates, rate_errors = normalize_rates(body.vat_rates)
+        unused = [i["ref"] for i in company.catalog or [] if not rate_allowed(str(i.get("vat_rate", "")), rates)]
+        if unused:
+            rate_errors.append(f"catalog item(s) {', '.join(unused)} use a rate that would no longer exist")
+        if rate_errors:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "; ".join(rate_errors))
+        if rates != (company.vat_rates or []):
+            company.vat_rates = rates
+            changes["vat_rates"] = rates
+    if body.settings is not None:
+        errors = validate_settings(body.settings, set(registry()))
+        if errors:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "; ".join(errors))
+        company.settings = {**(company.settings or {}), **body.settings}
+        changes["settings"] = body.settings
     record(
         db,
         company.id,
@@ -129,7 +191,17 @@ def put_catalog(body: list[CatalogItemIn], ctx: CompanyDep, db: DbDep) -> dict[s
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Catalog references must be unique.")
     company = db.get(Company, ctx.company.id)
     assert company is not None
-    company.catalog = [{**i.model_dump(mode="json"), "unit_price": format(i.unit_price, "f")} for i in body]
+    wrong = [f"{i.ref} ({i.vat_rate})" for i in body if not rate_allowed(i.vat_rate, company.vat_rates or [])]
+    if wrong:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            f"VAT rate not used by this company for: {', '.join(wrong)}. "
+            f"Company rates: {', '.join(company.vat_rates or [])} (change them in Settings).",
+        )
+    company.catalog = [
+        {**i.model_dump(mode="json"), "unit_price": format(i.unit_price, "f"), "vat_rate": _rate(i.vat_rate)}
+        for i in body
+    ]
     record(
         db,
         company.id,
@@ -150,6 +222,7 @@ def emergency_stop(ctx: CompanyDep, db: DbDep, on: bool = True) -> dict[str, Any
     assert company is not None
     company.emergency_stop = on
     cancelled = jobs.cancel_company_jobs(db, company.id) if on else 0
+    held = delivery.hold_all(db, company.id, "Emergency stop: a person releases it.") if on else 0
     record(
         db,
         company.id,
@@ -157,7 +230,8 @@ def emergency_stop(ctx: CompanyDep, db: DbDep, on: bool = True) -> dict[str, Any
         "company.emergency_stop",
         "company",
         company.id,
-        f"Emergency stop {'ON' if on else 'off'}" + (f"; {cancelled} queued run(s) cancelled" if on else ""),
+        f"Emergency stop {'ON' if on else 'off'}"
+        + (f"; {cancelled} queued job(s) cancelled, {held} e-mail(s) held" if on else ""),
     )
     db.commit()
     return company_out(company, ctx.role)
@@ -171,12 +245,19 @@ def list_members(ctx: CompanyDep, db: DbDep) -> list[dict[str, Any]]:
         .where(Membership.company_id == ctx.company.id)
         .order_by(User.created_at)
     ).all()
-    return [{"id": str(u.id), "email": u.email, "name": u.name, "role": r} for u, r in rows]
+    return [
+        {"id": str(u.id), "email": u.email, "name": u.name, "role": r, "is_you": u.id == ctx.principal.user_id}
+        for u, r in rows
+    ]
 
 
 @router.post("/companies/{company_id}/members", status_code=201)
 def add_member(body: UserIn, ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
     ctx.require("owner")
+    if get_settings().auth_mode == "password":
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "With sign-in by password, invite people instead: they choose their own password."
+        )
     user = db.scalar(select(User).where(User.email == body.email))
     if user is None:
         user = User(email=body.email, name=body.name)

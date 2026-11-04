@@ -86,7 +86,7 @@ def test_all_shipped_contracts_load():
 def test_valid_quote_is_verified(quote_contract, quote, ctx):
     receipt = verify(quote_contract, quote, ctx, run_id="run-1")
     assert receipt.status == "verified", [c for c in receipt.checks if c.status != "passed"]
-    assert receipt.contract_version == 1
+    assert receipt.contract_version == 2
     assert receipt.contract_sha256 == quote_contract.sha256
     assert receipt.run_id == "run-1"
     assert all(c.status == "passed" for c in receipt.checks)
@@ -156,6 +156,32 @@ def test_disallowed_vat_rate(quote_contract, quote, ctx):
     bad["lines"][0]["vat_rate"]["value"] = "0.16"
     receipt = verify(quote_contract, bad, ctx, run_id="r")
     assert {c.id for c in receipt.checks if c.status == "failed"} >= {"vat_rate_allowed", "totals_add_up"}
+
+
+def test_vat_rates_come_from_the_company(quote_contract, quote, ctx):
+    """The same quote is wrong for a company that does not charge 19 %, and right with its own rate."""
+    french = ctx.model_copy(update={"allowed_vat_rates": [Decimal("0.20"), Decimal("0.10"), Decimal("0.055")]})
+    receipt = verify(quote_contract, quote, french, run_id="r")
+    failed = {c.id for c in receipt.checks if c.status == "failed"}
+    assert {"vat_rate_allowed", "totals_add_up"} <= failed
+    evidence = next(c for c in receipt.checks if c.id == "vat_rate_allowed")
+    assert "20 %" in evidence.message and "5.5 %" in evidence.message
+
+    priced = copy.deepcopy(quote)
+    for line in priced["lines"]:
+        line["vat_rate"]["value"] = "0.20"
+    priced["totals"]["vat"]["value"] = "146.76"
+    priced["totals"]["gross"]["value"] = "880.56"
+    assert verify(quote_contract, priced, french, run_id="r").status == "verified"
+
+
+def test_missing_vat_rate_is_never_assumed(quote_contract, quote, ctx):
+    bad = copy.deepcopy(quote)
+    del bad["lines"][0]["vat_rate"]
+    receipt = verify(quote_contract, bad, ctx, run_id="r")
+    totals = next(c for c in receipt.checks if c.id == "totals_add_up")
+    assert totals.status == "failed"
+    assert {"field": "lines[0].vat_rate", "found": "missing", "expected": "a VAT rate"} in totals.evidence["problems"]
 
 
 def test_floats_are_refused():

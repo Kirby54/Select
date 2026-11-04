@@ -1,7 +1,7 @@
 # Customer quote built from a customer request and the company catalog.
 # Amounts are computed by code; the model may only point at catalog items and quote the request.
 id: quote
-version: 1
+version: 2
 title: Customer quote
 description: A priced quote answering a customer request. Every price comes from the catalog, every quantity from the request.
 risk: medium
@@ -23,9 +23,9 @@ checks:
     rule: quote_totals
     description: Line totals, net, VAT and gross recomputed with exact decimals.
   - id: vat_rate_allowed
-    rule: allowed_values
-    description: Only the German standard (19 %) or reduced (7 %) VAT rate.
-    params: { field: "lines[].vat_rate", values: ["0.19", "0.07"] }
+    rule: vat_rate
+    description: Only VAT rates the company uses (set from its country in Settings).
+    params: { field: "lines[].vat_rate" }
   - id: every_number_sourced
     rule: provenance
     description: Quantities come from the request, prices from the catalog, totals from calculation.

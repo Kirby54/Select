@@ -11,18 +11,25 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .models import (
     Agent,
+    ApiToken,
     Approval,
     AuditEvent,
     Company,
+    Delivery,
     Goal,
+    Invitation,
+    MailAccount,
+    MailMessage,
     Project,
     ProviderConnection,
     ReceiptRow,
+    Routine,
     Run,
     Task,
     TaskComment,
     Trust,
     TrustEvent,
+    User,
 )
 
 
@@ -30,9 +37,18 @@ class Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
 
+Language = Literal["fr", "de", "en"]
+EMAIL_PATTERN = r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$"
+
+
 class CompanyIn(Strict):
     name: str = Field(min_length=1, max_length=120)
-    currency: str = Field(default="EUR", pattern=r"^[A-Z]{3}$")
+    # A preset country fills currency, VAT rates, time zone and language unless they are given.
+    country: str = Field(default="DE", pattern=r"^[A-Z]{2}$")
+    currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    vat_rates: list[str] | None = Field(default=None, max_length=12)
+    timezone: str | None = Field(default=None, max_length=64)
+    language: Language | None = None
     monthly_budget: Decimal = Field(default=Decimal("0"), ge=0, max_digits=14, decimal_places=2)
 
 
@@ -40,6 +56,12 @@ class CompanyPatch(Strict):
     name: str | None = Field(default=None, min_length=1, max_length=120)
     monthly_budget: Decimal | None = Field(default=None, ge=0, max_digits=14, decimal_places=2)
     policy: dict[str, Any] | None = None
+    country: str | None = Field(default=None, pattern=r"^[A-Z]{2}$")
+    currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    vat_rates: list[str] | None = Field(default=None, max_length=12)
+    timezone: str | None = Field(default=None, max_length=64)
+    language: Language | None = None
+    settings: dict[str, Any] | None = None
 
 
 class CatalogItemIn(Strict):
@@ -47,7 +69,8 @@ class CatalogItemIn(Strict):
     label: str = Field(min_length=1, max_length=120)
     unit: str = Field(min_length=1, max_length=16)
     unit_price: Decimal = Field(ge=0, max_digits=12, decimal_places=2)
-    vat_rate: Literal["0.19", "0.07", "0"] = "0.19"
+    # Checked against the company's VAT rates when the catalog is saved.
+    vat_rate: str = Field(default="0.19", pattern=r"^(0|0?\.\d{1,4})$")
 
 
 class AgentIn(Strict):
@@ -166,9 +189,128 @@ class ConnectionIn(Strict):
 
 
 class UserIn(Strict):
-    email: str = Field(max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
+    email: str = Field(max_length=254, pattern=EMAIL_PATTERN)
     name: str = Field(min_length=1, max_length=120)
     role: Literal["admin", "member", "viewer"] = "member"
+
+
+# ---------------------------------------------------------------- accounts
+
+
+class SetupIn(Strict):
+    name: str = Field(min_length=1, max_length=120)
+    email: str = Field(max_length=254, pattern=EMAIL_PATTERN)
+    password: str = Field(min_length=10, max_length=200)
+
+
+class LoginIn(Strict):
+    email: str = Field(max_length=254)
+    password: str = Field(min_length=1, max_length=200)
+
+
+class PasswordIn(Strict):
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=10, max_length=200)
+
+
+class InviteIn(Strict):
+    email: str = Field(max_length=254, pattern=EMAIL_PATTERN)
+    role: Literal["admin", "member", "viewer"] = "member"
+
+
+class AcceptIn(Strict):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    password: str | None = Field(default=None, min_length=10, max_length=200)
+
+
+class MemberPatch(Strict):
+    role: Literal["owner", "admin", "member", "viewer"]
+
+
+class TokenIn(Strict):
+    name: str = Field(min_length=1, max_length=80)
+
+
+# ---------------------------------------------------------------- operations
+
+
+class MailboxIn(Strict):
+    label: str = Field(min_length=1, max_length=80)
+    address: str = Field(max_length=254, pattern=EMAIL_PATTERN)
+    display_name: str = Field(default="", max_length=120)
+    imap_host: str | None = Field(default=None, max_length=255, pattern=r"^[A-Za-z0-9.\-]+$")
+    imap_port: int = Field(default=993, ge=1, le=65535)
+    imap_security: Literal["ssl", "starttls", "none"] = "ssl"
+    imap_username: str = Field(default="", max_length=254)
+    imap_password: str | None = Field(default=None, max_length=400)
+    imap_folder: str = Field(default="INBOX", min_length=1, max_length=120)
+    smtp_host: str | None = Field(default=None, max_length=255, pattern=r"^[A-Za-z0-9.\-]+$")
+    smtp_port: int = Field(default=465, ge=1, le=65535)
+    smtp_security: Literal["ssl", "starttls", "none"] = "ssl"
+    smtp_username: str = Field(default="", max_length=254)
+    smtp_password: str | None = Field(default=None, max_length=400)
+    inbound_enabled: bool = False
+    outbound_enabled: bool = False
+    poll_seconds: int = Field(default=120, ge=60, le=86_400)
+    import_days: int = Field(default=0, ge=0, le=14)
+
+
+class MessageTaskIn(Strict):
+    task_type: str = Field(min_length=1, max_length=64)
+    assignee_id: uuid.UUID | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class DeliverySendIn(Strict):
+    confirm_resend: bool = False
+
+
+class DeliveryMarkIn(Strict):
+    status: Literal["sent", "cancelled"]
+    note: str = Field(default="", max_length=500)
+
+
+class RoutineIn(Strict):
+    name: str = Field(min_length=1, max_length=120)
+    cron: str = Field(min_length=9, max_length=120)
+    timezone: str | None = Field(default=None, max_length=64)
+    enabled: bool = True
+    title: str = Field(min_length=1, max_length=200)
+    description: str = Field(default="", max_length=10_000)
+    task_type: str = Field(min_length=1, max_length=64)
+    assignee_id: uuid.UUID | None = None
+    project_id: uuid.UUID | None = None
+    priority: Literal["low", "medium", "high", "urgent"] = "medium"
+
+
+class RoutinePatch(Strict):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    cron: str | None = Field(default=None, min_length=9, max_length=120)
+    timezone: str | None = Field(default=None, max_length=64)
+    enabled: bool | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=10_000)
+    task_type: str | None = Field(default=None, min_length=1, max_length=64)
+    assignee_id: uuid.UUID | None = None
+    clear_assignee: bool = False
+    priority: Literal["low", "medium", "high", "urgent"] | None = None
+
+
+class SchedulePreviewIn(Strict):
+    cron: str = Field(min_length=1, max_length=120)
+    timezone: str | None = Field(default=None, max_length=64)
+
+
+class ApplyTemplateIn(Strict):
+    template: str = Field(min_length=1, max_length=40, pattern=r"^[a-z0-9_\-]+$")
+    provider: Literal["anthropic", "openai", "gemini", "ollama"] | None = None
+    model: str | None = Field(default=None, max_length=120)
+
+
+class AgentsModelIn(Strict):
+    provider: Literal["anthropic", "openai", "gemini", "ollama"]
+    model: str = Field(min_length=1, max_length=120)
+    only_unset: bool = False
 
 
 def iso(value: Any) -> str | None:
@@ -180,6 +322,8 @@ def money(value: Decimal | None) -> str | None:
 
 
 def company_out(c: Company, role: str) -> dict[str, Any]:
+    from .company_profile import settings_for
+
     return {
         "id": str(c.id),
         "name": c.name,
@@ -190,6 +334,11 @@ def company_out(c: Company, role: str) -> dict[str, Any]:
         "emergency_stop": c.emergency_stop,
         "policy": c.policy or {},
         "catalog": c.catalog or [],
+        "country": c.country,
+        "timezone": c.timezone,
+        "language": c.language,
+        "vat_rates": c.vat_rates or [],
+        "settings": settings_for(c),
         "role": role,
         "created_at": iso(c.created_at),
     }
@@ -273,6 +422,9 @@ def task_out(t: Task, assignee: Agent | None = None) -> dict[str, Any]:
         "attempts": t.attempts,
         "version": t.version,
         "is_demo": t.is_demo,
+        "origin": t.origin,
+        "message_id": str(t.message_id) if t.message_id else None,
+        "routine_id": str(t.routine_id) if t.routine_id else None,
         "archived": t.archived_at is not None,
         "created_at": iso(t.created_at),
         "updated_at": iso(t.updated_at),
@@ -399,4 +551,132 @@ def connection_out(c: ProviderConnection) -> dict[str, Any]:
         "last_test_at": iso(c.last_test_at),
         "last_test_ok": c.last_test_ok,
         "last_error": c.last_error,
+    }
+
+
+def user_out(u: User) -> dict[str, Any]:
+    return {"id": str(u.id), "email": u.email, "name": u.name, "has_password": u.password_hash is not None}
+
+
+def token_out(t: ApiToken) -> dict[str, Any]:
+    return {
+        "id": str(t.id),
+        "name": t.name,
+        "created_at": iso(t.created_at),
+        "last_used_at": iso(t.last_used_at),
+    }
+
+
+def invitation_out(i: Invitation) -> dict[str, Any]:
+    return {
+        "id": str(i.id),
+        "email": i.email,
+        "role": i.role,
+        "created_at": iso(i.created_at),
+        "expires_at": iso(i.expires_at),
+        "accepted_at": iso(i.accepted_at),
+    }
+
+
+def mailbox_out(m: MailAccount) -> dict[str, Any]:
+    return {
+        "id": str(m.id),
+        "label": m.label,
+        "address": m.address,
+        "display_name": m.display_name,
+        "imap_host": m.imap_host,
+        "imap_port": m.imap_port,
+        "imap_security": m.imap_security,
+        "imap_username": m.imap_username,
+        "imap_folder": m.imap_folder,
+        "has_imap_password": bool(m.imap_password_encrypted),
+        "smtp_host": m.smtp_host,
+        "smtp_port": m.smtp_port,
+        "smtp_security": m.smtp_security,
+        "smtp_username": m.smtp_username,
+        "has_smtp_password": bool(m.smtp_password_encrypted),
+        "inbound_enabled": m.inbound_enabled,
+        "outbound_enabled": m.outbound_enabled,
+        "poll_seconds": m.poll_seconds,
+        "import_days": m.import_days,
+        "reading_since_set": m.imap_last_uid is not None,
+        "last_poll_at": iso(m.last_poll_at),
+        "last_poll_ok": m.last_poll_ok,
+        "last_poll_error": m.last_poll_error,
+        "last_smtp_test_at": iso(m.last_smtp_test_at),
+        "last_smtp_test_ok": m.last_smtp_test_ok,
+        "last_smtp_error": m.last_smtp_error,
+        "created_at": iso(m.created_at),
+    }
+
+
+def message_out(m: MailMessage, mailbox: MailAccount | None = None, *, full: bool = False) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "id": str(m.id),
+        "mailbox_id": str(m.mail_account_id) if m.mail_account_id else None,
+        "mailbox": mailbox.address if mailbox else None,
+        "from_address": m.from_address,
+        "from_name": m.from_name,
+        "reply_to": m.reply_to,
+        "to": m.to_addresses,
+        "subject": m.subject,
+        "snippet": " ".join(m.text.split())[:180],
+        "attachments": m.attachments or [],
+        "automatic": m.automatic,
+        "status": m.status,
+        "status_note": m.status_note,
+        "received_at": iso(m.received_at),
+        "created_at": iso(m.created_at),
+    }
+    if full:
+        out["text"] = m.text
+        out["message_id"] = m.message_id
+    return out
+
+
+def delivery_out(d: Delivery, task: Task | None = None, mailbox: MailAccount | None = None) -> dict[str, Any]:
+    return {
+        "id": str(d.id),
+        "task_id": str(d.task_id),
+        "task_key": f"T-{task.number}" if task else None,
+        "task_title": task.title if task else None,
+        "approval_id": str(d.approval_id) if d.approval_id else None,
+        "mailbox": mailbox.address if mailbox else None,
+        "action": d.action,
+        "to": d.to_address,
+        "subject": d.subject,
+        "body": d.body,
+        "message_id": d.message_id,
+        "status": d.status,
+        "status_note": d.status_note,
+        "attempts": d.attempts,
+        "last_error": d.last_error,
+        "approved_by": d.approved_by,
+        "created_at": iso(d.created_at),
+        "updated_at": iso(d.updated_at),
+        "sent_at": iso(d.sent_at),
+    }
+
+
+def routine_out(r: Routine, assignee: Agent | None = None, upcoming: list[Any] | None = None) -> dict[str, Any]:
+    return {
+        "id": str(r.id),
+        "name": r.name,
+        "cron": r.cron,
+        "timezone": r.timezone,
+        "enabled": r.enabled,
+        "title": r.title,
+        "description": r.description,
+        "task_type": r.task_type,
+        "assignee_id": str(r.assignee_id) if r.assignee_id else None,
+        "assignee_name": assignee.name if assignee else None,
+        "project_id": str(r.project_id) if r.project_id else None,
+        "priority": r.priority,
+        "next_run_at": iso(r.next_run_at),
+        "last_run_at": iso(r.last_run_at),
+        "last_task_id": str(r.last_task_id) if r.last_task_id else None,
+        "runs_count": r.runs_count,
+        "upcoming": [iso(x) for x in (upcoming or [])],
+        "created_by": r.created_by,
+        "created_at": iso(r.created_at),
     }

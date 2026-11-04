@@ -1,0 +1,53 @@
+{
+  "id": "artisan",
+  "order": 1,
+  "name": { "fr": "Artisan ou atelier", "de": "Handwerksbetrieb", "en": "Craft business or workshop" },
+  "description": {
+    "fr": "Les e-mails entrants sont triés, les demandes de devis chiffrées depuis votre catalogue et les questions des clients reçoivent une réponse.",
+    "de": "Eingehende E-Mails werden sortiert, Angebotsanfragen aus Ihrem Katalog berechnet und Kundenfragen beantwortet.",
+    "en": "Incoming e-mail is triaged, quote requests are priced from your catalog and customer questions get an answer."
+  },
+  "agents": [
+    {
+      "key": "inbox",
+      "manager": null,
+      "name": { "fr": "Courrier", "de": "Posteingang", "en": "Inbox" },
+      "role": { "fr": "Tri des e-mails entrants", "de": "Sortiert eingehende E-Mails", "en": "Triages incoming e-mail" },
+      "task_types": ["message_triage", "general_task"],
+      "permissions": ["read_messages"],
+      "instructions": {
+        "fr": "Lis chaque message reçu et classe-le : demande de devis, question d'un client, question sur une facture, spam ou autre. Un message qui cite des produits, des quantités ou des dimensions est une demande de devis. Résume le besoin en une phrase pour l'équipe.",
+        "de": "Lies jede eingehende Nachricht und ordne sie ein: Angebotsanfrage, Kundenfrage, Frage zu einer Rechnung, Spam oder Sonstiges. Eine Nachricht mit Produkten, Mengen oder Maßen ist eine Angebotsanfrage. Fasse das Anliegen in einem Satz für das Team zusammen.",
+        "en": "Read each incoming message and classify it: quote request, customer question, invoice question, spam or other. A message that names products, quantities or dimensions is a quote request. Summarise the need in one sentence for the team."
+      }
+    },
+    {
+      "key": "quotes",
+      "manager": "inbox",
+      "name": { "fr": "Devis", "de": "Angebote", "en": "Quotes" },
+      "role": { "fr": "Prépare les devis", "de": "Erstellt Angebote", "en": "Prepares quotes" },
+      "task_types": ["quote"],
+      "permissions": ["read_messages", "read_catalog", "draft_external"],
+      "instructions": {
+        "fr": "Pour chaque demande, retrouve les articles du catalogue et la quantité exacte écrite par le client. Si une quantité, une dimension ou l'adresse e-mail manque, indique-la dans « missing » au lieu de la deviner.",
+        "de": "Finde für jede Anfrage die Katalogartikel und die genaue Menge, die der Kunde geschrieben hat. Fehlt eine Menge, ein Maß oder die E-Mail-Adresse, trage sie unter „missing“ ein, statt sie zu raten.",
+        "en": "For each request, find the catalog items and the exact quantity the customer wrote. If a quantity, a dimension or the e-mail address is missing, list it under \"missing\" instead of guessing."
+      }
+    },
+    {
+      "key": "support",
+      "manager": "inbox",
+      "name": { "fr": "Service client", "de": "Kundenservice", "en": "Customer service" },
+      "role": { "fr": "Répond aux clients", "de": "Beantwortet Kundenfragen", "en": "Answers customers" },
+      "task_types": ["support_reply"],
+      "permissions": ["read_messages", "draft_external"],
+      "instructions": {
+        "fr": "Réponds avec politesse et précision, en peu de phrases. Ne promets ni remboursement, ni remise, ni date : écris qu'une personne de l'équipe revient vers le client sur ces points.",
+        "de": "Antworte höflich, genau und knapp. Versprich weder Erstattung noch Rabatt noch Termin: schreibe, dass sich jemand aus dem Team dazu meldet.",
+        "en": "Answer politely, precisely and briefly. Never promise a refund, a discount or a date: say that someone from the team will follow up on those points."
+      }
+    }
+  ],
+  "routing": { "quote_request": "quote", "support": "support_reply", "invoice_question": "human", "spam": "ignore", "other": "human" },
+  "routines": []
+}

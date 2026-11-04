@@ -17,7 +17,7 @@ def test_vertical_slice(client):
     assert result["outcome"] == "awaiting_approval"
     receipt = result["receipts"][0]
     assert receipt["status"] == "verified"
-    assert receipt["contract_id"] == "quote" and receipt["contract_version"] == 1
+    assert receipt["contract_id"] == "quote" and receipt["contract_version"] == 2
     assert {c["id"] for c in receipt["body"]["checks"]} >= {
         "prices_match_catalog",
         "totals_add_up",
@@ -27,7 +27,12 @@ def test_vertical_slice(client):
     approval = pending_approval(client, cid, task["id"])
     assert approval["reason"] == "supervised"
     assert approval["action"] == "send_quote_email"
-    assert any("Total 873.22" in line for line in approval["payload"]["preview"])
+    # The approval shows the exact e-mail that would leave Select, in the company's language.
+    preview = approval["payload"]["preview"]
+    assert preview[0] == "To: jonas.weber@example.org"
+    assert "- 3,2 m × Oak worktop @ 189,00 € = 604,80 €" in preview
+    assert "Gesamtbetrag brutto: 873,22 €" in preview
+    assert approval["payload"]["email"]["to"] == "jonas.weber@example.org"
 
     decided = ok(client.post(f"/api/companies/{cid}/approvals/{approval['id']}/decide", json={"decision": "approved"}))
     assert decided["status"] == "approved" and decided["decided_by"] == "Owner"

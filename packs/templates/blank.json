@@ -1,0 +1,13 @@
+{
+  "id": "blank",
+  "order": 9,
+  "name": { "fr": "Partir de zéro", "de": "Leer beginnen", "en": "Start from scratch" },
+  "description": {
+    "fr": "Aucun agent : vous composez l'équipe vous-même.",
+    "de": "Keine Agenten: Sie stellen das Team selbst zusammen.",
+    "en": "No agents: you build the team yourself."
+  },
+  "agents": [],
+  "routing": {},
+  "routines": []
+}

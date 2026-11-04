@@ -33,13 +33,17 @@ def catalog_items(company: Company) -> dict[str, CatalogItem]:
     return items
 
 
+def company_vat_rates(company: Company) -> list[Decimal]:
+    return [Decimal(str(r)) for r in (company.vat_rates or [])]
+
+
 def build_context(company: Company, task: Task) -> VerifyContext:
     """Built by the system from stored data. Nothing here comes from the agent's output."""
     sources: dict[str, str] = {}
     for source in (task.inputs or {}).get("sources", []):
         if isinstance(source, dict) and "id" in source and "text" in source:
             sources[str(source["id"])] = str(source["text"])
-    return VerifyContext(catalog=catalog_items(company), sources=sources)
+    return VerifyContext(catalog=catalog_items(company), sources=sources, allowed_vat_rates=company_vat_rates(company))
 
 
 def contract_summary(contract: Contract) -> dict[str, Any]:

@@ -1,0 +1,80 @@
+{
+  "id": "services",
+  "order": 2,
+  "name": { "fr": "Prestataire de services", "de": "Dienstleister", "en": "Service business" },
+  "description": {
+    "fr": "Tri des e-mails, devis à partir de vos prestations, réponses aux clients et une publication par semaine à relire.",
+    "de": "E-Mails sortieren, Angebote aus Ihren Leistungen, Antworten an Kunden und ein Beitrag pro Woche zur Durchsicht.",
+    "en": "E-mail triage, quotes from your services, answers to customers and one post a week for you to review."
+  },
+  "agents": [
+    {
+      "key": "inbox",
+      "manager": null,
+      "name": { "fr": "Courrier", "de": "Posteingang", "en": "Inbox" },
+      "role": { "fr": "Tri des e-mails entrants", "de": "Sortiert eingehende E-Mails", "en": "Triages incoming e-mail" },
+      "task_types": ["message_triage", "general_task"],
+      "permissions": ["read_messages"],
+      "instructions": {
+        "fr": "Classe chaque message : demande de devis, question d'un client, question sur une facture, spam ou autre. Une demande de prestation chiffrable est une demande de devis. Résume le besoin en une phrase.",
+        "de": "Ordne jede Nachricht ein: Angebotsanfrage, Kundenfrage, Frage zu einer Rechnung, Spam oder Sonstiges. Eine bezifferbare Leistungsanfrage ist eine Angebotsanfrage. Fasse das Anliegen in einem Satz zusammen.",
+        "en": "Classify each message: quote request, customer question, invoice question, spam or other. A request for a service that can be priced is a quote request. Summarise the need in one sentence."
+      }
+    },
+    {
+      "key": "quotes",
+      "manager": "inbox",
+      "name": { "fr": "Devis", "de": "Angebote", "en": "Quotes" },
+      "role": { "fr": "Prépare les devis", "de": "Erstellt Angebote", "en": "Prepares quotes" },
+      "task_types": ["quote"],
+      "permissions": ["read_messages", "read_catalog", "draft_external"],
+      "instructions": {
+        "fr": "Associe chaque besoin du client à une prestation du catalogue, avec la quantité (heures, jours, unités) écrite par le client. Ce qui n'est pas précisé va dans « missing ».",
+        "de": "Ordne jeden Bedarf einer Katalogleistung zu, mit der Menge (Stunden, Tage, Einheiten), die der Kunde geschrieben hat. Was fehlt, kommt unter „missing“.",
+        "en": "Match each customer need to a catalog service, with the quantity (hours, days, units) the customer wrote. Anything not stated goes under \"missing\"."
+      }
+    },
+    {
+      "key": "support",
+      "manager": "inbox",
+      "name": { "fr": "Service client", "de": "Kundenservice", "en": "Customer service" },
+      "role": { "fr": "Répond aux clients", "de": "Beantwortet Kundenfragen", "en": "Answers customers" },
+      "task_types": ["support_reply"],
+      "permissions": ["read_messages", "draft_external"],
+      "instructions": {
+        "fr": "Réponds clairement et brièvement. Ne promets ni remboursement, ni remise, ni délai : une personne de l'équipe s'en charge.",
+        "de": "Antworte klar und kurz. Versprich weder Erstattung noch Rabatt noch Frist: darum kümmert sich jemand aus dem Team.",
+        "en": "Answer clearly and briefly. Never promise a refund, a discount or a deadline: someone from the team handles those."
+      }
+    },
+    {
+      "key": "comms",
+      "manager": null,
+      "name": { "fr": "Communication", "de": "Kommunikation", "en": "Communications" },
+      "role": { "fr": "Rédige les publications", "de": "Schreibt Beiträge", "en": "Writes posts" },
+      "task_types": ["social_post", "general_task"],
+      "permissions": ["draft_external"],
+      "instructions": {
+        "fr": "Écris des publications courtes, concrètes et sans superlatifs. N'avance aucun chiffre qui ne figure pas dans une source.",
+        "de": "Schreibe kurze, konkrete Beiträge ohne Superlative. Nenne keine Zahl, die nicht in einer Quelle steht.",
+        "en": "Write short, concrete posts without superlatives. State no figure that is not in a source."
+      }
+    }
+  ],
+  "routing": { "quote_request": "quote", "support": "support_reply", "invoice_question": "human", "spam": "ignore", "other": "human" },
+  "routines": [
+    {
+      "agent": "comms",
+      "cron": "0 9 * * 1",
+      "enabled": false,
+      "task_type": "social_post",
+      "name": { "fr": "Publication de la semaine", "de": "Beitrag der Woche", "en": "Post of the week" },
+      "title": { "fr": "Publication LinkedIn de la semaine", "de": "LinkedIn-Beitrag der Woche", "en": "LinkedIn post of the week" },
+      "description": {
+        "fr": "Une publication courte qui présente une de nos prestations. Pas de chiffre sans source.",
+        "de": "Ein kurzer Beitrag, der eine unserer Leistungen vorstellt. Keine Zahl ohne Quelle.",
+        "en": "A short post presenting one of our services. No figure without a source."
+      }
+    }
+  ]
+}

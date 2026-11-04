@@ -95,7 +95,7 @@ class Receipt(BaseModel):
     errors: list[str] = Field(default_factory=list)
     deliverable_sha256: str
     verified_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    verifier: str = "select-verify/0.1.0"
+    verifier: str = "select-verify/0.2.0"
 
     @property
     def blocking_failures(self) -> list[CheckResult]:

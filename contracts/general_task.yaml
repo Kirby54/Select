@@ -1,0 +1,24 @@
+# Free-form work described in plain words (a summary, a draft, a plan, research notes).
+# Code can only check the shape of such a result, not whether it is right, so a human
+# reviews every result whatever the agent's record. Nothing leaves Select.
+id: general_task
+version: 1
+title: Free-form task (always reviewed)
+description: Any work described in plain words. Only its shape can be checked by code, so a human reviews every result.
+risk: medium
+required:
+  - summary
+  - result
+checks:
+  - id: summary_short
+    rule: max_length
+    description: The summary fits in a short paragraph.
+    params: { field: summary, max: 600 }
+  - id: result_bounded
+    rule: max_length
+    description: The result stays within 20,000 characters.
+    params: { field: result, max: 20000 }
+correction:
+  max_attempts: 1
+approval:
+  mode: always

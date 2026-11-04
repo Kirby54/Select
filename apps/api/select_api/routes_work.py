@@ -9,11 +9,25 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import func, or_, select, update
 
-from . import jobs, runner
+from . import automation, jobs, runner
 from .audit import record
 from .auth import Actor, CompanyDep, DbDep
 from .contracts import get_contract
-from .models import Agent, Approval, AuditEvent, Company, Job, ReceiptRow, Run, Task, TaskComment
+from .models import (
+    Agent,
+    Approval,
+    AuditEvent,
+    Delivery,
+    Goal,
+    Job,
+    MailAccount,
+    MailMessage,
+    Project,
+    ReceiptRow,
+    Run,
+    Task,
+    TaskComment,
+)
 from .pipeline import PipelineError, decide, new_run, process_output, report_problem
 from .views import (
     CommentIn,
@@ -25,6 +39,8 @@ from .views import (
     approval_out,
     audit_out,
     comment_out,
+    delivery_out,
+    message_out,
     receipt_out,
     run_out,
     task_out,
@@ -114,29 +130,30 @@ def create_task(body: TaskIn, ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
                 f"{assignee.name} is not allowed to do '{body.task_type}'. Add it on the agent first.",
             )
-    # Lock the company row so concurrent creations get distinct numbers.
-    db.scalar(select(Company).where(Company.id == ctx.company.id).with_for_update())
-    number = (
-        int(db.scalar(select(func.coalesce(func.max(Task.number), 0)).where(Task.company_id == ctx.company.id))) + 1
-    )
-    data = body.model_dump(exclude={"sources"})
-    task = Task(
-        company_id=ctx.company.id,
-        number=number,
-        inputs={"sources": [s.model_dump() for s in body.sources]},
-        created_by=ctx.principal.name,
-        **data,
-    )
-    db.add(task)
-    db.flush()
-    record(
+    linked: list[tuple[str, Project | Goal | Task | None]] = [
+        ("project", db.get(Project, body.project_id) if body.project_id else None),
+        ("goal", db.get(Goal, body.goal_id) if body.goal_id else None),
+        ("parent task", db.get(Task, body.parent_id) if body.parent_id else None),
+    ]
+    for (label, row), ref in zip(linked, (body.project_id, body.goal_id, body.parent_id), strict=True):
+        if ref is not None and (row is None or row.company_id != ctx.company.id):
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"Unknown {label}.")
+    task = automation.create_task(
         db,
-        ctx.company.id,
-        ctx.principal.actor,
-        "task.created",
-        "task",
-        task.id,
-        f"T-{number} {task.title}" + (f" → {assignee.name}" if assignee else ""),
+        ctx.company,
+        title=body.title,
+        description=body.description,
+        task_type=body.task_type,
+        assignee=assignee,
+        priority=body.priority,
+        status=body.status,
+        due_date=body.due_date,
+        project_id=body.project_id,
+        goal_id=body.goal_id,
+        parent_id=body.parent_id,
+        sources=[s.model_dump() for s in body.sources],
+        origin="user",
+        actor=ctx.principal.actor,
     )
     db.commit()
     return task_out(task, assignee)
@@ -168,6 +185,9 @@ def get_task(task_id: uuid.UUID, ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
         )
     )
     receipts_by_id = {r.id: r for r in receipts}
+    deliveries = db.scalars(select(Delivery).where(Delivery.task_id == task.id).order_by(Delivery.created_at)).all()
+    boxes = {m.id: m for m in db.scalars(select(MailAccount).where(MailAccount.company_id == ctx.company.id))}
+    message = db.get(MailMessage, task.message_id) if task.message_id else None
     return {
         **task_out(task, assignee),
         "comments": [comment_out(c) for c in comments],
@@ -175,6 +195,12 @@ def get_task(task_id: uuid.UUID, ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
         "receipts": [receipt_out(r) for r in receipts],
         "approvals": [approval_out(a, task, assignee, receipts_by_id.get(a.receipt_id)) for a in approvals],
         "history": [audit_out(e) for e in history],
+        "deliveries": [
+            delivery_out(d, task, boxes.get(d.mail_account_id) if d.mail_account_id else None) for d in deliveries
+        ],
+        "message": message_out(message, boxes.get(message.mail_account_id) if message.mail_account_id else None)
+        if message
+        else None,
         "run_pending": pending_job is not None,
     }
 
@@ -217,6 +243,8 @@ def patch_task(task_id: uuid.UUID, body: TaskPatch, ctx: CompanyDep, db: DbDep) 
             f"T-{task.number} updated: {', '.join(changed)}",
             changed,
         )
+    if "assignee_id" in changed or ("status" in changed and task.status == "todo"):
+        automation.maybe_autorun(db, ctx.company, task, ctx.principal.actor)
     db.commit()
     return get_task(task_id, ctx, db)
 
@@ -428,11 +456,21 @@ def decide_approval(approval_id: uuid.UUID, body: DecisionIn, ctx: CompanyDep, d
     task = db.get(Task, approval.task_id)
     if body.decision == "changes_requested" and task is not None and not task.is_demo:
         agent = db.get(Agent, task.assignee_id) if task.assignee_id else None
-        try:
-            runner.check_can_run(db, ctx.company, agent)
-            jobs.enqueue(db, "run_task", {"task_id": str(task.id)}, company_id=ctx.company.id)
-        except runner.RunRefused:
-            pass  # no live provider: the task waits in progress for a new submission
+        if agent is not None and agent.provider and agent.model:
+            try:
+                runner.check_can_run(db, ctx.company, agent)
+                jobs.enqueue(db, "run_task", {"task_id": str(task.id)}, company_id=ctx.company.id)
+            except runner.RunRefused as exc:
+                db.add(
+                    TaskComment(
+                        task_id=task.id,
+                        author_type="system",
+                        author_id="select",
+                        author_name="Select",
+                        body=f"The correction did not start automatically: {exc}",
+                    )
+                )
+        # An agent driven from outside picks the task up again through the submission API.
     if task is not None:
         task.version += 1
     db.commit()

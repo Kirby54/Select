@@ -8,6 +8,8 @@ import secrets
 from functools import lru_cache
 from pathlib import Path
 
+from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError
 from cryptography.fernet import Fernet, InvalidToken
 
 from .config import get_settings
@@ -60,3 +62,28 @@ def new_token() -> str:
 
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+_hasher = PasswordHasher()  # Argon2id with the library's RFC 9106 defaults
+
+
+@lru_cache
+def _dummy_hash() -> str:
+    return _hasher.hash("select-dummy-password-for-timing")
+
+
+def hash_password(password: str) -> str:
+    return _hasher.hash(password)
+
+
+def verify_password(stored: str | None, password: str) -> bool:
+    """Constant work whether or not the account exists, so timing does not reveal accounts."""
+    try:
+        _hasher.verify(stored or _dummy_hash(), password)
+    except (VerificationError, InvalidHashError):
+        return False
+    return stored is not None
+
+
+def needs_rehash(stored: str) -> bool:
+    return _hasher.check_needs_rehash(stored)

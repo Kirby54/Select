@@ -17,8 +17,20 @@ from . import autonomy
 from .audit import record
 from .auth import CompanyDep, DbDep
 from .contracts import contract_summary, get_contract, registry
-from .models import Agent, Approval, AuditEvent, CostEvent, Outcome, ReceiptRow, Task, Trust, TrustEvent
-from .runner import month_spend
+from .guards import month_spend
+from .models import (
+    Agent,
+    Approval,
+    AuditEvent,
+    CostEvent,
+    Delivery,
+    MailMessage,
+    Outcome,
+    ReceiptRow,
+    Task,
+    Trust,
+    TrustEvent,
+)
 from .views import NoteIn, audit_out, task_out, trust_event_out, trust_out
 
 router = APIRouter(prefix="/api/companies/{company_id}")
@@ -68,6 +80,15 @@ def overview(ctx: CompanyDep, db: DbDep, days: int = Query(default=7, ge=1, le=3
     recent = db.scalars(
         select(AuditEvent).where(AuditEvent.company_id == cid).order_by(AuditEvent.created_at.desc()).limit(12)
     ).all()
+    received = db.scalar(select(func.count()).where(MailMessage.company_id == cid, MailMessage.received_at >= since))
+    sent = db.scalar(
+        select(func.count()).where(Delivery.company_id == cid, Delivery.status == "sent", Delivery.sent_at >= since)
+    )
+    attention = db.scalar(
+        select(func.count()).where(
+            Delivery.company_id == cid, Delivery.status.in_(("ready", "held", "failed", "uncertain"))
+        )
+    )
     return {
         "period_days": days,
         "is_demo": ctx.company.is_demo,
@@ -102,6 +123,7 @@ def overview(ctx: CompanyDep, db: DbDep, days: int = Query(default=7, ge=1, le=3
         },
         "series": [{"day": d, **v} for d, v in sorted(series.items())],
         "recent": [audit_out(e) for e in recent],
+        "mail": {"received": received or 0, "sent": sent or 0, "needs_attention": attention or 0},
     }
 
 
@@ -125,8 +147,25 @@ def inbox(ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
         .order_by(TrustEvent.created_at.desc())
         .limit(20)
     ).all()
+    messages = db.scalars(
+        select(MailMessage)
+        .where(MailMessage.company_id == cid, MailMessage.status.in_(("needs_human", "failed")))
+        .order_by(MailMessage.received_at.desc())
+        .limit(50)
+    ).all()
+    deliveries = db.scalars(
+        select(Delivery)
+        .where(Delivery.company_id == cid, Delivery.status.in_(("ready", "held", "failed", "uncertain")))
+        .order_by(Delivery.updated_at.desc())
+        .limit(50)
+    ).all()
     agents = {a.id: a for a in db.scalars(select(Agent).where(Agent.company_id == cid))}
-    tasks = {t.id: t for t in db.scalars(select(Task).where(Task.id.in_([a.task_id for a in approvals])))}
+    tasks = {
+        t.id: t
+        for t in db.scalars(
+            select(Task).where(Task.id.in_([a.task_id for a in approvals] + [d.task_id for d in deliveries]))
+        )
+    }
     items: list[dict[str, Any]] = []
     for a in approvals:
         t = tasks.get(a.task_id)
@@ -167,9 +206,40 @@ def inbox(ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
                 "is_demo": e.is_demo,
             }
         )
+    for m in messages:
+        items.append(
+            {
+                "kind": "message",
+                "id": str(m.id),
+                "title": f"E-mail from {m.from_name or m.from_address}: {m.subject or '(no subject)'}",
+                "detail": m.status_note or "Waiting for a person",
+                "message_id": str(m.id),
+                "created_at": m.received_at.isoformat(),
+                "is_demo": False,
+            }
+        )
+    for d in deliveries:
+        t = tasks.get(d.task_id)
+        items.append(
+            {
+                "kind": "delivery",
+                "id": str(d.id),
+                "title": f"E-mail to {d.to_address} is {d.status}",
+                "detail": d.status_note or d.last_error or (t.title if t else ""),
+                "task_id": str(d.task_id),
+                "created_at": d.updated_at.isoformat(),
+                "is_demo": d.is_demo,
+            }
+        )
     return {
         "items": items,
-        "counts": {"approvals": len(approvals), "blocked": len(blocked), "demotions": len(demotions)},
+        "counts": {
+            "approvals": len(approvals),
+            "blocked": len(blocked),
+            "demotions": len(demotions),
+            "messages": len(messages),
+            "deliveries": len(deliveries),
+        },
     }
 
 

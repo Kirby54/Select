@@ -64,13 +64,52 @@ def live_company(client):
 
 
 def _queue_and_work(client, cid, task_id, fake, monkeypatch):
+    """Tasks assigned to a connected agent start by themselves; the worker then runs them."""
     from select_api import runner, worker
 
     monkeypatch.setattr(runner, "build", lambda provider, key, base: fake)
-    ok(client.post(f"/api/companies/{cid}/tasks/{task_id}/run"), 202)
+    detail = ok(client.get(f"/api/companies/{cid}/tasks/{task_id}"))
+    assert detail["run_pending"] and detail["status"] == "in_progress", "the task should have started on creation"
     while worker.run_once("test"):
         pass
     return ok(client.get(f"/api/companies/{cid}/tasks/{task_id}"))
+
+
+def test_a_task_waits_when_auto_run_is_off_and_starts_on_demand(client, live_company, monkeypatch):
+    from select_api import runner, worker
+
+    cid, agent_id = live_company
+    ok(client.patch(f"/api/companies/{cid}", json={"settings": {"auto_run": False}}))
+    task = ok(
+        client.post(
+            f"/api/companies/{cid}/tasks",
+            json={
+                "title": "Q",
+                "task_type": "quote",
+                "assignee_id": agent_id,
+                "sources": [{"id": "msg-1", "text": REQUEST}],
+            },
+        ),
+        201,
+    )
+    assert task["status"] == "todo"
+    monkeypatch.setattr(runner, "build", lambda provider, key, base: FakeProvider(json.dumps(EXTRACTION)))
+    ok(client.post(f"/api/companies/{cid}/tasks/{task['id']}/run"), 202)
+    while worker.run_once("test"):
+        pass
+    assert ok(client.get(f"/api/companies/{cid}/tasks/{task['id']}"))["status"] == "awaiting_approval"
+
+
+def test_a_configured_agent_that_cannot_run_says_why(client, live_company):
+    cid, agent_id = live_company
+    ok(client.put(f"/api/companies/{cid}/connections/openai", json={"enabled": False}))
+    task = ok(
+        client.post(f"/api/companies/{cid}/tasks", json={"title": "Q", "task_type": "quote", "assignee_id": agent_id}),
+        201,
+    )
+    detail = ok(client.get(f"/api/companies/{cid}/tasks/{task['id']}"))
+    assert detail["status"] == "todo" and not detail["run_pending"]
+    assert "Not started automatically: No enabled openai connection" in detail["comments"][0]["body"]
 
 
 def test_live_quote_run_computes_prices_in_code(client, live_company, monkeypatch):

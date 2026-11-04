@@ -18,6 +18,8 @@ dependencies = [
     "anthropic>=2.4,<3",
     "openai>=3.42,<4",
     "pyyaml>=6.0.3,<7",
+    "argon2-cffi>=25.1,<26",
+    "croniter>=6.2,<7",
 ]
 
 [project.scripts]

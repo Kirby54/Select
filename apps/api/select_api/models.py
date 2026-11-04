@@ -9,6 +9,7 @@ from typing import Any
 
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     CheckConstraint,
     Date,
@@ -50,6 +51,16 @@ class Company(Base):
     # Autonomy policy: thresholds and sampling. Hypotheses to calibrate, not proven values.
     policy: Mapped[dict[str, Any]] = mapped_column(Json, default=dict)
     catalog: Mapped[list[dict[str, Any]]] = mapped_column(Json, default=list)
+    # Where the company operates: drives the allowed VAT rates, the currency and the time zone of routines.
+    country: Mapped[str] = mapped_column(String(2), default="DE", server_default="DE")
+    timezone: Mapped[str] = mapped_column(String(64), default="Europe/Berlin", server_default="Europe/Berlin")
+    # Language agents write to customers in when the customer's own language is unclear.
+    language: Mapped[str] = mapped_column(String(8), default="en", server_default="en")
+    vat_rates: Mapped[list[str]] = mapped_column(
+        Json, default=lambda: ["0.19", "0.07", "0"], server_default='["0.19", "0.07", "0"]'
+    )
+    # Operations: auto-run, routing of triaged messages, outbound limits, e-mail signature.
+    settings: Mapped[dict[str, Any]] = mapped_column(Json, default=dict, server_default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
@@ -58,7 +69,52 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_id)
     email: Mapped[str] = mapped_column(String(254), unique=True)
     name: Mapped[str] = mapped_column(String(120))
+    # Argon2id hash; None for the implicit local owner and for users who only use API tokens.
+    password_hash: Mapped[str | None] = mapped_column(String(255))
+    disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class UserSession(Base):
+    """A signed-in browser. Only the SHA-256 of the cookie value is stored."""
+
+    __tablename__ = "sessions"
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_id)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    ip: Mapped[str | None] = mapped_column(String(64))
+    user_agent: Mapped[str | None] = mapped_column(String(300))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class LoginAttempt(Base):
+    __tablename__ = "login_attempts"
+    __table_args__ = (Index("ix_login_attempts_email_created", "email", "created_at"),)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_id)
+    email: Mapped[str] = mapped_column(String(254))
+    ip: Mapped[str | None] = mapped_column(String(64))
+    ok: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class Invitation(Base):
+    __tablename__ = "invitations"
+    __table_args__ = (CheckConstraint("role in ('admin','member','viewer')", name="invitation_role"),)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_id)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), index=True)
+    email: Mapped[str] = mapped_column(String(254))
+    role: Mapped[str] = mapped_column(String(16))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    invited_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    accepted_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Membership(Base):
@@ -167,6 +223,15 @@ class Task(Base):
     version: Mapped[int] = mapped_column(Integer, default=1)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
     created_by: Mapped[str] = mapped_column(String(80), default="user")
+    # How the task arrived: user | mail | routing | routine | api | demo
+    origin: Mapped[str] = mapped_column(String(16), default="user", server_default="user")
+    # The e-mail this task answers, when it came from a mailbox.
+    message_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("mail_messages.id", ondelete="SET NULL", name="fk_tasks_message"), index=True
+    )
+    routine_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("routines.id", ondelete="SET NULL", name="fk_tasks_routine")
+    )
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
@@ -367,6 +432,162 @@ class ProviderConnection(Base):
     last_test_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_test_ok: Mapped[bool | None] = mapped_column(Boolean)
     last_error: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+
+
+MAIL_SECURITY = ("ssl", "starttls", "none")
+
+
+class MailAccount(Base):
+    """A company mailbox: IMAP to read incoming mail, SMTP to send approved replies.
+
+    Passwords are encrypted like provider keys and never returned by the API.
+    """
+
+    __tablename__ = "mail_accounts"
+    __table_args__ = (
+        UniqueConstraint("company_id", "address"),
+        CheckConstraint("imap_security in ('ssl','starttls','none')", name="mail_imap_security"),
+        CheckConstraint("smtp_security in ('ssl','starttls','none')", name="mail_smtp_security"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_id)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), index=True)
+    label: Mapped[str] = mapped_column(String(80))
+    address: Mapped[str] = mapped_column(String(254))
+    display_name: Mapped[str] = mapped_column(String(120), default="")
+    imap_host: Mapped[str | None] = mapped_column(String(255))
+    imap_port: Mapped[int] = mapped_column(Integer, default=993)
+    imap_security: Mapped[str] = mapped_column(String(10), default="ssl")
+    imap_username: Mapped[str] = mapped_column(String(254), default="")
+    imap_password_encrypted: Mapped[str | None] = mapped_column(Text)
+    imap_folder: Mapped[str] = mapped_column(String(120), default="INBOX")
+    smtp_host: Mapped[str | None] = mapped_column(String(255))
+    smtp_port: Mapped[int] = mapped_column(Integer, default=465)
+    smtp_security: Mapped[str] = mapped_column(String(10), default="ssl")
+    smtp_username: Mapped[str] = mapped_column(String(254), default="")
+    smtp_password_encrypted: Mapped[str | None] = mapped_column(Text)
+    inbound_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    outbound_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    poll_seconds: Mapped[int] = mapped_column(Integer, default=120)
+    # On the first poll Select remembers where the mailbox stands and only imports newer mail,
+    # plus the last `import_days` days if asked.
+    import_days: Mapped[int] = mapped_column(Integer, default=0)
+    imap_uidvalidity: Mapped[int | None] = mapped_column(BigInteger)
+    imap_last_uid: Mapped[int | None] = mapped_column(BigInteger)
+    last_poll_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_poll_ok: Mapped[bool | None] = mapped_column(Boolean)
+    last_poll_error: Mapped[str | None] = mapped_column(Text)
+    last_smtp_test_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_smtp_test_ok: Mapped[bool | None] = mapped_column(Boolean)
+    last_smtp_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+
+
+MESSAGE_STATUSES = ("new", "triage", "routed", "needs_human", "handled", "ignored", "failed")
+
+
+class MailMessage(Base):
+    """An incoming e-mail. Its content is untrusted data, never instructions."""
+
+    __tablename__ = "mail_messages"
+    __table_args__ = (
+        UniqueConstraint("mail_account_id", "message_id"),
+        CheckConstraint(f"status in {MESSAGE_STATUSES!r}".replace('"', "'"), name="mail_message_status"),
+        Index("ix_mail_messages_company_received", "company_id", "received_at"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_id)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"))
+    mail_account_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("mail_accounts.id", ondelete="SET NULL"))
+    uidvalidity: Mapped[int | None] = mapped_column(BigInteger)
+    uid: Mapped[int | None] = mapped_column(BigInteger)
+    message_id: Mapped[str] = mapped_column(String(500))
+    in_reply_to: Mapped[str | None] = mapped_column(String(500))
+    references: Mapped[str | None] = mapped_column(Text)
+    from_address: Mapped[str] = mapped_column(String(254), default="")
+    from_name: Mapped[str] = mapped_column(String(200), default="")
+    reply_to: Mapped[str | None] = mapped_column(String(254))
+    to_addresses: Mapped[str] = mapped_column(Text, default="")
+    subject: Mapped[str] = mapped_column(String(500), default="")
+    text: Mapped[str] = mapped_column(Text, default="")
+    attachments: Mapped[list[dict[str, Any]]] = mapped_column(Json, default=list)
+    automatic: Mapped[bool] = mapped_column(Boolean, default=False)
+    status: Mapped[str] = mapped_column(String(16), default="new")
+    status_note: Mapped[str | None] = mapped_column(Text)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+DELIVERY_STATUSES = ("ready", "held", "queued", "sending", "sent", "failed", "uncertain", "cancelled")
+
+
+class Delivery(Base):
+    """One outgoing e-mail for one verified result. Sent at most once.
+
+    ready: verified and approved but no outgoing mailbox is configured.
+    held: waiting for a human (hourly limit reached or emergency stop).
+    uncertain: the connection broke after the message was handed over; never resent automatically.
+    """
+
+    __tablename__ = "deliveries"
+    __table_args__ = (
+        UniqueConstraint("task_id", "run_id"),
+        CheckConstraint(f"status in {DELIVERY_STATUSES!r}".replace('"', "'"), name="delivery_status"),
+        Index("ix_deliveries_company_created", "company_id", "created_at"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_id)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"))
+    task_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), index=True)
+    run_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("runs.id", ondelete="SET NULL"))
+    approval_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("approvals.id", ondelete="SET NULL"))
+    mail_account_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("mail_accounts.id", ondelete="SET NULL"))
+    action: Mapped[str] = mapped_column(String(64))
+    to_address: Mapped[str] = mapped_column(String(254))
+    subject: Mapped[str] = mapped_column(String(500))
+    body: Mapped[str] = mapped_column(Text)
+    in_reply_to: Mapped[str | None] = mapped_column(String(500))
+    references: Mapped[str | None] = mapped_column(Text)
+    message_id: Mapped[str] = mapped_column(String(500), unique=True)
+    status: Mapped[str] = mapped_column(String(12))
+    status_note: Mapped[str | None] = mapped_column(Text)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    smtp_response: Mapped[str | None] = mapped_column(Text)
+    approved_by: Mapped[str] = mapped_column(String(120))
+    is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Routine(Base):
+    """A task created on a schedule (cron expression evaluated in the routine's time zone)."""
+
+    __tablename__ = "routines"
+    __table_args__ = (
+        CheckConstraint("priority in ('low','medium','high','urgent')", name="routine_priority"),
+        Index("ix_routines_due", "enabled", "next_run_at"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_id)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    cron: Mapped[str] = mapped_column(String(120))
+    timezone: Mapped[str] = mapped_column(String(64))
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str] = mapped_column(Text, default="")
+    task_type: Mapped[str] = mapped_column(String(64))
+    assignee_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("agents.id", ondelete="SET NULL"))
+    project_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("projects.id", ondelete="SET NULL"))
+    priority: Mapped[str] = mapped_column(String(8), default="medium")
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_task_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("tasks.id", ondelete="SET NULL", use_alter=True, name="fk_routines_last_task")
+    )
+    runs_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_by: Mapped[str] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
 
 

@@ -21,6 +21,8 @@ dev = [
     "ruff==0.17.3",
     "mypy==2.4.1",
     "types-PyYAML>=6.0.12",
+    "pymap==0.36.7",
+    "aiosmtpd==1.4.6",
 ]
 
 [tool.ruff]

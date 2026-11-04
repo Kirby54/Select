@@ -15,12 +15,38 @@ STALE_AFTER = timedelta(minutes=10)
 
 
 def enqueue(
-    db: Session, kind: str, payload: dict[str, Any], *, company_id: uuid.UUID | None = None, max_attempts: int = 3
+    db: Session,
+    kind: str,
+    payload: dict[str, Any],
+    *,
+    company_id: uuid.UUID | None = None,
+    max_attempts: int = 3,
+    run_after: datetime | None = None,
 ) -> Job:
-    job = Job(kind=kind, payload=payload, company_id=company_id, max_attempts=max_attempts)
+    job = Job(
+        kind=kind,
+        payload=payload,
+        company_id=company_id,
+        max_attempts=max_attempts,
+        run_after=run_after or datetime.now(UTC),
+    )
     db.add(job)
     db.flush()
     return job
+
+
+def pending(db: Session, kind: str, key: str, value: str) -> bool:
+    """Whether a queued or running job of ``kind`` already carries ``payload[key] == value``."""
+    return (
+        db.scalar(
+            select(Job.id).where(
+                Job.kind == kind,
+                Job.status.in_(("queued", "running")),
+                Job.payload[key].as_string() == value,
+            )
+        )
+        is not None
+    )
 
 
 def claim(db: Session, worker_id: str) -> Job | None:

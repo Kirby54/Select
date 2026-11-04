@@ -68,3 +68,111 @@ def token_mode(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 
 REPO = Path(__file__).resolve().parents[3]
+
+
+# ---------------------------------------------------------------- real mail servers for the mail tests
+#
+# Select's IMAP and SMTP code talks to real protocol servers here: pymap (an IMAP server, in-memory
+# backend) and aiosmtpd (an SMTP server). Only the servers are local; nothing in Select is replaced.
+
+
+def _free_port() -> int:
+    import socket
+
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+
+
+@pytest.fixture(scope="session")
+def imap_server() -> Iterator[dict[str, object]]:
+    import imaplib
+    import subprocess
+    import sys
+    import time
+
+    port = _free_port()
+    pymap = str(Path(sys.executable).parent / "pymap")
+    process = subprocess.Popen(  # noqa: S603 - fixed arguments, test-only server
+        [pymap, "--host", "127.0.0.1", "--port", str(port), "dict", "--demo-data"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    deadline = time.monotonic() + 30
+    while True:
+        try:
+            imaplib.IMAP4("127.0.0.1", port, timeout=2).logout()
+            break
+        except OSError:
+            if time.monotonic() > deadline or process.poll() is not None:
+                process.kill()
+                raise RuntimeError("the pymap IMAP server did not start") from None
+            time.sleep(0.2)
+    yield {"host": "127.0.0.1", "port": port, "user": "demouser", "password": "demopass"}
+    process.terminate()
+    process.wait(timeout=10)
+
+
+class MailCatcher:
+    """aiosmtpd handler that keeps every accepted message and can misbehave on purpose."""
+
+    def __init__(self) -> None:
+        self.messages: list[bytes] = []
+        self.envelopes: list[tuple[str, list[str]]] = []
+        self.rcpt_reply: str | None = None  # e.g. "550 5.1.1 no such user"
+        self.data_replies: list[str] = []  # consumed one per message, e.g. ["451 4.3.0 try later"]
+        self.drop_after_data = False
+
+    async def handle_RCPT(self, server, session, envelope, address, rcpt_options):
+        if self.rcpt_reply:
+            return self.rcpt_reply
+        envelope.rcpt_tos.append(address)
+        return "250 OK"
+
+    async def handle_DATA(self, server, session, envelope):
+        if self.drop_after_data:
+            self.messages.append(envelope.original_content or envelope.content)
+            server.transport.close()  # the message arrived, the answer never does
+            return "250 OK"
+        if self.data_replies:
+            return self.data_replies.pop(0)
+        self.messages.append(envelope.original_content or envelope.content)
+        self.envelopes.append((envelope.mail_from, list(envelope.rcpt_tos)))
+        return "250 2.0.0 queued as TEST"
+
+
+@pytest.fixture()
+def smtp_server() -> Iterator[dict[str, object]]:
+    from aiosmtpd.controller import Controller
+    from aiosmtpd.smtp import AuthResult
+
+    def authenticate(server, session, envelope, mechanism, auth_data):  # type: ignore[no-untyped-def]
+        ok = auth_data.login == b"shop@example.com" and auth_data.password == b"smtp-secret"
+        # handled=False: aiosmtpd answers 235 or 535 itself.
+        return AuthResult(success=ok, handled=False)
+
+    catcher = MailCatcher()
+    port = _free_port()
+    controller = Controller(
+        catcher,
+        hostname="127.0.0.1",
+        port=port,
+        authenticator=authenticate,
+        auth_require_tls=False,
+    )
+    controller.start()
+    yield {"host": "127.0.0.1", "port": port, "catcher": catcher}
+    controller.stop()
+
+
+@pytest.fixture()
+def password_mode(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    from select_api.config import get_settings
+
+    monkeypatch.setenv("SELECT_AUTH_MODE", "password")
+    monkeypatch.setenv("SELECT_PUBLIC_URL", "https://select.example.com")
+    get_settings.cache_clear()
+    yield
+    monkeypatch.setenv("SELECT_AUTH_MODE", "local")
+    monkeypatch.delenv("SELECT_PUBLIC_URL")
+    get_settings.cache_clear()

@@ -1,4 +1,4 @@
-"""select-api command line: serve, worker, migrate, create-token, check-contracts."""
+"""select-api command line: serve, worker, migrate, create-token, reset-password, check-contracts."""
 
 from __future__ import annotations
 
@@ -45,6 +45,33 @@ def create_token(email: str, name: str) -> None:
     print(token)
 
 
+def reset_password(email: str) -> None:
+    """For an owner locked out of password sign-in: sets a random password, ends every session."""
+    import secrets
+    from datetime import UTC, datetime
+
+    from sqlalchemy import func, select, update
+
+    from .db import session_scope
+    from .models import User, UserSession
+    from .security import hash_password
+
+    password = secrets.token_urlsafe(12)
+    with session_scope() as db:
+        user = db.scalar(select(User).where(func.lower(User.email) == email.strip().lower()))
+        if user is None:
+            print(f"No account for {email}.", file=sys.stderr)
+            sys.exit(1)
+        user.password_hash = hash_password(password)
+        db.execute(
+            update(UserSession)
+            .where(UserSession.user_id == user.id, UserSession.revoked_at.is_(None))
+            .values(revoked_at=datetime.now(UTC))
+        )
+    print(f"New password for {email} (shown once; change it after signing in):")
+    print(password)
+
+
 def check_contracts() -> None:
     from .contracts import registry
 
@@ -67,6 +94,8 @@ def main(argv: list[str] | None = None) -> None:
     token = sub.add_parser("create-token", help="create an API token (auth_mode=token)")
     token.add_argument("--email", required=True)
     token.add_argument("--name", required=True)
+    reset = sub.add_parser("reset-password", help="set a new random password for an account (auth_mode=password)")
+    reset.add_argument("--email", required=True)
     sub.add_parser("check-contracts", help="load and list delivery contracts")
     args = parser.parse_args(argv)
 
@@ -84,6 +113,8 @@ def main(argv: list[str] | None = None) -> None:
         migrate()
     elif args.command == "create-token":
         create_token(args.email, args.name)
+    elif args.command == "reset-password":
+        reset_password(args.email)
     elif args.command == "check-contracts":
         check_contracts()
     else:
