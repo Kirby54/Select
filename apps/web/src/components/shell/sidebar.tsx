@@ -30,9 +30,7 @@ function CompanySwitcher({ company, collapsed }: { company: Company; collapsed: 
             collapsed ? "w-9 justify-center" : "w-full px-1.5",
           )}
         >
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-fg text-canvas">
-            <Logo className="size-3.5" title="" />
-          </span>
+          <Logo className="size-5 shrink-0 text-fg" title="" />
           {!collapsed && (
             <>
               <span className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">{company.name}</span>

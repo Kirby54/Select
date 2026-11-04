@@ -151,7 +151,7 @@ function NeedsYou({ cid }: { cid: string }) {
   const inbox = useInbox(cid);
   const items = inbox.data?.items ?? [];
   return (
-    <section aria-label="Needs you">
+    <section aria-label="Needs you" className="min-w-0">
       <Heading action={items.length > 6 ? <Link href={`/c/${cid}/inbox`} className="text-xs font-medium text-accent hover:text-accent-strong">All {items.length}</Link> : null}>Needs you</Heading>
       <Card>
         {inbox.isPending ? (
@@ -182,7 +182,7 @@ function NeedsYou({ cid }: { cid: string }) {
 function RecentActivity({ o, company: c }: { o: Overview; company: Company }) {
   const cid = c.id;
   return (
-    <section aria-label="Recent activity">
+    <section aria-label="Recent activity" className="min-w-0">
       <Heading action={<Link href={`/c/${cid}/activity`} className="text-xs font-medium text-accent hover:text-accent-strong">All activity</Link>}>Recent activity</Heading>
       <Card>
         {o.recent.length === 0 ? (

@@ -49,9 +49,7 @@ function Home() {
     <main id="main" className="flex min-h-dvh items-start justify-center px-4 py-12 sm:items-center sm:py-16">
       <div className="w-full max-w-[520px] animate-rise-in">
         <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-fg text-canvas shadow-[var(--shadow-popover)]">
-            <Logo className="size-5" title="" />
-          </span>
+          <Logo className="size-8 shrink-0 text-fg" title="" />
           <div>
             <p className="text-[15px] font-semibold tracking-[-0.01em]">Select</p>
             <p className="text-xs text-muted">Agents that earn their autonomy</p>

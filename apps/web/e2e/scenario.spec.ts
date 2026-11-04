@@ -181,7 +181,11 @@ test("no horizontal scroll on a 360 px phone", async ({ browser }) => {
   for (const path of ["overview", "tasks", "approvals", "autonomy", "agents", "verification", "costs", "activity", "settings", "connections"]) {
     await page.goto(`/c/${cid}/${path}`);
     await page.waitForLoadState("networkidle");
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    // The page itself, and the scrolling main area, where clipped content would otherwise hide.
+    const overflow = await page.evaluate(() => {
+      const main = document.querySelector("main");
+      return Math.max(document.documentElement.scrollWidth - window.innerWidth, main ? main.scrollWidth - main.clientWidth : 0);
+    });
     expect(overflow, `overflow on ${path}`).toBeLessThanOrEqual(1);
   }
   await page.close();

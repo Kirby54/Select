@@ -358,7 +358,7 @@ function Wizard() {
       <div className="mx-auto max-w-5xl animate-rise-in">
         <div className="mb-6 flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-2.5" aria-label="Select home">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-fg text-canvas"><Logo className="size-4" title="" /></span>
+            <Logo className="size-7 shrink-0 text-fg" title="" />
             <span className="text-[14px] font-semibold">Set up a company</span>
           </Link>
           {company.data && <Badge tone="accent">{company.data.name}</Badge>}
