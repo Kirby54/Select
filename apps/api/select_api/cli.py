@@ -97,6 +97,34 @@ def _validate_bind_address(host: str) -> None:
         )
 
 
+def probe_provider(provider: str, model: str, base_url: str | None, timeout: float) -> None:
+    """Opt-in live generation smoke test, with no company data or stored credentials."""
+    import os
+
+    from .providers import PROVIDERS, ProviderError, build, parse_json_object
+
+    key = os.environ.get("SELECT_PROBE_API_KEY")
+    if PROVIDERS[provider].needs_key and not key:
+        raise SystemExit("Set SELECT_PROBE_API_KEY in your environment; do not pass the key on the command line.")
+    try:
+        adapter = build(provider, key, base_url)
+        result = adapter.complete(
+            model=model,
+            system='Return only one JSON object with the exact field "select_probe": "ok".',
+            user='Connectivity test. Respond with {"select_probe":"ok"} and no other text.',
+            json_output=True,
+            timeout=timeout,
+        )
+        payload = parse_json_object(result.text)
+        if payload.get("select_probe") != "ok":
+            raise ProviderError("Provider did not return the expected probe response.")
+    except ProviderError as exc:
+        print(f"Probe failed: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    print(f"Probe passed: {provider}/{model}. JSON verified; no company data sent.")
+    print(f"Tokens reported: input={result.input_tokens}, output={result.output_tokens}.")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="select-api")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -112,6 +140,11 @@ def main(argv: list[str] | None = None) -> None:
     reset = sub.add_parser("reset-password", help="set a new random password for an account (auth_mode=password)")
     reset.add_argument("--email", required=True)
     sub.add_parser("check-contracts", help="load and list delivery contracts")
+    probe = sub.add_parser("probe-provider", help="opt-in live model call with a harmless test prompt")
+    probe.add_argument("--provider", required=True, choices=("anthropic", "openai", "gemini", "ollama"))
+    probe.add_argument("--model", required=True)
+    probe.add_argument("--base-url", default=None, help="optional custom API endpoint")
+    probe.add_argument("--timeout", type=float, default=30)
     args = parser.parse_args(argv)
 
     if args.command == "serve":
@@ -133,6 +166,10 @@ def main(argv: list[str] | None = None) -> None:
         reset_password(args.email)
     elif args.command == "check-contracts":
         check_contracts()
+    elif args.command == "probe-provider":
+        if not 1 <= args.timeout <= 300:
+            parser.error("--timeout must be between 1 and 300 seconds")
+        probe_provider(args.provider, args.model, args.base_url, args.timeout)
     else:
         parser.print_help()
         sys.exit(2)
