@@ -155,7 +155,22 @@ jobs:
   docker:
     runs-on: ubuntu-24.04
     needs: [backend, frontend]
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - run: docker compose config --quiet
       - run: docker compose build
+      - name: Start full Docker stack
+        run: docker compose up -d --wait --wait-timeout 240
+      - name: Verify API is healthy through the web proxy
+        run: |
+          curl --fail --silent --show-error http://127.0.0.1:3000/api/health |
+            python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["status"] == "ok"; assert data["contracts"]; print("Docker smoke test passed")'
+      - name: Show Docker logs on failure
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs --tail 150
+      - name: Stop stack
+        if: always()
+        run: docker compose down --remove-orphans
