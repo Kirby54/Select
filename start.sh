@@ -21,6 +21,10 @@ if ! docker compose version >/dev/null 2>&1; then
   echo "The 'docker compose' command is missing: install Docker Compose v2." >&2
   exit 1
 fi
+if ! command -v curl >/dev/null 2>&1; then
+  echo "curl is required to check whether Select started. Install curl and run ./start.sh again." >&2
+  exit 1
+fi
 
 if [ ! -f .env ]; then
   # 32 random bytes in URL-safe base64: the format of a Fernet key.
