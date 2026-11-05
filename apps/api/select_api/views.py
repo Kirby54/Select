@@ -199,8 +199,6 @@ class GenerationProbeIn(Strict):
     consent: Literal[True]
 
 
-
-
 class UserIn(Strict):
     email: str = Field(max_length=254, pattern=EMAIL_PATTERN)
     name: str = Field(min_length=1, max_length=120)
