@@ -256,13 +256,13 @@ def test_code_change_patch_is_structural_only_and_always_reviewed(ctx):
     proposal = {
         "summary": "Proposed fix to show the correct answer.",
         "diff": (
-            "diff --git a/src/app.py b/src/app.py\\n"
-            "index 1111111..2222222 100644\\n"
-            "--- a/src/app.py\\n"
-            "+++ b/src/app.py\\n"
-            "@@ -1 +1 @@\\n"
-            "-print(1)\\n"
-            "+print(2)\\n"
+            "diff --git a/src/app.py b/src/app.py\n"
+            "index 1111111..2222222 100644\n"
+            "--- a/src/app.py\n"
+            "+++ b/src/app.py\n"
+            "@@ -1 +1 @@\n"
+            "-print(1)\n"
+            "+print(2)\n"
         ),
     }
     receipt = verify(contract, proposal, ctx, run_id="review-only")
@@ -274,11 +274,11 @@ def test_code_change_patch_is_structural_only_and_always_reviewed(ctx):
 @pytest.mark.parametrize(
     "path_or_patch",
     [
-        "diff --git a/../secret b/../secret\\n--- a/../secret\\n+++ b/../secret\\n@@ -1 +1 @@\\n-a\\n+b",
-        "diff --git a/.git/config b/.git/config\\n--- a/.git/config\\n+++ b/.git/config\\n@@ -1 +1 @@\\n-a\\n+b",
-        "diff --git a/src/app.py b/src/other.py\\n--- a/src/app.py\\n+++ b/src/other.py\\n@@ -1 +1 @@\\n-a\\n+b",
-        "diff --git a/src/app.py b/src/app.py\\nGIT binary patch\\n--- a/src/app.py\\n+++ b/src/app.py\\n@@ -1 +1 @@\\n-a\\n+b",
-        "diff --git a/src/app.py b/src/app.py\\nnew file mode 120000\\n--- /dev/null\\n+++ b/src/app.py\\n@@ -0,0 +1 @@\\n+../other",
+        "diff --git a/../secret b/../secret\n--- a/../secret\n+++ b/../secret\n@@ -1 +1 @@\n-a\n+b",
+        "diff --git a/.git/config b/.git/config\n--- a/.git/config\n+++ b/.git/config\n@@ -1 +1 @@\n-a\n+b",
+        "diff --git a/src/app.py b/src/other.py\n--- a/src/app.py\n+++ b/src/other.py\n@@ -1 +1 @@\n-a\n+b",
+        "diff --git a/src/app.py b/src/app.py\nGIT binary patch\n--- a/src/app.py\n+++ b/src/app.py\n@@ -1 +1 @@\n-a\n+b",
+        "diff --git a/src/app.py b/src/app.py\nnew file mode 120000\n--- /dev/null\n+++ b/src/app.py\n@@ -0,0 +1 @@\n+../other",
         "not a diff at all",
     ],
 )
