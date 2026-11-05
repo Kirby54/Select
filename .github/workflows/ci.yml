@@ -38,6 +38,7 @@ jobs:
       - run: uv run ruff format --check apps packages
       - run: uv run select-api check-contracts
       - run: uv run pytest packages/select-verify/tests apps/api/tests
+      - run: python3 -m unittest discover -s bench -p 'test_*.py'
       - run: bash -n start.sh
       - run: python3 scripts/check-readme-links.py
 
