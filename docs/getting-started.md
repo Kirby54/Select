@@ -7,7 +7,7 @@ Windows and macOS: install [Docker Desktop](https://docs.docker.com/get-docker/)
 ## 2. Start Select
 
 ```bash
-git clone <URL_OF_THIS_REPOSITORY> select
+git clone https://github.com/Kirby54/Select.git select
 cd select
 ./start.sh          # macOS, Linux
 ```
@@ -27,7 +27,7 @@ The first visit asks for your name, e-mail and a password: you become the owner.
 
 1. **Company**: name and country. The country fills the currency, VAT rates, time zone and language.
 2. **Team**: start from a template (inbox, quotes, customer service, communications) or from scratch. Agents can do any kind of work: add developers, marketers or analysts later.
-3. **AI model**: an Anthropic, OpenAI or Gemini key, or a local Ollama. Later is fine: nothing runs without one.
+3. **AI model**: an Anthropic, OpenAI or Gemini key, or a local Ollama. Later is fine: nothing runs without one. The first connection only lists available models; before assigning real work, open **Connections → Test generation** and run an explicit, potentially billable probe with your selected model.
 4. **Mailbox** (optional): connect the company mailbox so incoming e-mail becomes work. See [mail.md](mail.md).
 5. **Catalog** (optional): paste your price list from a spreadsheet; quotes can only use these prices.
 
