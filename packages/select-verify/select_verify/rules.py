@@ -113,7 +113,7 @@ def unified_diff_shape(data: dict[str, Any], params: dict[str, Any], ctx: Verify
         return Outcome(False, "patch missing or not text")
     if len(raw.encode("utf-8")) > limit:
         return Outcome(False, "patch exceeds size limit")
-    if "\\x00" in raw or "\\r" in raw or "GIT binary patch" in raw or "Binary files " in raw:
+    if "\x00" in raw or "\r" in raw or "GIT binary patch" in raw or "Binary files " in raw:
         return Outcome(False, "binary or non-text patch is not supported")
     lines = raw.splitlines()
     heads = [i for i, line in enumerate(lines) if line.startswith("diff --git ")]
@@ -127,7 +127,7 @@ def unified_diff_shape(data: dict[str, Any], params: dict[str, Any], ctx: Verify
             return Outcome(False, "unsupported or mismatched file paths")
         path = matched.group(1)
         parts = path.split("/")
-        if any(piece in ("", ".", "..", ".git") for piece in parts) or "\\\\" in path:
+        if any(piece in ("", ".", "..", ".git") for piece in parts) or "\\" in path:
             return Outcome(False, "unsafe file path")
         if any(line.startswith(("old mode ", "new mode ", "new file mode 120000", "deleted file mode")) for line in section):
             return Outcome(False, "file mode or deletion change requires an external diff review")
