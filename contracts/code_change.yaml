@@ -1,0 +1,22 @@
+# A code change is a REVIEW-ONLY PROPOSAL, never an executable patch.
+# Structural checks cannot establish correctness or that a patch applies.
+id: code_change
+version: 1
+title: Code change proposal (human review required)
+description: A proposed text diff for a separate code workspace; it is NOT applied, executed or pushed by Select.
+risk: high
+required:
+  - summary
+  - diff
+checks:
+  - id: summary_bounded
+    rule: max_length
+    params: { field: summary, max: 600 }
+  - id: patch_structure
+    rule: unified_diff_shape
+    description: Check text diff structure and reject traversal/binary patches; this is NOT a code correctness check.
+    params: { field: diff, max_bytes: 100000, max_files: 20 }
+correction:
+  max_attempts: 0
+approval:
+  mode: always
