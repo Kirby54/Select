@@ -76,24 +76,31 @@ def test_real_ollama_http_transport_verifies_quote_without_sending(client) -> No
     }
     with local_ollama(reply) as (url, handler):
         cid, aid = setup_company(client)
-        ok(client.put(
-            f"/api/companies/{cid}/connections/ollama",
-            json={"base_url": url, "enabled": True, "prices": {"llama-test": {"input": "0.00", "output": "0.00"}}},
-        ))
+        ok(
+            client.put(
+                f"/api/companies/{cid}/connections/ollama",
+                json={"base_url": url, "enabled": True, "prices": {"llama-test": {"input": "0.00", "output": "0.00"}}},
+            )
+        )
         agent = ok(client.get(f"/api/companies/{cid}/agents/{aid}"))
-        ok(client.patch(
-            f"/api/companies/{cid}/agents/{aid}",
-            json={"version": agent["version"], "provider": "ollama", "model": "llama-test"},
-        ))
-        task = ok(client.post(
-            f"/api/companies/{cid}/tasks",
-            json={
-                "title": "Real HTTP adapter quote",
-                "task_type": "quote",
-                "assignee_id": aid,
-                "sources": [{"id": "msg-1", "text": REQUEST}],
-            },
-        ), 201)
+        ok(
+            client.patch(
+                f"/api/companies/{cid}/agents/{aid}",
+                json={"version": agent["version"], "provider": "ollama", "model": "llama-test"},
+            )
+        )
+        task = ok(
+            client.post(
+                f"/api/companies/{cid}/tasks",
+                json={
+                    "title": "Real HTTP adapter quote",
+                    "task_type": "quote",
+                    "assignee_id": aid,
+                    "sources": [{"id": "msg-1", "text": REQUEST}],
+                },
+            ),
+            201,
+        )
         while worker.run_once("ollama-http-test"):
             pass
         detail = ok(client.get(f"/api/companies/{cid}/tasks/{task['id']}"))
