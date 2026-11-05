@@ -193,6 +193,17 @@ jobs:
           done
           python3 -c 'import json; data=json.load(open("/tmp/select-health.json")); assert data["status"] == "ok"; assert data["contracts"]; print("Web-to-API smoke test passed")'
           docker compose ps --status running --services | grep -x worker
+      - name: Verify database backup and recovery on a fresh test database
+        run: |
+          set -euo pipefail
+          # Only CI's disposable database is touched; never overwrite the live database.
+          docker compose exec -T db pg_dump -U select -Fc -d select > "$RUNNER_TEMP/select-ci-backup.dump"
+          test -s "$RUNNER_TEMP/select-ci-backup.dump"
+          docker compose exec -T db createdb -U select select_restore_ci
+          docker compose exec -T db pg_restore -U select --no-owner --exit-on-error -d select_restore_ci < "$RUNNER_TEMP/select-ci-backup.dump"
+          restored=$(docker compose exec -T db psql -U select -d select_restore_ci -Atqc "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'companies'")
+          test "$restored" = "1"
+          echo "Disposable PostgreSQL backup/restore smoke test passed"
       - name: Show Docker logs on failure
         if: failure()
         run: |
