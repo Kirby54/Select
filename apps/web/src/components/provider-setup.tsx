@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, Cloud, Server, XCircle } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { Button, Field, Input, Select, cx } from "@/components/ui/primitives";
@@ -116,7 +117,16 @@ export function ProviderSetup({ cid, onDone }: { cid: string; onDone: (summary: 
         </form>
       ) : (
         <div className="space-y-3">
-          <p className="flex items-center gap-2 text-xs text-success"><CheckCircle2 className="size-3.5" aria-hidden />Connected: {models.length} model{models.length === 1 ? "" : "s"} available.</p>
+          <div className="space-y-1">
+            <p className="flex items-center gap-2 text-xs text-success"><CheckCircle2 className="size-3.5" aria-hidden />Model list accessible: {models.length} model{models.length === 1 ? "" : "s"}.</p>
+            <p className="text-xs text-muted">
+              Listing models does not verify generation. Before assigning real work,{" "}
+              <Link href={`/c/${cid}/connections`} className="text-accent underline-offset-2 hover:underline">
+                run a generation test
+              </Link>{" "}
+              with the selected model.
+            </p>
+          </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="min-w-0 flex-1">
               <Field label="Model for every agent" htmlFor="model" hint="You can give an agent another model later on its page.">
