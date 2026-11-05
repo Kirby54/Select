@@ -9,7 +9,6 @@ from __future__ import annotations
 import httpx
 import pytest
 from pydantic import ValidationError
-
 from select_api import providers
 from select_api.views import ConnectionIn
 
