@@ -155,7 +155,30 @@ jobs:
   docker:
     runs-on: ubuntu-24.04
     needs: [backend, frontend]
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - run: docker compose config --quiet
       - run: docker compose build
+      - name: Start full Docker stack
+        run: docker compose up -d
+      - name: Verify running services and API health through the web proxy
+        run: |
+          # The worker is a long-lived process without an HTTP healthcheck:
+          # compose --wait treats that as an error even while the process is running.
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent http://127.0.0.1:3000/api/health > /tmp/select-health.json; then
+              break
+            fi
+            sleep 2
+          done
+          python3 -c 'import json; data=json.load(open("/tmp/select-health.json")); assert data["status"] == "ok"; assert data["contracts"]; print("Web-to-API smoke test passed")'
+          docker compose ps --status running --services | grep -x worker
+      - name: Show Docker logs on failure
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs --tail 150
+      - name: Stop stack
+        if: always()
+        run: docker compose down --remove-orphans
