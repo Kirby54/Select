@@ -100,6 +100,21 @@ export function ProviderSetup({ cid, onDone }: { cid: string; onDone: (summary: 
             type="button"
             role="radio"
             aria-checked={provider === p.id}
+            tabIndex={provider === p.id ? 0 : -1}
+            onKeyDown={(event) => {
+              if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(event.key)) return;
+              event.preventDefault();
+              if (busy || probeBusy) return;
+              const direction = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
+              const index = PROVIDERS.findIndex((item) => item.id === provider);
+              const target = PROVIDERS[(index + direction + PROVIDERS.length) % PROVIDERS.length];
+              setProvider(target.id);
+              setModels(null);
+              setProbe(null);
+              setError(null);
+              const radios = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+              radios?.[(index + direction + PROVIDERS.length) % PROVIDERS.length]?.focus();
+            }}
             onClick={() => { if (busy || probeBusy) return; setProvider(p.id); setModels(null); setProbe(null); setError(null); }}
             className={cx(
               "flex items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors duration-[120ms]",
