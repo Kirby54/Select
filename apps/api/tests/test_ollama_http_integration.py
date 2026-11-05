@@ -8,18 +8,19 @@ from __future__ import annotations
 
 import json
 import threading
+from collections.abc import Iterator
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Iterator
+from typing import ClassVar
 
 from helpers import REQUEST, ok, setup_company
 
 
 class OllamaStub(BaseHTTPRequestHandler):
-    calls: list[dict[str, object]] = []
-    reply: dict[str, object] = {}
+    calls: ClassVar[list[dict[str, object]]] = []
+    reply: ClassVar[dict[str, object]] = {}
 
-    def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler interface
+    def do_POST(self) -> None:
         length = int(self.headers["content-length"])
         request = json.loads(self.rfile.read(length))
         self.calls.append({"path": self.path, "body": request})
@@ -30,14 +31,14 @@ class OllamaStub(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
-    def log_message(self, format: str, *args: object) -> None:  # noqa: A002
+    def log_message(self, format: str, *args: object) -> None:
         pass
 
 
 @contextmanager
 def local_ollama(reply: dict[str, object]) -> Iterator[tuple[str, type[OllamaStub]]]:
     class Handler(OllamaStub):
-        calls: list[dict[str, object]] = []
+        calls: ClassVar[list[dict[str, object]]] = []
 
     Handler.reply = reply
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
