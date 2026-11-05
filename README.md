@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo.svg" width="56" alt="Select logo" />
+  <img src="docs/hero-select.svg" width="100%" alt="Select — AI agents that earn their autonomy. Every result checked by code. Trust earned from evidence, never by default." />
 </p>
 
 <h1 align="center">Select</h1>
@@ -26,6 +26,12 @@ Multi-agent orchestrators let you decide in advance what agents may do alone. Se
 - **Limits the score never overrides.** Payments, contracts, taxes and hiring are always supervised, in code.
 - **An honest counter.** The share of work finished without a person is always shown next to the rate of errors people found afterwards.
 - **No invented numbers.** Every value carries its source; a quantity that is not in the customer's e-mail fails verification.
+
+<p align="center">
+  <img src="docs/how-select-works.svg" width="100%" alt="How Select works: task arrives, agent works, code verifies, human approves, and Select sends once with a permanent log. Verified success can increase autonomy; blocking failures revoke it. Payments, signatures, hiring and taxes stay human." />
+</p>
+
+Both diagrams are SVG and can be reviewed or edited directly in the repository.
 
 ## What it does
 

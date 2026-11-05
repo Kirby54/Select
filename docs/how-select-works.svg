@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1536 1024" role="img" aria-labelledby="diagram-title diagram-description">
+<title id="diagram-title">How Select works</title>
+<desc id="diagram-description">Agents do the work. Code checks it. Autonomy is earned. Five steps lead from a task to a human-approved action. Successful verification can lead from supervised to sampled to autonomous, while sensitive actions stay human.</desc>
+<defs>
+<linearGradient id="levels" x1="0" y1="0" x2="1" y2="0">
+<stop stop-color="#D9B26A" stop-opacity=".58"/><stop offset=".33" stop-color="#D9B26A" stop-opacity=".45"/><stop offset=".5" stop-color="#7DB4C8" stop-opacity=".45"/><stop offset=".67" stop-color="#7DB4C8" stop-opacity=".5"/><stop offset="1" stop-color="#7CC59E" stop-opacity=".55"/>
+</linearGradient>
+<linearGradient id="edge" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#D9B26A"/><stop offset=".5" stop-color="#7DB4C8"/><stop offset="1" stop-color="#7CC59E"/></linearGradient>
+</defs>
+<rect width="1536" height="1024" fill="#111214"/>
+<text x="60" y="141" fill="#F5F5F7" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="76" font-weight="750" letter-spacing="-3.4">How Select works</text>
+<text x="60" y="196" fill="#A1A1A6" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="34">Agents do the work. Code checks it. Autonomy is earned.</text>
+<rect x="40" y="272" width="236" height="308" rx="26" fill="#1B1D20" stroke="#3E4148" stroke-width="1.4"/>
+<g transform="translate(158 363)" stroke="#F5F5F7" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round" fill="none"><path d="M-33 -16h66l9 38v16h-84V22z"/><path d="M-42 13h23l7 11h24l7-11h23"/></g>
+<text x="158" y="459" text-anchor="middle" fill="#F5F5F7" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-weight="650" font-size="25" letter-spacing="-1">A task arrives</text>
+<text x="158" y="507" text-anchor="middle" fill="#A1A1A6" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-weight="400" font-size="20">From you, an e-mail</text><text x="158" y="539" text-anchor="middle" fill="#A1A1A6" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-weight="400" font-size="20">or a routine</text>
+<line x1="283" y1="430" x2="332" y2="430" stroke="#60656E" stroke-width="2.3"/><path d="m322 421 10 9-10 9" fill="none" stroke="#9398A0" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><rect x="345" y="272" width="236" height="308" rx="26" fill="#1B1D20" stroke="#3E4148" stroke-width="1.4"/>
+<g transform="translate(463 363)" stroke="#F5F5F7" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round" fill="none"><path d="M-10 -43L-1 -14L28 -5L-1 4L-10 33L-19 4L-48 -5L-19 -14Z"/><path d="M35 -38L39 -26L51 -22L39 -18L35 -6L31 -18L19 -22L31 -26Z"/></g>
+<text x="463" y="459" text-anchor="middle" fill="#F5F5F7" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-weight="650" font-size="25" letter-spacing="-1">An agent works</text>
+<text x="463" y="507" text-anchor="middle" fill="#A1A1A6" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-weight="400" font-size="20">Any role, any model</text>
+<line x1="588" y1="430" x2="637" y2="430" stroke="#60656E" stroke-width="2.3"/><path d="m627 421 10 9-10 9" fill="none" stroke="#9398A0" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><rect x="650" y="272" width="236" height="308" rx="26" fill="#1B1D20" stroke="#3E4148" stroke-width="1.4"/>
+<g transform="translate(768 363)" stroke="#F5F5F7" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round" fill="none"><rect x="-34" y="-34" width="68" height="79" rx="8"/><rect x="-13" y="-45" width="26" height="20" rx="5"/><path d="m-17 6 12 12 26 -30"/></g>
+<text x="768" y="459" text-anchor="middle" fill="#F5F5F7" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-weight="650" font-size="25" letter-spacing="-1">Code checks it</text>
+<text x="768" y="507" text-anchor="middle" fill="#A1A1A6" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-weight="400" font-size="20">Contract, sources,</text><text x="768" y="539" text-anchor="middle" fill="#A1A1A6" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-weight="400" font-size="20">exact totals</text>
+<line x1="893" y1="430" x2="942" y2="430" stroke="#60656E" stroke-width="2.3"/><path d="m932 421 10 9-10 9" fill="none" stroke="#9398A0" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><rect x="955" y="272" width="236" height="308" rx="26" fill="#1B1D20" stroke="#3E4148" stroke-width="1.4"/>
+<g transform="translate(1073 363)" stroke="#F5F5F7" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round" fill="none"><circle cx="-8" cy="-23" r="19"/><path d="M-41 39c0-27 17-40 33-40 16 0 27 8 33 23"/><path d="m16 22 12 12 28-28"/></g>
+<text x="1073" y="459" text-anchor="middle" fill="#F5F5F7" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-weight="650" font-size="23" letter-spacing="-1">A person approves</text>
+<text x="1073" y="507" text-anchor="middle" fill="#A1A1A6" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-weight="400" font-size="20">The exact result</text><text x="1073" y="539" text-anchor="middle" fill="#A1A1A6" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-weight="400" font-size="20">that will leave</text>
+<line x1="1198" y1="430" x2="1247" y2="430" stroke="#60656E" stroke-width="2.3"/><path d="m1237 421 10 9-10 9" fill="none" stroke="#9398A0" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><rect x="1260" y="272" width="236" height="308" rx="26" fill="#1B1D20" stroke="#3E4148" stroke-width="1.4"/>
+<g transform="translate(1378 363)" stroke="#F5F5F7" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round" fill="none"><path d="m-53 -10 109-39-30 106-19-37-37 16 11-30Z"/><path d="M7 20 56 -49"/></g>
+<text x="1378" y="459" text-anchor="middle" fill="#F5F5F7" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-weight="650" font-size="25" letter-spacing="-1">Done</text>
+<text x="1378" y="507" text-anchor="middle" fill="#A1A1A6" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-weight="400" font-size="20">Sent once,</text><text x="1378" y="539" text-anchor="middle" fill="#A1A1A6" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-weight="400" font-size="20">logged forever</text>
+
+<rect x="52" y="661" width="1432" height="90" rx="45" fill="url(#levels)" stroke="url(#edge)" stroke-width="1.8"/>
+<text x="303" y="718" fill="#F5F5F7" text-anchor="middle" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="37" font-weight="600">Supervised</text>
+<path d="M525 706h38m-12 -11 12 11-12 11" fill="none" stroke="#F5F5F7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="773" y="718" fill="#F5F5F7" text-anchor="middle" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="37" font-weight="600">Sampled</text>
+<path d="M976 706h38m-12 -11 12 11-12 11" fill="none" stroke="#F5F5F7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1243" y="718" fill="#F5F5F7" text-anchor="middle" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="37" font-weight="600">Autonomous</text>
+<text x="768" y="811" fill="#D0D2D6" text-anchor="middle" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="29">Each verified success moves an agent up. The first error sends it back.</text>
+<text x="768" y="864" fill="#94949B" text-anchor="middle" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="25">Payments, signatures, hiring and taxes always stay human.</text>
+<g transform="translate(1250 929) scale(2.6)"><g transform="translate(5.75 5.75)" fill="#F5F5F7"><path d="M9.5 3H4.5A4 4 0 0 0 .5 7v9a4 4 0 0 0 4 4h9a4 4 0 0 0 4-4v-5a1 1 0 0 0-2 0v5a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5a1 1 0 0 0 0-2Z"/><path d="M3.5359 2.5A4 4 0 0 1 7 .5h9a4 4 0 0 1 4 4v9a4 4 0 0 1-2 3.4641V4.5a2 2 0 0 0-2-2Z"/></g></g>
+<text x="1326" y="978" fill="#F5F5F7" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="42" font-weight="650" letter-spacing="-1.2">Select</text>
+</svg>
