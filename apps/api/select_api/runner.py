@@ -24,6 +24,12 @@ from .quote_pack import EXTRACTION_FORMAT, build_quote
 from .security import decrypt
 
 OUTPUT_FORMATS: dict[str, str] = {
+    "code_change": (
+        'Return one JSON object with "summary" (a short explanation), "diff" '
+        '(a unified text patch with diff --git, ---/+++, and @@ headers), and optional "tests_to_run" '
+        '(a list of suggestions only). You have NOT modified any files, run tests, committed changes, '
+        'or opened a pull request. The proposal always requires human review; never claim it was applied.'
+    ),
     "support_reply": (
         'Return one JSON object: {"to": {"value": "<sender address exactly as written>", '
         '"source_ref": "source:<message id>"}, "subject": "Re: <their subject>", "body": "..."}. '
