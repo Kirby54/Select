@@ -130,13 +130,10 @@ def unified_diff_shape(data: dict[str, Any], params: dict[str, Any], ctx: Verify
         if any(piece in ("", ".", "..", ".git") for piece in parts) or "\\" in path:
             return Outcome(False, "unsafe file path")
         if any(
-            line.startswith(("old mode ", "new mode ", "new file mode 120000", "deleted file mode"))
-            for line in section
+            line.startswith(("old mode ", "new mode ", "new file mode 120000", "deleted file mode")) for line in section
         ):
             return Outcome(False, "file mode or deletion change requires an external diff review")
-        if f"+++ b/{path}" not in section or not (
-            f"--- a/{path}" in section or "--- /dev/null" in section
-        ):
+        if f"+++ b/{path}" not in section or not (f"--- a/{path}" in section or "--- /dev/null" in section):
             return Outcome(False, "patch file markers do not match the path")
         if not any(line.startswith("@@ ") and " @@" in line for line in section):
             return Outcome(False, "patch has no unified hunk")
