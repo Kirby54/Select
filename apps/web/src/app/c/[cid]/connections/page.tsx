@@ -6,10 +6,10 @@ import { Suspense, useState } from "react";
 
 import { MailboxForm } from "@/components/mailbox-form";
 import { PageBody, PageHeader } from "@/components/shell/app-shell";
-import { EmptyState, ErrorState, LoadingRows } from "@/components/ui/feedback";
+import { EmptyState, ErrorState, LoadingRows, useToast } from "@/components/ui/feedback";
 import { ConfirmDialog, Dialog } from "@/components/ui/overlay";
 import { Badge, Button, Card, Field, Input, Switch, Textarea } from "@/components/ui/primitives";
-import { api } from "@/lib/api";
+import { api, errorMessage } from "@/lib/api";
 import { relative } from "@/lib/format";
 import { useAction, useCompany, useCompanyId, useConnections, useMailboxes } from "@/lib/queries";
 import type { Connection, Mailbox } from "@/lib/types";
@@ -77,10 +77,78 @@ function ConnectionDialog({ cid, connection, open, onOpenChange }: { cid: string
   );
 }
 
+interface ProbeResult {
+  ok: boolean;
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  error: string | null;
+}
+
+/** Test actual generation, not only model listing. User confirmation is required for the paid request. */
+function GenerationProbeDialog({ cid, connection, onClose }: { cid: string; connection: Connection; onClose: () => void }) {
+  const [model, setModel] = useState(connection.models?.[0] ?? "");
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<ProbeResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+
+  const run = async () => {
+    if (!model.trim()) return setError("Enter a model ID before testing.");
+    setRunning(true);
+    setError(null);
+    setResult(null);
+    try {
+      const next = await api<ProbeResult>(`/companies/${cid}/connections/${connection.provider}/probe`, {
+        method: "POST",
+        body: { model: model.trim(), consent: true },
+      });
+      setResult(next);
+      if (next.ok) toast.show({ tone: "success", title: "Generation test passed", description: `${connection.label} produced valid JSON.` });
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setRunning(false);
+    }
+  };
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open && !running) onClose(); }}
+      title={`Test ${connection.label} generation`}
+      description="This sends one harmless prompt to your selected model using the saved connection. It may use paid tokens. No company data is sent.">
+      <div className="space-y-4">
+        <Field label="Model to test" htmlFor="probe-model" hint="Choose a model available to your account. Listing models does not prove generation works.">
+          <Input id="probe-model" value={model} onChange={(e) => { setModel(e.target.value); setResult(null); }} placeholder="Exact provider model ID" autoComplete="off" />
+        </Field>
+        {connection.models?.length ? (
+          <div className="flex flex-wrap gap-1.5" aria-label="Available models">
+            {connection.models.slice(0, 5).map((candidate) => (
+              <Button key={candidate} size="sm" variant="ghost" onClick={() => { setModel(candidate); setResult(null); }}>{candidate}</Button>
+            ))}
+          </div>
+        ) : null}
+        <p className="text-xs text-muted">A successful test only checks connectivity and JSON output. It does not certify safety, budgets or real business workflows.</p>
+        {error && <p role="alert" className="rounded-lg border border-danger/30 bg-danger/8 px-3 py-2 text-xs text-danger">{error}</p>}
+        {result && (
+          <div role="status" className={`rounded-lg border px-3 py-3 text-xs ${result.ok ? "border-autonomous/30 bg-autonomous/8 text-fg" : "border-danger/30 bg-danger/8 text-danger"}`}>
+            <p className="font-semibold">{result.ok ? "Generation verified" : "Generation test failed"}</p>
+            <p className="mt-1 text-muted">{result.ok ? `Model ${result.model} returned the expected JSON. ${result.input_tokens} input tokens · ${result.output_tokens} output tokens.` : result.error}</p>
+          </div>
+        )}
+        <div className="flex justify-end gap-2 border-t border-line-soft pt-3">
+          <Button variant="ghost" onClick={onClose} disabled={running}>Close</Button>
+          <Button variant="primary" onClick={() => void run()} loading={running} disabled={!model.trim()}>
+            Run live test
+          </Button>
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+
 function StatusBadge({ c }: { c: Connection }) {
   if (!c.configured) return <Badge>Not configured</Badge>;
   if (!c.enabled) return <Badge tone="warning">Disabled</Badge>;
-  if (c.last_test_ok === true) return <Badge tone="success"><CheckCircle2 className="size-3" aria-hidden />Working</Badge>;
+  if (c.last_test_ok === true) return <Badge tone="success"><CheckCircle2 className="size-3" aria-hidden />Models listed</Badge>;
   if (c.last_test_ok === false) return <Badge tone="danger"><XCircle className="size-3" aria-hidden />Test failed</Badge>;
   return <Badge tone="accent">Not tested yet</Badge>;
 }
@@ -195,6 +263,7 @@ function ConnectionsInner() {
   const company = useCompany(cid);
   const connections = useConnections(cid);
   const [editing, setEditing] = useState<Connection | null>(null);
+  const [probing, setProbing] = useState<Connection | null>(null);
   const test = useAction(cid, (provider: string) => api<Connection>(`/companies/${cid}/connections/${provider}/test`, { method: "POST" }), {
     success: (c) => (c.last_test_ok ? `Connected: ${c.models?.length ?? 0} models found` : `Test failed: ${c.last_error}`),
   });
@@ -237,7 +306,8 @@ function ConnectionsInner() {
                 {canAdmin && (
                   <div className="flex flex-wrap gap-2 border-t border-line-soft px-4 py-2.5">
                     <Button size="sm" icon={<Pencil className="size-3.5" aria-hidden />} onClick={() => setEditing(c)}>{c.configured ? "Edit" : "Configure"}</Button>
-                    {c.configured && <Button size="sm" variant="ghost" loading={test.isPending && test.variables === c.provider} onClick={() => test.mutate(c.provider)}>Test connection</Button>}
+                    {c.configured && <Button size="sm" variant="ghost" loading={test.isPending && test.variables === c.provider} onClick={() => test.mutate(c.provider)}>List models</Button>}
+                    {c.configured && c.enabled && <Button size="sm" variant="ghost" onClick={() => setProbing(c)}>Test generation</Button>}
                     {c.configured && (
                       <ConfirmDialog trigger={<Button size="sm" variant="ghost" icon={<Trash2 className="size-3.5" aria-hidden />} className="ml-auto text-danger hover:text-danger">Remove</Button>}
                         title={`Remove the ${c.label} connection?`} description="The stored key is erased. Agents using this provider stop being able to run live."
@@ -252,6 +322,7 @@ function ConnectionsInner() {
         </section>
       </PageBody>
       {editing && <ConnectionDialog cid={cid} connection={editing} open={!!editing} onOpenChange={(o) => !o && setEditing(null)} />}
+      {probing && <GenerationProbeDialog cid={cid} connection={probing} onClose={() => setProbing(null)} />}
     </>
   );
 }
