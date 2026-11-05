@@ -16,6 +16,31 @@ The Docker setup starts in password mode with ports bound to 127.0.0.1. Before o
 6. **Back up** PostgreSQL (`docker compose exec db pg_dump -U select select > backup.sql`) and the `api-data` volume.
 7. **Pin base images by digest** for reproducible builds.
 
+## Database backup and recovery
+
+A database backup is **not** a full backup of Select. Keep **both**:
+
+- PostgreSQL data (a SQL or custom-format dump).
+- The encryption key from `.env` (`SELECT_SECRET_KEY`), or the shared `api-data` volume's `secret.key` if no environment key is set. Without it, encrypted provider and mailbox credentials cannot be decrypted.
+
+To back up the database while Compose is running:
+
+```bash
+docker compose exec -T db pg_dump -U select -Fc -d select > select-backup.dump
+```
+
+To inspect the backup **without overwriting your current company data**, restore it into a new database:
+
+```bash
+docker compose exec -T db createdb -U select select_restore_check
+docker compose exec -T db pg_restore -U select --no-owner --exit-on-error -d select_restore_check < select-backup.dump
+docker compose exec -T db psql -U select -d select_restore_check -c "SELECT count(*) FROM companies;"
+```
+
+Use unique restore database names for repeated trials. Restore into the live `select` database **only during a deliberate maintenance window**, after confirming the backup and stopping writers. Replacing live data can destroy work performed after the backup.
+
+GitHub CI now checks the PostgreSQL dump/restore into a **disposable second database** on the Ubuntu test stack. This verifies that migrations are included and the backup is restorable there; it does **not** prove that large customer datasets, mail delivery state, encrypted secrets, cross-version upgrades, or full disaster recovery have been tested. Schedule periodic off-machine encrypted backups and rehearsal restores before production use.
+
 ## Accounts
 
 | Need | How |
