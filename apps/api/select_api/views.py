@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -183,8 +183,12 @@ class ConnectionIn(Strict):
             if set(price) != {"input", "output"}:
                 raise ValueError(f"{model}: give 'input' and 'output' prices per million tokens")
             for v in price.values():
-                if Decimal(v) < 0:
-                    raise ValueError("prices cannot be negative")
+                try:
+                    amount = Decimal(v)
+                except (InvalidOperation, ValueError, TypeError) as exc:
+                    raise ValueError("prices must be valid decimal amounts") from exc
+                if not amount.is_finite() or amount < 0:
+                    raise ValueError("prices must be finite and non-negative")
         return value
 
 

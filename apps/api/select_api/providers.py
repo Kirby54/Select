@@ -118,6 +118,23 @@ class OpenAIProvider:
             raise ProviderError(f"OpenAI: {exc}") from exc
 
 
+def _json_mapping(response: httpx.Response, provider: str) -> dict[str, object]:
+    """An HTTP 200 response is not necessarily a valid provider result."""
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise ProviderError(f"{provider}: response was not valid JSON") from exc
+    if not isinstance(data, dict):
+        raise ProviderError(f"{provider}: expected a JSON object")
+    return data
+
+
+def _token_count(value: object, provider: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ProviderError(f"{provider}: invalid token usage in response")
+    return value
+
+
 class GeminiProvider:
     """Gemini REST API (generateContent). Google's Python SDK is not a dependency."""
 
@@ -144,13 +161,27 @@ class GeminiProvider:
             response.raise_for_status()
         except httpx.HTTPError as exc:
             raise ProviderError(f"Gemini: {exc}") from exc
-        data = response.json()
+        data = _json_mapping(response, "Gemini")
         try:
-            text = "".join(p.get("text", "") for p in data["candidates"][0]["content"]["parts"])
-        except (KeyError, IndexError) as exc:
-            raise ProviderError(f"Gemini: unexpected response shape ({exc})") from exc
-        usage = data.get("usageMetadata", {})
-        return Completion(text, int(usage.get("promptTokenCount", 0)), int(usage.get("candidatesTokenCount", 0)), model)
+            parts = data["candidates"][0]["content"]["parts"]
+            if not isinstance(parts, list):
+                raise TypeError("parts must be a list")
+            if any(not isinstance(part, dict) or not isinstance(part.get("text", ""), str) for part in parts):
+                raise TypeError("parts must contain text")
+            text = "".join(part.get("text", "") for part in parts)
+        except (KeyError, IndexError, TypeError) as exc:
+            raise ProviderError("Gemini: unexpected response shape") from exc
+        if not text.strip():
+            raise ProviderError("Gemini: response contained no text")
+        usage = data.get("usageMetadata") or {}
+        if not isinstance(usage, dict):
+            raise ProviderError("Gemini: invalid usage metadata")
+        return Completion(
+            text,
+            _token_count(usage.get("promptTokenCount", 0), "Gemini"),
+            _token_count(usage.get("candidatesTokenCount", 0), "Gemini"),
+            model,
+        )
 
     def list_models(self, timeout: float) -> list[str]:
         try:
@@ -158,7 +189,13 @@ class GeminiProvider:
             response.raise_for_status()
         except httpx.HTTPError as exc:
             raise ProviderError(f"Gemini: {exc}") from exc
-        return sorted(m["name"].removeprefix("models/") for m in response.json().get("models", []))
+        data = _json_mapping(response, "Gemini")
+        models = data.get("models", [])
+        if not isinstance(models, list) or any(
+            not isinstance(item, dict) or not isinstance(item.get("name"), str) for item in models
+        ):
+            raise ProviderError("Gemini: invalid model list")
+        return sorted(item["name"].removeprefix("models/") for item in models)
 
 
 class OllamaProvider:
@@ -180,11 +217,17 @@ class OllamaProvider:
             response.raise_for_status()
         except httpx.HTTPError as exc:
             raise ProviderError(f"Ollama: {exc}") from exc
-        data = response.json()
+        data = _json_mapping(response, "Ollama")
+        message = data.get("message")
+        if not isinstance(message, dict) or not isinstance(message.get("content"), str):
+            raise ProviderError("Ollama: response contains no message text")
+        content = message["content"]
+        if not content.strip():
+            raise ProviderError("Ollama: response contained no text")
         return Completion(
-            data.get("message", {}).get("content", ""),
-            int(data.get("prompt_eval_count", 0)),
-            int(data.get("eval_count", 0)),
+            content,
+            _token_count(data.get("prompt_eval_count", 0), "Ollama"),
+            _token_count(data.get("eval_count", 0), "Ollama"),
             model,
         )
 
@@ -194,7 +237,13 @@ class OllamaProvider:
             response.raise_for_status()
         except httpx.HTTPError as exc:
             raise ProviderError(f"Ollama: {exc}") from exc
-        return sorted(m["name"] for m in response.json().get("models", []))
+        data = _json_mapping(response, "Ollama")
+        models = data.get("models", [])
+        if not isinstance(models, list) or any(
+            not isinstance(item, dict) or not isinstance(item.get("name"), str) for item in models
+        ):
+            raise ProviderError("Ollama: invalid model list")
+        return sorted(item["name"] for item in models)
 
 
 def build(provider: str, api_key: str | None, base_url: str | None) -> Provider:

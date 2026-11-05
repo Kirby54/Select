@@ -122,7 +122,14 @@ test("demo week runs and shows a demotion", async ({ page }) => {
   await page.goto("/?demo=1");
   const cid = await companyId(page);
   await page.getByRole("button", { name: /Run demo week/ }).click();
-  await page.getByRole("status").filter({ hasText: "Demo week finished" }).waitFor({ timeout: 90_000 });
+  // Observe the durable server event rather than a transient toast: slow CI runners
+  // can miss the toast even after the week has been committed successfully.
+  await expect.poll(async () => {
+    const response = await page.request.get(`/api/companies/${cid}/overview?days=30`);
+    if (!response.ok()) return false;
+    const overview = await response.json() as { recent?: { kind: string }[] };
+    return overview.recent?.some((event) => event.kind === "demo.finished") ?? false;
+  }, { timeout: 120_000, intervals: [500, 1000, 2000] }).toBe(true);
   await page.goto(`/c/${cid}/autonomy`);
   await expect(page.getByText(/Demoted to supervised: blocking check\(s\) failed/).first()).toBeVisible();
   await expect(page.getByText("Demo company.").first()).toBeVisible();
