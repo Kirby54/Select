@@ -38,6 +38,24 @@ jobs:
       - run: uv run ruff format --check apps packages
       - run: uv run select-api check-contracts
       - run: uv run pytest packages/select-verify/tests apps/api/tests
+      - run: bash -n start.sh
+      - run: python3 scripts/check-readme-links.py
+
+  windows-startup:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Windows PowerShell installer syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile("$PWD/start.ps1", [ref]$tokens, [ref]$parseErrors)
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | ForEach-Object { Write-Error $_.ToString() }
+            exit 1
+          }
+          Write-Host "PowerShell installer parses successfully (Docker runtime not tested on Windows)."
 
   frontend:
     runs-on: ubuntu-24.04
