@@ -19,6 +19,12 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+docker compose version *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Docker Compose v2 is missing. Update or reinstall Docker Desktop and run .\start.ps1 again." -ForegroundColor Red
+    exit 1
+}
+
 if (-not (Test-Path .env)) {
     $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
     # 32 random bytes in URL-safe base64: the format of a Fernet key.
