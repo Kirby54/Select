@@ -82,6 +82,21 @@ def check_contracts() -> None:
         )
 
 
+def _validate_bind_address(host: str) -> None:
+    """Never expose password-free local mode on a network interface."""
+    from .config import get_settings
+
+    if get_settings().auth_mode == "local" and host.lower().strip("[]") not in (
+        "127.0.0.1",
+        "::1",
+        "localhost",
+    ):
+        raise SystemExit(
+            "Refusing to bind unauthenticated SELECT_AUTH_MODE=local to a network interface. "
+            "Use --host 127.0.0.1, or configure SELECT_AUTH_MODE=password (or token) first."
+        )
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="select-api")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -102,6 +117,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "serve":
         import uvicorn
 
+        _validate_bind_address(args.host)
         if args.migrate:
             migrate()
         uvicorn.run("select_api.main:app", host=args.host, port=args.port, proxy_headers=True)

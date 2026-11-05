@@ -52,6 +52,13 @@
 - Single sign-on, two-factor authentication, password reset by e-mail (an admin resets with the CLI).
 - OAuth for mailboxes (Microsoft 365, Google): app passwords only.
 - Rate limiting per IP address (sign-in is limited per account address; put IP limits in the reverse proxy).
+
+## Local deployment safety
+
+`SELECT_AUTH_MODE=local` intentionally skips sign-in and is **only** for a trusted computer. The `select-api serve` CLI refuses to bind this mode to a public or LAN interface; leave the default `--host 127.0.0.1` in place. Use `SELECT_AUTH_MODE=password` or `token` before exposing the API outside localhost. Reverse proxies and other ASGI launchers must apply equivalent network restrictions; do not expose local mode by running Uvicorn directly on `0.0.0.0`.
+
+When `SELECT_SECRET_KEY` is not provided, the API and worker can start together against a shared `SELECT_DATA_DIR`. They create/read the same encryption key atomically in that directory. **Back it up**: deleting this file makes existing encrypted provider and mailbox credentials unreadable.
+
 - Model-based detection of prompt injection: Select relies on deterministic checks against stored sources instead.
 
 Report vulnerabilities as described in [SECURITY.md](../SECURITY.md).
