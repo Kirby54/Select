@@ -107,7 +107,7 @@ export function ProviderSetup({ cid, onDone }: { cid: string; onDone: (summary: 
               if (busy || probeBusy) return;
               const direction = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
               const index = PROVIDERS.findIndex((item) => item.id === provider);
-              const target = PROVIDERS[(index + direction + PROVIDERS.length) % PROVIDERS.length];
+              const target = PROVIDERS[(index + direction + PROVIDERS.length) % PROVIDERS.length]!;
               setProvider(target.id);
               setModels(null);
               setProbe(null);
