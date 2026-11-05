@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 import secrets
+import tempfile
 from functools import lru_cache
 from pathlib import Path
 
@@ -25,15 +26,24 @@ def _fernet() -> Fernet:
     key = settings.secret_key.strip()
     if not key:
         key_file = Path(settings.data_dir) / "secret.key"
-        if key_file.exists():
-            key = key_file.read_text().strip()
-        else:
+        if not key_file.exists():
             key_file.parent.mkdir(parents=True, exist_ok=True)
-            key = Fernet.generate_key().decode()
-            # Create with owner-only permissions before writing the key.
-            fd = os.open(key_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-            with os.fdopen(fd, "w") as handle:
-                handle.write(key)
+            # API and worker may both need a key at startup. Build it in a private
+            # temporary file, then publish it atomically without overwriting the
+            # winner's key. Readers never observe a partially written key.
+            fd, temporary = tempfile.mkstemp(prefix=".select-key-", dir=key_file.parent)
+            try:
+                with os.fdopen(fd, "w") as handle:
+                    handle.write(Fernet.generate_key().decode())
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                try:
+                    os.link(temporary, key_file)
+                except FileExistsError:
+                    pass  # Another process published its complete key first.
+            finally:
+                os.unlink(temporary)
+        key = key_file.read_text().strip()
     try:
         return Fernet(key.encode())
     except ValueError as exc:
