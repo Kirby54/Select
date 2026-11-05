@@ -18,12 +18,12 @@ describe("ProviderSetup generation verification", () => {
   it("supports accessible arrow-key navigation across providers", () => {
     render(<ProviderSetup cid="company-1" onDone={vi.fn()} />);
     const radios = screen.getAllByRole("radio") as HTMLButtonElement[];
-    expect(radios[0].getAttribute("tabindex")).toBe("0");
-    radios[0].focus();
-    fireEvent.keyDown(radios[0], { key: "ArrowRight" });
-    expect(radios[1].getAttribute("aria-checked")).toBe("true");
-    expect(document.activeElement).toBe(radios[1]);
-    expect(radios[1].getAttribute("tabindex")).toBe("0");
+    expect(radios[0]!.getAttribute("tabindex")).toBe("0");
+    radios[0]!.focus();
+    fireEvent.keyDown(radios[0]!, { key: "ArrowRight" });
+    expect(radios[1]!.getAttribute("aria-checked")).toBe("true");
+    expect(document.activeElement).toBe(radios[1]!);
+    expect(radios[1]!.getAttribute("tabindex")).toBe("0");
   });
   it("distinguishes model discovery from an actual generated result", async () => {
     vi.mocked(api).mockImplementation(async (path) => {
