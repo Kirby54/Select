@@ -110,6 +110,6 @@ def test_real_ollama_http_transport_verifies_quote_without_sending(client) -> No
         assert detail["runs"][0]["input_tokens"] == 105
         assert detail["runs"][0]["output_tokens"] == 49
         approvals = ok(client.get(f"/api/companies/{cid}/approvals"))
-        assert approvals
+        assert approvals["total"] >= 1
         # Production send must never happen without a human approval.
-        assert all(item["status"] == "pending" for item in approvals)
+        assert all(item["status"] == "pending" for item in approvals["items"])
