@@ -135,6 +135,25 @@ test("demo week runs and shows a demotion", async ({ page }) => {
   await expect(page.getByText("Demo company.").first()).toBeVisible();
 });
 
+test("Connections explains that a generation test is live and may be billed", async ({ page }) => {
+  const company = await (await page.request.post("/api/companies", {
+    data: { name: "Probe UX", country: "DE" },
+  })).json();
+  const cid = company.id as string;
+  await page.request.put(`/api/companies/${cid}/connections/openai`, {
+    data: { api_key: "sk-test-not-a-real-provider-key" },
+  });
+  await page.goto(`/c/${cid}/connections`);
+  await expect(page.getByText("Models listed")).toHaveCount(0);
+  await page.getByRole("button", { name: "Test generation" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("It may use paid tokens");
+  await expect(dialog).toContainText("No company data is sent");
+  await expect(dialog.getByRole("button", { name: "Run live test" })).toBeEnabled();
+  await dialog.getByRole("button", { name: "Close" }).click();
+  await expect(dialog).toBeHidden();
+});
+
 test("keyboard: Ctrl+K opens the command palette and navigates", async ({ page }) => {
   await page.goto("/?demo=1");
   await companyId(page);
