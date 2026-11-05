@@ -74,7 +74,7 @@ jobs:
           --health-interval 5s --health-timeout 3s --health-retries 20
     env:
       SELECT_DATABASE_URL: postgresql+psycopg://select:select@127.0.0.1:5432/select
-      SELECT_DATA_DIR: ${{ runner.temp }}/select-data
+      SELECT_DATA_DIR: ${{ github.workspace }}/.run/select-data
       SELECT_DEMO_STEP_DELAY_MS: "50"
     steps:
       - uses: actions/checkout@v4
@@ -117,7 +117,7 @@ jobs:
           --health-interval 5s --health-timeout 3s --health-retries 20
     env:
       SELECT_DATABASE_URL: postgresql+psycopg://select:select@127.0.0.1:5432/select
-      SELECT_DATA_DIR: ${{ runner.temp }}/select-data
+      SELECT_DATA_DIR: ${{ github.workspace }}/.run/select-data
       SELECT_AUTH_MODE: password
       SELECT_PUBLIC_URL: http://localhost:3000
       SELECT_SCHEDULER_SECONDS: "5"
