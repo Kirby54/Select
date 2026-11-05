@@ -152,7 +152,7 @@ test("Connections explains that a generation test is live and may be billed", as
   await expect(dialog.getByRole("button", { name: "Run live test" })).toBeDisabled();
   await dialog.getByLabel("Model to test").fill("gpt-test");
   await expect(dialog.getByRole("button", { name: "Run live test" })).toBeEnabled();
-  await dialog.getByRole("button", { name: "Close" }).click();
+  await dialog.getByRole("button", { name: "Close" }).last().click();
   await expect(dialog).toBeHidden();
 });
 
