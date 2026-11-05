@@ -192,6 +192,15 @@ class ConnectionIn(Strict):
         return value
 
 
+class GenerationProbeIn(Strict):
+    """One explicit, potentially billable model call using a fixed harmless prompt."""
+
+    model: str = Field(min_length=1, max_length=120, pattern=r"^[A-Za-z0-9._:/+-]+$")
+    consent: Literal[True]
+
+
+
+
 class UserIn(Strict):
     email: str = Field(max_length=254, pattern=EMAIL_PATTERN)
     name: str = Field(min_length=1, max_length=120)
