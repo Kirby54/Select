@@ -60,7 +60,7 @@ These four come from the end-to-end test run against local IMAP and SMTP test se
 Requirements: Docker Desktop (Windows, macOS) or Docker Engine with Compose (Linux).
 
 ```bash
-git clone <URL_OF_THIS_REPOSITORY> select
+git clone https://github.com/Kirby54/Select.git select
 cd select
 ./start.sh                 # Windows: .\start.ps1
 ```
