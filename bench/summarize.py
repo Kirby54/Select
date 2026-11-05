@@ -95,7 +95,9 @@ def load(path: Path) -> dict[str, list[dict[str, Any]]]:
     if not systems:
         raise BenchmarkInputError("No task records supplied. Nothing to measure.")
     if len(systems) > 1:
-        reference = {entry["task_id"] for entry in next(iter(systems.values()))}
+        reference_entries = next(iter(systems.values()))
+        reference = {entry["task_id"] for entry in reference_entries}
+        reference_traps = {entry["task_id"]: entry["trap"] for entry in reference_entries}
         for name, entries in systems.items():
             current = {entry["task_id"] for entry in entries}
             if current != reference:
@@ -103,6 +105,12 @@ def load(path: Path) -> dict[str, list[dict[str, Any]]]:
                     f"{name}: task IDs do not match the other systems. "
                     "Use the same tasks for every comparison."
                 )
+            for entry in entries:
+                if entry["trap"] != reference_traps[entry["task_id"]]:
+                    raise BenchmarkInputError(
+                        f"{name}: trap label disagrees on task {entry['task_id']}. "
+                        "Trap classification is a property of the task, not the system."
+                    )
     return systems
 
 
