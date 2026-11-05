@@ -118,9 +118,9 @@ def unified_diff_shape(data: dict[str, Any], params: dict[str, Any], ctx: Verify
     lines = raw.splitlines()
     heads = [i for i, line in enumerate(lines) if line.startswith("diff --git ")]
     if not heads or len(heads) > max_files or heads[0] != 0:
-        return Outcome(False, "patch must contain 1 to {0} git file sections".format(max_files))
+        return Outcome(False, f"patch must contain 1 to {max_files} git file sections")
     paths: list[str] = []
-    for start, end in zip(heads, heads[1:] + [len(lines)], strict=True):
+    for start, end in zip(heads, [*heads[1:], len(lines)], strict=True):
         section = lines[start:end]
         matched = re.fullmatch(r"diff --git a/([A-Za-z0-9._/-]+) b/([A-Za-z0-9._/-]+)", section[0])
         if not matched or matched.group(1) != matched.group(2):
@@ -129,7 +129,10 @@ def unified_diff_shape(data: dict[str, Any], params: dict[str, Any], ctx: Verify
         parts = path.split("/")
         if any(piece in ("", ".", "..", ".git") for piece in parts) or "\\" in path:
             return Outcome(False, "unsafe file path")
-        if any(line.startswith(("old mode ", "new mode ", "new file mode 120000", "deleted file mode")) for line in section):
+        if any(
+            line.startswith(("old mode ", "new mode ", "new file mode 120000", "deleted file mode"))
+            for line in section
+        ):
             return Outcome(False, "file mode or deletion change requires an external diff review")
         if f"+++ b/{path}" not in section or not (
             f"--- a/{path}" in section or "--- /dev/null" in section
