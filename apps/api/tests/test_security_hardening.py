@@ -15,13 +15,13 @@ def test_local_mode_only_binds_to_loopback(monkeypatch: pytest.MonkeyPatch) -> N
     try:
         for address in ("127.0.0.1", "::1", "[::1]", "localhost"):
             _validate_bind_address(address)
-        for address in ("0.0.0.0", "::", "[::]", "192.168.1.20", "select.example.com"):
+        for address in ("0.0.0.0", "::", "[::]", "192.168.1.20", "select.example.com"):  # noqa: S104 - intentionally rejected test inputs
             with pytest.raises(SystemExit, match="Refusing to bind unauthenticated"):
                 _validate_bind_address(address)
 
         monkeypatch.setenv("SELECT_AUTH_MODE", "password")
         get_settings.cache_clear()
-        _validate_bind_address("0.0.0.0")
+        _validate_bind_address("0.0.0.0")  # noqa: S104 - allowed with authentication
     finally:
         get_settings.cache_clear()
 
