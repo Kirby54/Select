@@ -47,7 +47,7 @@ export SELECT_DATABASE_URL=postgresql+psycopg://$USER@127.0.0.1:5432/select
 ./scripts/dev-down.sh
 ```
 
-Without Docker the default auth mode is `local` (no sign-in, one implicit owner); set `SELECT_AUTH_MODE=password` to try accounts. For frontend work, run `npm run dev` in `apps/web`; it proxies `/api` to `SELECT_API_URL` (default `http://127.0.0.1:8000`).
+Without Docker the default auth mode is `local` (no sign-in, one implicit owner); set `SELECT_AUTH_MODE=password` to try accounts. The `select-api serve` command refuses non-loopback bind addresses in local mode; switch to password or token authentication before making the API reachable from another machine. For frontend work, run `npm run dev` in `apps/web`; it proxies `/api` to `SELECT_API_URL` (default `http://127.0.0.1:8000`).
 
 To try the mail loop without a real mailbox: `uv run python scripts/dev-mail.py serve` (see [mail.md](mail.md)).
 
