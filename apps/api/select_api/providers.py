@@ -21,6 +21,21 @@ class ProviderError(RuntimeError):
     pass
 
 
+def _safe_http_error(provider: str, exc: httpx.HTTPError) -> ProviderError:
+    """Avoid persisting arbitrary URLs, headers or response bodies from failed requests."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        return ProviderError(f"{provider}: HTTP {exc.response.status_code} from provider")
+    return ProviderError(f"{provider}: network request failed ({type(exc).__name__})")
+
+
+def _safe_sdk_error(provider: str, exc: Exception) -> ProviderError:
+    """SDK exception text can contain request metadata; emit only the HTTP status."""
+    status_code = getattr(exc, "status_code", None)
+    if isinstance(status_code, int):
+        return ProviderError(f"{provider}: HTTP {status_code} from provider")
+    return ProviderError(f"{provider}: provider request failed ({type(exc).__name__})")
+
+
 @dataclass
 class Completion:
     text: str
@@ -78,7 +93,7 @@ class AnthropicProvider:
                 timeout=timeout,
             )
         except anthropic.APIError as exc:
-            raise ProviderError(f"Anthropic: {exc}") from exc
+            raise _safe_sdk_error("Anthropic", exc) from exc
         text = "".join(getattr(block, "text", "") for block in message.content)
         return Completion(text, message.usage.input_tokens, message.usage.output_tokens, message.model)
 
@@ -86,7 +101,7 @@ class AnthropicProvider:
         try:
             return [m.id for m in self._client.models.list(limit=100, timeout=timeout).data]
         except anthropic.APIError as exc:
-            raise ProviderError(f"Anthropic: {exc}") from exc
+            raise _safe_sdk_error("Anthropic", exc) from exc
 
 
 class OpenAIProvider:
@@ -104,7 +119,7 @@ class OpenAIProvider:
                 timeout=timeout,
             )
         except openai.APIError as exc:
-            raise ProviderError(f"OpenAI: {exc}") from exc
+            raise _safe_sdk_error("OpenAI", exc) from exc
         usage = response.usage
         text = response.choices[0].message.content or ""
         return Completion(
@@ -115,7 +130,7 @@ class OpenAIProvider:
         try:
             return sorted(m.id for m in self._client.models.list(timeout=timeout))
         except openai.APIError as exc:
-            raise ProviderError(f"OpenAI: {exc}") from exc
+            raise _safe_sdk_error("OpenAI", exc) from exc
 
 
 def _json_mapping(response: httpx.Response, provider: str) -> dict[str, object]:
@@ -160,7 +175,7 @@ class GeminiProvider:
             )
             response.raise_for_status()
         except httpx.HTTPError as exc:
-            raise ProviderError(f"Gemini: {exc}") from exc
+            raise _safe_http_error("Gemini", exc) from exc
         data = _json_mapping(response, "Gemini")
         try:
             parts = data["candidates"][0]["content"]["parts"]
@@ -188,7 +203,7 @@ class GeminiProvider:
             response = httpx.get(f"{self._base}/v1beta/models", headers={"x-goog-api-key": self._key}, timeout=timeout)
             response.raise_for_status()
         except httpx.HTTPError as exc:
-            raise ProviderError(f"Gemini: {exc}") from exc
+            raise _safe_http_error("Gemini", exc) from exc
         data = _json_mapping(response, "Gemini")
         models = data.get("models", [])
         if not isinstance(models, list) or any(
@@ -216,7 +231,7 @@ class OllamaProvider:
             response = httpx.post(f"{self._base}/api/chat", json=body, timeout=timeout)
             response.raise_for_status()
         except httpx.HTTPError as exc:
-            raise ProviderError(f"Ollama: {exc}") from exc
+            raise _safe_http_error("Ollama", exc) from exc
         data = _json_mapping(response, "Ollama")
         message = data.get("message")
         if not isinstance(message, dict) or not isinstance(message.get("content"), str):
@@ -236,7 +251,7 @@ class OllamaProvider:
             response = httpx.get(f"{self._base}/api/tags", timeout=timeout)
             response.raise_for_status()
         except httpx.HTTPError as exc:
-            raise ProviderError(f"Ollama: {exc}") from exc
+            raise _safe_http_error("Ollama", exc) from exc
         data = _json_mapping(response, "Ollama")
         models = data.get("models", [])
         if not isinstance(models, list) or any(

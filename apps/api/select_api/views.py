@@ -192,6 +192,20 @@ class ConnectionIn(Strict):
         return value
 
 
+class GenerationProbeIn(Strict):
+    """One explicit, potentially billable model call using a fixed harmless prompt."""
+
+    model: str = Field(min_length=1, max_length=120, pattern=r"^[A-Za-z0-9._:/+-]+$")
+    consent: Literal[True]
+
+    @field_validator("model")
+    @classmethod
+    def prevent_path_segments(cls, value: str) -> str:
+        if any(part in ("", ".", "..") for part in value.split("/")):
+            raise ValueError("model IDs cannot include empty or parent directory segments")
+        return value
+
+
 class UserIn(Strict):
     email: str = Field(max_length=254, pattern=EMAIL_PATTERN)
     name: str = Field(min_length=1, max_length=120)
