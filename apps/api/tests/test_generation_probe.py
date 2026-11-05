@@ -7,9 +7,8 @@ from __future__ import annotations
 
 import pytest
 from helpers import ok
-
 from select_api import providers
-from select_api.providers import Completion, ProviderError
+from select_api.providers import Completion
 
 
 class ProbeAdapter:
