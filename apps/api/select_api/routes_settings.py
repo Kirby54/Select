@@ -13,9 +13,9 @@ from . import demo, jobs
 from .audit import record
 from .auth import CompanyDep, DbDep, PrincipalDep
 from .models import Job, Membership, ProviderConnection
-from .providers import PROVIDERS, build
+from .providers import PROVIDERS, ProviderError, build, parse_json_object
 from .security import decrypt, encrypt, hint
-from .views import ConnectionIn, company_out, connection_out
+from .views import ConnectionIn, GenerationProbeIn, company_out, connection_out
 
 router = APIRouter(prefix="/api")
 
@@ -101,8 +101,10 @@ def test_connection(provider: str, ctx: CompanyDep, db: DbDep) -> dict[str, Any]
         secret = decrypt(conn.secret_encrypted) if conn.secret_encrypted else None
         models = build(provider, secret, conn.base_url).list_models(timeout=15)
         conn.models, conn.last_test_ok, conn.last_error = models[:200], True, None
-    except Exception as exc:  # noqa: BLE001 - any failure is reported to the user and stored, never swallowed
-        conn.last_test_ok, conn.last_error = False, str(exc)[:1000]
+    except ProviderError as exc:
+        conn.last_test_ok, conn.last_error = False, str(exc)[:200]
+    except Exception:  # noqa: BLE001 - fail closed without persisting secrets or provider response bodies
+        conn.last_test_ok, conn.last_error = False, "The provider test failed. Check server logs."
     record(
         db,
         ctx.company.id,
@@ -115,6 +117,59 @@ def test_connection(provider: str, ctx: CompanyDep, db: DbDep) -> dict[str, Any]
     )
     db.commit()
     return connection_out(conn)
+
+
+@router.post("/companies/{company_id}/connections/{provider}/probe")
+def probe_connection(provider: str, body: GenerationProbeIn, ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
+    """Make one explicit potentially billable generation request; never send company information."""
+    ctx.require("admin")
+    if ctx.company.is_demo:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Demo companies cannot call real providers.")
+    conn = _connection(db, ctx.company.id, provider)
+    if conn is None or not conn.enabled:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Enable and save this connection first.")
+    secret = decrypt(conn.secret_encrypted) if conn.secret_encrypted else None
+    try:
+        adapter = build(provider, secret, conn.base_url)
+        completion = adapter.complete(
+            model=body.model,
+            system='Return exactly one JSON object with "select_probe": "ok".',
+            user='Select connectivity check only. Reply with {"select_probe":"ok"}. No company data.',
+            json_output=True,
+            timeout=30,
+        )
+        parsed = parse_json_object(completion.text)
+        if parsed.get("select_probe") != "ok":
+            raise ProviderError("Provider returned an unexpected probe response.")
+        result = {
+            "ok": True,
+            "model": body.model,
+            "input_tokens": completion.input_tokens,
+            "output_tokens": completion.output_tokens,
+            "error": None,
+        }
+    except ProviderError as exc:
+        result = {"ok": False, "model": body.model, "input_tokens": 0, "output_tokens": 0, "error": str(exc)[:200]}
+    except Exception:  # noqa: BLE001 - protect stored secrets from third-party SDK messages
+        result = {
+            "ok": False,
+            "model": body.model,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "error": "Provider generation failed. Check the server logs.",
+        }
+    record(
+        db,
+        ctx.company.id,
+        ctx.principal.actor,
+        "connection.probed",
+        "connection",
+        conn.id,
+        f"{PROVIDERS[provider].label} generation probe: {'ok' if result['ok'] else 'failed'}",
+        {"model": body.model, "ok": result["ok"]},
+    )
+    db.commit()
+    return result
 
 
 @router.delete("/companies/{company_id}/connections/{provider}")
