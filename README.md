@@ -15,7 +15,7 @@ and an agent stops needing your approval only once its verified record shows it 
   <img src="docs/screenshots/overview.png" alt="Select home after the demo week: four figures, the autonomy rate next to the errors found afterwards, what needs you and recent activity" width="900" />
 </p>
 
-> **Status: 0.2.** Accounts, guided setup, real mailboxes, routines and the verification loop run and are tested end to end. Real model calls and the Docker build have not been verified yet: see [Limits](#limits).
+> **Status: 0.2.** Accounts, guided setup, local IMAP/SMTP mail tests, routines and the verification loop are covered by end-to-end tests. Docker images build and the Compose stack starts successfully in Ubuntu GitHub Actions CI. Real model API calls have not been verified yet: see [Limits](#limits).
 
 ## Why Select
 
@@ -147,7 +147,7 @@ None published yet. The protocol (`autonomy-bench`: same tasks and models, auton
 ## Limits
 
 - **Provider calls** have not been exercised against the real APIs (no keys in the build environment); the runner is tested with a double replacing only the network call.
-- **Docker**: the compose file validates and `start.sh` was tested with a stand-in Docker CLI, but the images were not built in the build environment (container registries unreachable) and `start.ps1` was not run (no PowerShell). The services were run and tested directly.
+- **Docker**: GitHub Actions builds both images, starts PostgreSQL, API, worker and web with Compose, and reaches the API health endpoint through the web proxy on Ubuntu. The `start.sh` script itself was tested with a stand-in Docker CLI; real macOS/Windows installations and `start.ps1` have not been exercised in CI.
 - **Mailboxes** were tested against local IMAP and SMTP servers, not yet at a real provider. No OAuth: Microsoft 365 and Outlook.com cannot connect yet; Gmail needs an app password.
 - **Agents write text and structured results through model APIs.** They do not work in a code repository yet (no Claude Code or Codex runtime); such agents can submit results through the API.
 - Attachments are not read; quotes are sent as e-mail text, without a PDF.
