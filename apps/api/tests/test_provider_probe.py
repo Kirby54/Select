@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from select_api.cli import main, probe_provider
 from select_api.providers import Completion, ProviderError
 
@@ -14,7 +13,9 @@ class FakeProvider:
         self.calls: list[dict[str, object]] = []
 
     def complete(self, *, model, system, user, json_output, timeout):
-        self.calls.append({"model": model, "system": system, "user": user, "json_output": json_output, "timeout": timeout})
+        self.calls.append(
+            {"model": model, "system": system, "user": user, "json_output": json_output, "timeout": timeout}
+        )
         return Completion(self.text, 7, 3, model)
 
 
