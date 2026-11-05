@@ -149,6 +149,8 @@ test("Connections explains that a generation test is live and may be billed", as
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("It may use paid tokens");
   await expect(dialog).toContainText("No company data is sent");
+  await expect(dialog.getByRole("button", { name: "Run live test" })).toBeDisabled();
+  await dialog.getByLabel("Model to test").fill("gpt-test");
   await expect(dialog.getByRole("button", { name: "Run live test" })).toBeEnabled();
   await dialog.getByRole("button", { name: "Close" }).click();
   await expect(dialog).toBeHidden();
