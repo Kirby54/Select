@@ -23,7 +23,7 @@ Compose starts in **password** mode: the first visit creates the owner account. 
 
 **Keep `.env`.** It holds the database password and the key that encrypts provider keys and mailbox passwords. A new `.env` with a different `POSTGRES_PASSWORD` cannot open the existing database volume.
 
-**Status of this setup:** `docker compose config` validates, and `start.sh` was tested with a stand-in for the `docker` command (it writes a valid `.env`, keeps it on the second run, waits for the health check). The images themselves have not been built in the development environment, which cannot reach container registries, and `start.ps1` has not been run (no PowerShell there). The application inside — API, worker, web — was run and tested without Docker. Please report any build problem.
+**Verified in GitHub CI (Ubuntu):** `docker compose config` succeeds, images build, all four Compose services start, and `/api/health` responds through the Next.js web proxy. `start.sh` was also tested with a stand-in Docker CLI (secrets are generated and reused). **Not yet verified:** `start.ps1` on Windows and the complete installation on macOS/Windows machines. Please report any platform-specific problem.
 
 ## Windows
 
