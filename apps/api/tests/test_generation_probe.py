@@ -52,7 +52,7 @@ def test_generation_probe_requires_explicit_consent_and_is_audited(client, monke
     assert seen == [("openai", "secret-provider-test-key", None)]
     assert len(adapter.requests) == 1
     assert adapter.requests[0]["json_output"] is True
-    assert "company" not in adapter.requests[0]["user"].lower()
+    assert "Select connectivity check only" in adapter.requests[0]["user"]
     assert "Probe workshop" not in str(adapter.requests[0])
     activity = ok(client.get(f"/api/companies/{cid}/activity"))["items"]
     assert any(item["kind"] == "connection.probed" for item in activity)
