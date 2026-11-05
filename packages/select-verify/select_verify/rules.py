@@ -100,6 +100,51 @@ def pattern(data: dict[str, Any], params: dict[str, Any], ctx: VerifyContext) ->
     return Outcome(True, "format valid")
 
 
+@rule("unified_diff_shape")
+def unified_diff_shape(data: dict[str, Any], params: dict[str, Any], ctx: VerifyContext) -> Outcome:
+    """Only basic patch shape and path safety, NOT whether a diff applies or tests pass.
+
+    This rule never executes code. Every proposal still requires human approval.
+    """
+    raw = unwrap(get_one(data, _param(params, "field")))
+    limit = int(params.get("max_bytes", 100_000))
+    max_files = int(params.get("max_files", 20))
+    if not isinstance(raw, str) or not raw.strip():
+        return Outcome(False, "patch missing or not text")
+    if len(raw.encode("utf-8")) > limit:
+        return Outcome(False, "patch exceeds size limit")
+    if "\\x00" in raw or "\\r" in raw or "GIT binary patch" in raw or "Binary files " in raw:
+        return Outcome(False, "binary or non-text patch is not supported")
+    lines = raw.splitlines()
+    heads = [i for i, line in enumerate(lines) if line.startswith("diff --git ")]
+    if not heads or len(heads) > max_files or heads[0] != 0:
+        return Outcome(False, "patch must contain 1 to {0} git file sections".format(max_files))
+    paths: list[str] = []
+    for start, end in zip(heads, heads[1:] + [len(lines)], strict=True):
+        section = lines[start:end]
+        matched = re.fullmatch(r"diff --git a/([A-Za-z0-9._/-]+) b/([A-Za-z0-9._/-]+)", section[0])
+        if not matched or matched.group(1) != matched.group(2):
+            return Outcome(False, "unsupported or mismatched file paths")
+        path = matched.group(1)
+        parts = path.split("/")
+        if any(piece in ("", ".", "..", ".git") for piece in parts) or "\\\\" in path:
+            return Outcome(False, "unsafe file path")
+        if any(line.startswith(("old mode ", "new mode ", "new file mode 120000", "deleted file mode")) for line in section):
+            return Outcome(False, "file mode or deletion change requires an external diff review")
+        if f"+++ b/{path}" not in section or not (
+            f"--- a/{path}" in section or "--- /dev/null" in section
+        ):
+            return Outcome(False, "patch file markers do not match the path")
+        if not any(line.startswith("@@ ") and " @@" in line for line in section):
+            return Outcome(False, "patch has no unified hunk")
+        if not any(line.startswith(("+", "-")) and not line.startswith(("+++", "---")) for line in section):
+            return Outcome(False, "patch has no changed lines")
+        paths.append(path)
+    if len(paths) != len(set(paths)):
+        return Outcome(False, "file appears more than once")
+    return Outcome(True, "patch has a plausible text diff shape; not applied or tested", {"paths": paths})
+
+
 @rule("forbidden_phrases")
 def forbidden_phrases(data: dict[str, Any], params: dict[str, Any], ctx: VerifyContext) -> Outcome:
     raw = unwrap(get_one(data, _param(params, "field")))
