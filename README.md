@@ -140,6 +140,10 @@ make e2e      # 7 Playwright scenarios against a running stack
 
 `e2e/complete.spec.ts` (4 more scenarios) runs on a password-mode stack with the local mail servers of `scripts/dev-mail.py`: first owner, guided setup, a real IMAP mailbox, an e-mail triaged, routed, quoted, approved and sent once over SMTP (the `.eml` file is checked), a weekly routine seen from a New York browser on Paris time, and an invited colleague joining.
 
+## Verify a real model (optional)
+
+The CI tests use network doubles, not real provider keys. Before connecting production data, use the explicit [live-provider probe](docs/provider-verification.md) with **your own test credentials**. It sends a harmless fixed JSON-generation prompt and reports whether the chosen model returns the expected result. It never stores the key or accesses company data. Real-provider compatibility is **not yet certified** by the maintainers.
+
 ## Benchmarks
 
 None published yet. The protocol (`autonomy-bench`: same tasks and models, autonomy rate and undetected-error rate side by side, compared with a single agent and with Paperclip) is in [bench/README.md](bench/README.md). Until it runs, Select makes no comparative claim. Feature parity is tracked honestly in [docs/parity.md](docs/parity.md).
@@ -156,7 +160,7 @@ None published yet. The protocol (`autonomy-bench`: same tasks and models, auton
 
 ## Documentation
 
-[Five minutes](docs/getting-started.md) · [Installation](docs/installation.md) · [Configuration](docs/configuration.md) · [Mail](docs/mail.md) · [Agents](docs/agents.md) · [Autonomy](docs/autonomy.md) · [Verification](docs/verification.md) · [Workflows and routines](docs/workflows.md) · [Architecture](docs/architecture.md) · [Deployment](docs/deployment.md) · [Security](docs/security.md) · [Troubleshooting](docs/troubleshooting.md) · [Design system](docs/design-system.md) · [Français](docs/fr/README.md)
+[Five minutes](docs/getting-started.md) · [Installation](docs/installation.md) · [Provider probe](docs/provider-verification.md) · [Configuration](docs/configuration.md) · [Mail](docs/mail.md) · [Agents](docs/agents.md) · [Autonomy](docs/autonomy.md) · [Verification](docs/verification.md) · [Workflows and routines](docs/workflows.md) · [Architecture](docs/architecture.md) · [Deployment](docs/deployment.md) · [Security](docs/security.md) · [Troubleshooting](docs/troubleshooting.md) · [Design system](docs/design-system.md) · [Français](docs/fr/README.md)
 
 ## Contributing
 
