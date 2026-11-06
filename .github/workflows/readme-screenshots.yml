@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: real-readme-screenshots
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   capture:
@@ -48,9 +48,21 @@ jobs:
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
       - run: uv sync --all-packages --frozen
-      - name: Build frontend and install reproducible Chromium
-        run: npm ci && npm run build && npx playwright install --with-deps chromium
+      - name: Build frontend
+        run: npm ci && npm run build
         working-directory: apps/web
+      - name: Select installed browser or install Playwright Chromium
+        run: |
+          if command -v google-chrome >/dev/null 2>&1; then
+            echo "CHROME_PATH=$(command -v google-chrome)" >> "$GITHUB_ENV"
+            echo "Using preinstalled Chrome."
+          elif command -v chromium >/dev/null 2>&1; then
+            echo "CHROME_PATH=$(command -v chromium)" >> "$GITHUB_ENV"
+            echo "Using preinstalled Chromium."
+          else
+            cd apps/web
+            npx playwright install --with-deps chromium
+          fi
       - name: Start Select (fictional demo only)
         run: ./scripts/dev-up.sh
       - name: Capture genuine desktop and mobile UI
