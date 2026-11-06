@@ -122,7 +122,6 @@ function AutonomyLine({ o, cid }: { o: Overview; cid: string }) {
   return (
     <Link
       href={`/c/${cid}/autonomy`}
-      aria-label="Open verified autonomy and errors found afterwards"
       className="group block rounded-xl border border-line bg-surface px-4 py-4 transition-[border-color,background-color] duration-[120ms] hover:border-line-strong hover:bg-surface-2 sm:px-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
