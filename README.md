@@ -61,6 +61,30 @@ Both diagrams are SVG and can be reviewed or edited directly in the repository.
 
 These four come from the end-to-end test run against local IMAP and SMTP test servers (`E2E_SCREENSHOTS_DIR`); the others are the demo company. All are real captures.
 
+<!-- SELECT_SCREENSHOTS_BEGIN -->
+## Explore the interface
+
+These are real Playwright screenshots of Select running locally with **fictional demo data**.
+No external model provider or mailbox is connected in this capture session.
+
+<table>
+  <tr>
+    <td width="50%"><strong>Human approvals</strong><br /><img src="docs/screenshots/approvals.png" alt="Select approval queue with review context and verified results" /></td>
+    <td width="50%"><strong>Agent team</strong><br /><img src="docs/screenshots/agents.png" alt="Select agent management, responsibilities and runtime status" /></td>
+  </tr>
+  <tr>
+    <td><strong>Costs and budgets</strong><br /><img src="docs/screenshots/costs.png" alt="Select spending, budgets and agent activity" /></td>
+    <td><strong>Model connections</strong><br /><img src="docs/screenshots/connections.png" alt="Select model connections and generation verification" /></td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/screenshots/mobile-tasks.png" alt="Select tasks on a mobile viewport" width="240" />
+  <img src="docs/screenshots/mobile-autonomy.png" alt="Select autonomy tracking on a mobile viewport" width="240" />
+</p>
+
+<!-- SELECT_SCREENSHOTS_END -->
+
 ## Quickstart
 
 Requirements: Docker Desktop (Windows, macOS) or Docker Engine with Compose (Linux).
