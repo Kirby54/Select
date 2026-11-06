@@ -42,7 +42,7 @@ Each line must include these fields (one completed task per system and task ID):
 | `duration_ms` | non-negative integer | Elapsed wall time for the same task boundary |
 | `cost_usd` | non-negative decimal string | Provider billing estimate/receipt using the same price policy |
 
-The report contains autonomy rate, verified completion rate, post-hoc error rate on reviewed tasks, trap detection rate, intervention count, total task duration and cost per verified result. Rates with no valid denominator are **null**, not zero. An invalid or incomplete record, duplicate task, inconsistent autonomous claim or mismatched comparison task set makes the command fail.
+The report contains autonomy rate, verified completion rate, post-hoc error rate on reviewed tasks, trap detection rate, intervention count, total task duration and cost per verified result. Rates with no valid denominator are **null**, not zero. An invalid or incomplete record, duplicate task, inconsistent autonomous claim, mismatched comparison task set **or inconsistent trap labels for the same task ID across systems** makes the command fail. A trap must be defined from the reference task, never differently by each tool.
 
 For fairness, run Select, Paperclip and the baseline with the **same cases** and publish independent references, model IDs/versions, model temperatures, hardware, prompt budgets, run logs, billing method, failures, and raw JSONL. Report the number of reviewed tasks and the late-error rate **next to** autonomy. An unreviewed task must never be silently treated as error-free.
 

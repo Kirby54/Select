@@ -67,6 +67,23 @@ class BenchmarkSummaryTests(unittest.TestCase):
         with self.assertRaisesRegex(module.BenchmarkInputError, "task IDs do not match"):
             module.load(self.path)
 
+    def test_trap_labels_must_match_for_same_task(self):
+        self.write(
+            record("select", "t1", trap=True, trap_blocked=True),
+            record("paperclip", "t1", trap=False, trap_blocked=None),
+        )
+        with self.assertRaisesRegex(module.BenchmarkInputError, "trap label disagrees"):
+            module.load(self.path)
+
+    def test_trap_results_may_differ_but_task_labels_match(self):
+        self.write(
+            record("select", "t1", trap=True, trap_blocked=True),
+            record("paperclip", "t1", trap=True, trap_blocked=False),
+        )
+        report = module.summarize(module.load(self.path))
+        rates = {row["system"]: row["trap_detection_rate"] for row in report["systems"]}
+        self.assertEqual(rates, {"select": 1.0, "paperclip": 0.0})
+
     def test_multiple_systems_can_be_compared(self):
         self.write(record("select", "t1"), record("paperclip", "t1", verified=False))
         result = module.summarize(module.load(self.path))
