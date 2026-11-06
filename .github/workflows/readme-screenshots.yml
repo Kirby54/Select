@@ -13,7 +13,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: real-readme-screenshots
+  group: real-readme-screenshots-chrome-v2
   cancel-in-progress: true
 
 jobs:
