@@ -140,8 +140,8 @@ Agents never hold a permission to send, pay or sign; the server applies the appr
 ## Tests
 
 ```bash
-make test     # 79 Python tests on PostgreSQL + 20 frontend unit tests
-make e2e      # 7 Playwright scenarios against a running stack
+make test     # Python verifier/API tests on PostgreSQL plus frontend unit tests
+make e2e      # Playwright UI scenarios against a running stack
 ```
 
 `e2e/complete.spec.ts` (4 more scenarios) runs on a password-mode stack with the local mail servers of `scripts/dev-mail.py`: first owner, guided setup, a real IMAP mailbox, an e-mail triaged, routed, quoted, approved and sent once over SMTP (the `.eml` file is checked), a weekly routine seen from a New York browser on Paris time, and an invited colleague joining.
@@ -156,10 +156,10 @@ None published yet. The protocol (`autonomy-bench`: same tasks and models, auton
 
 ## Limits
 
-- **Provider calls** have not been exercised against the real APIs (no keys in the build environment); the runner is tested with a double replacing only the network call.
+- **Provider calls** have not been exercised against real paid-model APIs (no keys in CI). An Ollama-compatible localhost HTTP stub is used to test the full worker, deterministic verification and approval pipeline; it does not execute a real model.
 - **Docker**: GitHub Actions builds both images, starts PostgreSQL, API, worker and web with Compose, and reaches the API health endpoint through the web proxy on Ubuntu. The `start.sh` script itself was tested with a stand-in Docker CLI; real macOS/Windows installations and `start.ps1` have not been exercised in CI.
 - **Mailboxes** were tested against local IMAP and SMTP servers, not yet at a real provider. No OAuth: Microsoft 365 and Outlook.com cannot connect yet; Gmail needs an app password.
-- **Agents write text and structured results through model APIs.** They do not work in a code repository yet (no Claude Code or Codex runtime); such agents can submit results through the API.
+- **Agents write text and structured results through model APIs.** Code-change proposals can be checked for basic diff structure and sent to mandatory human review, but no repository code is edited, executed or pushed by Select. There is no isolated Claude Code or Codex runtime yet. See [review-only code proposals](docs/code-change-proposals.md).
 - Attachments are not read; quotes are sent as e-mail text, without a PDF.
 - **No e-invoice**: the invoice draft is not an XRechnung or ZUGFeRD file and is never presented as compliant. Businesses exempt from VAT (*franchise en base*) are not handled properly yet.
 - No single sign-on, two-factor authentication, plugins or sandboxed code execution.
@@ -174,7 +174,7 @@ Start with [CONTRIBUTING.md](CONTRIBUTING.md). Good first contributions: a new c
 
 ## Roadmap
 
-1. Verify with real model keys and real mailboxes; build the Docker images in CI.
+1. Verify with real model keys and real mailboxes; keep Docker startup, recovery and tests green across supported environments.
 2. Coding-agent runtimes: run Claude Code or Codex in a code workspace, verify with the project's tests, approve the exact diff.
 3. Run without Docker (embedded database), like a one-command install.
 4. Quote PDFs, attachments, OAuth mailboxes, VAT-exempt businesses.
