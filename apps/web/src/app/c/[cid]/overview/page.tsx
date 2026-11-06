@@ -116,25 +116,49 @@ function Heading({ children, action }: { children: ReactNode; action?: ReactNode
   );
 }
 
-/** The honest counter in one line: work finished without a person, next to the errors found afterwards. */
+/** The signature indicator: prominently show autonomy AND the errors found afterwards. */
 function AutonomyLine({ o, cid }: { o: Overview; cid: string }) {
   const a = o.autonomy;
   return (
-    <Link href={`/c/${cid}/autonomy`} className="flex flex-wrap items-center gap-x-6 gap-y-1 rounded-xl border border-line bg-surface px-4 py-3 text-compact transition-colors duration-[120ms] hover:border-line-strong">
-      <span className="inline-flex items-center gap-2 text-muted">
-        <ShieldCheck className="size-4 text-faint" aria-hidden />
-        Last {o.period_days} days
-        {(o.is_demo || a.includes_demo) && <DemoTag />}
-      </span>
-      <span>
-        <span className="font-semibold text-fg tabular">{percent(a.autonomy_rate)}</span>{" "}
-        <span className="text-muted">{a.finished ? `finished without a person (${a.autonomous} of ${a.finished} finished)` : "finished without a person · no finished task yet"}</span>
-      </span>
-      <span>
-        <span className={cx("font-semibold tabular", a.undetected_errors ? "text-danger" : "text-fg")}>{a.undetected_error_measurable ? percent(a.undetected_error_rate, 1) : "—"}</span>{" "}
-        <span className="text-muted">{a.undetected_error_measurable ? `errors found afterwards (${a.undetected_errors} in ${a.reviewed} reviewed)` : `errors found afterwards · measurable after 5 reviews (${a.reviewed} so far)`}</span>
-      </span>
-      <ArrowRight className="ml-auto size-4 text-faint" aria-hidden />
+    <Link
+      href={`/c/${cid}/autonomy`}
+      className="group block rounded-xl border border-line bg-surface px-4 py-4 transition-[border-color,background-color] duration-[120ms] hover:border-line-strong hover:bg-surface-2 sm:px-5"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-2 text-xs font-semibold text-muted">
+          <ShieldCheck className="size-4 text-autonomous" aria-hidden />
+          Verified autonomy
+          <span className="font-normal text-faint">· Last {o.period_days} days</span>
+          {(o.is_demo || a.includes_demo) && <DemoTag />}
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-accent">
+          Explore evidence <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
+        </span>
+      </div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 sm:gap-5">
+        <div className="min-w-0">
+          <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+            <strong className="text-3xl font-bold leading-none tracking-tight text-fg tabular">{percent(a.autonomy_rate)}</strong>
+            <span className="text-xs text-muted">finished without a person</span>
+          </p>
+          <p className="mt-1.5 text-xs text-faint">
+            {a.finished ? `${a.autonomous} of ${a.finished} finished tasks` : "No finished tasks yet"}
+          </p>
+        </div>
+        <div className="min-w-0 border-t border-line-soft pt-3 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-5">
+          <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+            <strong className={cx("text-3xl font-bold leading-none tracking-tight tabular", a.undetected_errors ? "text-danger" : "text-fg")}>
+              {a.undetected_error_measurable ? percent(a.undetected_error_rate, 1) : "—"}
+            </strong>
+            <span className="text-xs text-muted">errors found afterwards</span>
+          </p>
+          <p className="mt-1.5 text-xs text-faint">
+            {a.undetected_error_measurable
+              ? `${a.undetected_errors} in ${a.reviewed} independently reviewed tasks`
+              : `Measurable after 5 reviews · ${a.reviewed} so far`}
+          </p>
+        </div>
+      </div>
     </Link>
   );
 }
