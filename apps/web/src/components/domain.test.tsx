@@ -65,6 +65,29 @@ describe("ApprovalCard", () => {
     expect(confirm.disabled).toBe(false);
   });
 
+  it("marks a code diff as untested and approval as review-only", () => {
+    render(
+      <RTooltip.Provider>
+        <ApprovalCard
+          approval={{
+            ...approval,
+            task_type: "code_change",
+            action: null,
+            payload: {
+              ...approval.payload,
+              preview: ["diff --git a/app.py b/app.py", "-old", "+new"],
+            },
+          }}
+          onDecide={vi.fn()}
+          busy={false}
+          risk="high"
+        />
+      </RTooltip.Provider>,
+    );
+    expect(screen.getByText("Proposed diff — not applied or tested")).toBeTruthy();
+    expect(screen.getByRole("note").textContent).toContain("Approval only records your decision.");
+  });
+
   it("hides decision buttons for read-only members", () => {
     render(<RTooltip.Provider><ApprovalCard approval={approval} onDecide={vi.fn()} busy={false} readOnly /></RTooltip.Provider>);
     expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();

@@ -596,8 +596,13 @@ export function ApprovalCard({ approval, onDecide, busy, readOnly, risk, agentRo
 
       <div className="px-4 py-3">
         <p className="mb-1.5 text-2xs font-medium tracking-wide text-faint uppercase">
-          {approval.payload.email ? "Exactly the e-mail that would be sent" : action ? "Exactly what would leave Select" : "Result to accept"}
+          {approval.task_type === "code_change" ? "Proposed diff — not applied or tested" : approval.payload.email ? "Exactly the e-mail that would be sent" : action ? "Exactly what would leave Select" : "Result to accept"}
         </p>
+        {approval.task_type === "code_change" && (
+          <p role="note" className="mb-2.5 rounded-lg border border-warning/25 bg-warning/6 px-3 py-2 text-xs leading-relaxed text-muted">
+            Review-only proposal: Select has not applied this patch, run the suggested tests, or pushed code. Approval only records your decision.
+          </p>
+        )}
         <pre className="max-h-[28rem] overflow-auto rounded-lg border border-line-soft bg-canvas px-3 py-2.5 font-mono text-xs leading-relaxed whitespace-pre-wrap text-fg">
           {approval.payload.preview.join("\n")}
         </pre>

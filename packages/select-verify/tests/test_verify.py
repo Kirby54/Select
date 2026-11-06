@@ -247,3 +247,57 @@ def test_receipt_digest_changes_with_content(quote_contract, quote, ctx):
     changed["customer"]["name"]["value"] = "Jonas  Weber"
     b = verify(quote_contract, changed, ctx, run_id="r")
     assert a.deliverable_sha256 != b.deliverable_sha256
+
+
+def test_code_change_patch_is_structural_only_and_always_reviewed(ctx):
+    contract = load_contract((CONTRACTS / "code_change.yaml").read_text())
+    assert contract.approval.mode == "always"
+    assert contract.risk == "high"
+    proposal = {
+        "summary": "Proposed fix to show the correct answer.",
+        "diff": (
+            "diff --git a/src/app.py b/src/app.py\n"
+            "index 1111111..2222222 100644\n"
+            "--- a/src/app.py\n"
+            "+++ b/src/app.py\n"
+            "@@ -1 +1 @@\n"
+            "-print(1)\n"
+            "+print(2)\n"
+        ),
+    }
+    receipt = verify(contract, proposal, ctx, run_id="review-only")
+    assert receipt.status == "verified"
+    assert receipt.checks[1].evidence["paths"] == ["src/app.py"]
+    assert "not applied or tested" in receipt.checks[1].message
+
+
+@pytest.mark.parametrize(
+    "path_or_patch",
+    [
+        "diff --git a/../secret b/../secret\n--- a/../secret\n+++ b/../secret\n@@ -1 +1 @@\n-a\n+b",
+        "diff --git a/.git/config b/.git/config\n--- a/.git/config\n+++ b/.git/config\n@@ -1 +1 @@\n-a\n+b",
+        "diff --git a/src/app.py b/src/other.py\n--- a/src/app.py\n+++ b/src/other.py\n@@ -1 +1 @@\n-a\n+b",
+        (
+            "diff --git a/src/app.py b/src/app.py\n"
+            "GIT binary patch\n--- a/src/app.py\n"
+            "+++ b/src/app.py\n@@ -1 +1 @@\n-a\n+b"
+        ),
+        (
+            "diff --git a/src/app.py b/src/app.py\n"
+            "new file mode 120000\n--- /dev/null\n"
+            "+++ b/src/app.py\n@@ -0,0 +1 @@\n+../other"
+        ),
+        "not a diff at all",
+    ],
+)
+def test_code_change_bad_patch_never_passes(ctx, path_or_patch):
+    contract = load_contract((CONTRACTS / "code_change.yaml").read_text())
+    receipt = verify(contract, {"summary": "Something", "diff": path_or_patch}, ctx, run_id="r")
+    assert receipt.status == "failed"
+    assert receipt.checks[1].status == "failed"
+
+
+def test_code_change_missing_patch_is_blocked(ctx):
+    contract = load_contract((CONTRACTS / "code_change.yaml").read_text())
+    receipt = verify(contract, {"summary": "Change"}, ctx, run_id="r")
+    assert receipt.status == "blocked"
