@@ -1,6 +1,6 @@
 [project]
 name = "select-api"
-version = "0.2.0"
+version = "1.0.0"
 description = "Select backend: API, worker, autonomy engine."
 license = "AGPL-3.0-only"
 requires-python = ">=3.12,<3.14"
