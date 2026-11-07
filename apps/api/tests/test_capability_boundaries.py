@@ -8,7 +8,6 @@ from uuid import UUID
 
 import pytest
 from helpers import ok, setup_company
-
 from select_api import capabilities
 from select_api.db import session_scope
 from select_api.models import Agent
