@@ -4,9 +4,23 @@ All notable changes are listed here. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-11-07
+
+This is the **self-hosted core** 1.0 milestone, not a certification of production safety, all supported AI providers or roadmap completeness. See [release notes](release/1.0.0-notes.md).
+
+### Included
+- Existing organization, tasks, deterministic verification, earned autonomy, receipts, approvals, budgets, routines, IMAP/SMTP and Docker-based operations.
+- Repository-specific review-only code-proposal permissions: exact agent/resource scope, expiry, revocation and contract-hash checks.
+- Permission boundary demonstration and proof metadata in verification receipts.
+
 ### Release engineering
-- Added a fail-closed 1.0 readiness manifest with eight independently reviewable blockers, a standard-library preflight checker and CI tests. The 1.0.0 version is **not released** and the checks remain pending.
-- The preflight keeps version changes, change notes, verification evidence and reviewer attestation separate from normal development checks; no artificial graduation from 0.2.0.
+- Synchronized workspace, API, verifier, web and lockfile metadata to 1.0.0.
+- Full CI must pass on the tagged source commit before publication.
+- The independently reviewed, higher-assurance production-readiness gate remains pending; no evidence is invented.
+
+### Known limitations
+- No native Gmail/Microsoft OAuth, no isolated Claude Code/Codex execution, no comparative benchmark, and no verified production-grade cross-platform upgrade/disaster-recovery certification.
+- Real paid model provider compatibility and real external mailbox behavior have not been independently evidenced in the repository. For the exact supported scope and exclusions, read the linked release notes.
 
 ## [0.2.0] — 2026-11-04
 

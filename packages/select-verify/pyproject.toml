@@ -1,6 +1,6 @@
 [project]
 name = "select-verify"
-version = "0.2.0"
+version = "1.0.0"
 description = "Delivery contracts and verifiable receipts for AI agent work."
 readme = "README.md"
 license = "Apache-2.0"

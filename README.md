@@ -15,7 +15,7 @@ and an agent stops needing your approval only once its verified record shows it 
   <img src="docs/screenshots/overview.png" alt="Select home after the demo week: four figures, the autonomy rate next to the errors found afterwards, what needs you and recent activity" width="900" />
 </p>
 
-> **Status: 0.2.** Accounts, guided setup, local IMAP/SMTP mail tests, routines and the verification loop are covered by end-to-end tests. Docker images build and the Compose stack starts successfully in Ubuntu GitHub Actions CI. Real model API calls have not been verified yet: see [Limits](#limits).
+> **Status: 1.0.0 core release.** Self-hosted task management, deterministic verification and approvals are covered by automated tests, including Ubuntu Docker CI. This is **not production-safety certification**: native OAuth mail, sandboxed coding execution and independently verified real paid-provider acceptance remain unavailable or unverified. See [release notes](release/1.0.0-notes.md) and [Limits](#limits).
 
 ## Why Select
 
@@ -198,7 +198,7 @@ Start with [CONTRIBUTING.md](CONTRIBUTING.md). Good first contributions: a new c
 
 ## 1.0.0 release readiness
 
-**1.0.0 has not shipped.** Select is currently a 0.2.x pre-1.0 project. The acceptance criteria, eight open engineering/security tasks and strict verification command are tracked in [the release readiness checklist](release/README.md). The checklist is deliberately marked pending; passing CI alone is not a 1.0 certification.
+**1.0.0 is a self-hosted core milestone, not an independent production certification.** The higher-assurance, independently reviewed production-readiness checklist remains pending in [release readiness](release/README.md); passing CI alone does not prove the open roadmap integrations or readiness for high-risk environments.
 
 ## Roadmap
 

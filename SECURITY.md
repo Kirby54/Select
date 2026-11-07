@@ -10,7 +10,7 @@ We aim to acknowledge reports within 3 working days and to agree on a fix and di
 
 ## Supported versions
 
-Only the latest `0.x` release receives security fixes during the pre-1.0 phase.
+Only the latest release in the supported 1.x core line is targeted for security fixes. This is a best-effort open-source support policy, not an SLA.
 
 ## What is in scope
 
@@ -20,7 +20,7 @@ Only the latest `0.x` release receives security fixes during the pre-1.0 phase.
 - Exposure of provider API keys or tokens
 - Prompt injection that makes a deterministic check pass or an action run without its rules
 
-## Known limitations (0.2)
+## Known limitations (1.0 core)
 
 - `SELECT_AUTH_MODE=local` trusts anyone who can reach the server: use it only on your own machine. Docker Compose starts in `password` mode and binds its ports to `127.0.0.1`.
 - Sign-in is limited per account address, not per IP address: put IP rate limits in the reverse proxy.

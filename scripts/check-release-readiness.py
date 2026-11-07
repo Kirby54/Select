@@ -124,12 +124,59 @@ def release_check(root: Path, target: str = "1.0.0") -> list[str]:
     return errors
 
 
+
+def core_release_check(root: Path, target: str = "1.0.0") -> list[str]:
+    """Check the declared self-hosted core milestone, not external audit certification.
+
+    A passing result does not attest live provider, email OAuth, sandboxed coding,
+    production security, disaster recovery or independently conducted tests.
+    """
+    _manifest, errors = validate(root)
+    if target != "1.0.0":
+        errors.append("Only Select 1.0.0 is configured for this one-time core release.")
+    sources = (*VERSION_FILES, "apps/web/package.json", "apps/api/select_api/__init__.py")
+    for source in sources:
+        try:
+            actual = read_version(root / source)
+        except (OSError, ValueError, KeyError) as exc:
+            errors.append(f"{source}: cannot read version: {exc}")
+            continue
+        if actual != target:
+            errors.append(f"{source}: version {actual}, expected {target}.")
+    try:
+        lock = tomllib.loads((root / "uv.lock").read_text(encoding="utf-8"))
+        names = {"select-workspace", "select-api", "select-verify"}
+        installed = {p["name"]: p["version"] for p in lock["package"] if p.get("name") in names}
+        if installed != dict.fromkeys(names, target):
+            errors.append(f"uv.lock workspace metadata is inconsistent: {installed}.")
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        errors.append(f"Cannot validate uv.lock: {exc}")
+    try:
+        web_lock = json.loads((root / "apps/web/package-lock.json").read_text(encoding="utf-8"))
+        if web_lock.get("version") != target or web_lock.get("packages", {}).get("", {}).get("version") != target:
+            errors.append("Web package-lock.json root and packages root versions must be 1.0.0.")
+    except (OSError, ValueError) as exc:
+        errors.append(f"Cannot validate npm package lock: {exc}")
+    try:
+        changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+        if not re.search(r"(?m)^## \[1\.0\.0\](?:\s|$)", changelog):
+            errors.append("CHANGELOG.md needs a 1.0.0 entry.")
+        notes = (root / "release/1.0.0-notes.md").read_text(encoding="utf-8")
+        for disclosure in ("no sandboxed", "no native", "not a certification"):
+            if disclosure not in notes.lower():
+                errors.append(f"Release notes must disclose '{disclosure}'.")
+    except OSError as exc:
+        errors.append(f"Missing required release notes/changelog: {exc}")
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--validate", action="store_true", help="Validate manifest syntax; safe in regular CI")
     mode.add_argument("--report", action="store_true", help="Print v1 requirements without asserting readiness")
     mode.add_argument("--release", metavar="VERSION", help="Strictly require evidence and synchronized versions")
+    mode.add_argument("--core-release", metavar="VERSION", help="Check scoped core milestone without claiming external certification")
     args = parser.parse_args()
     manifest, errors = validate(ROOT)
     if args.report:
@@ -137,11 +184,16 @@ def main() -> int:
             print(f"{gate['status'].upper():8} {gate['id']}: issue #{gate['issue']} — {gate['title']}")
     if args.release:
         errors = release_check(ROOT, args.release)
+    elif args.core_release:
+        errors = core_release_check(ROOT, args.core_release)
     if errors:
         for error in errors:
             print(f"RELEASE GATE: {error}", file=sys.stderr)
         return 1
-    print("Manifest valid." if not args.release else f"Release {args.release} preflight passed; review CI and provenance.")
+    if args.core_release:
+        print(f"Core milestone {args.core_release} metadata valid; NOT an external production certification.")
+    else:
+        print("Manifest valid." if not args.release else f"Release {args.release} preflight passed; review CI and provenance.")
     return 0
 
 
