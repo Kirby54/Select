@@ -4,6 +4,7 @@ A grant permits submitting a review-only code proposal for exactly one repositor
 It NEVER permits applying code, running commands, emailing or acquiring autonomous trust.
 Grants live in the agent's server-managed JSON config (no schema migration).
 """
+
 from __future__ import annotations
 
 import re
@@ -46,12 +47,19 @@ def grants(agent: Agent, now: datetime | None = None) -> list[dict[str, Any]]:
         contract = get_contract(str(item.get("task_type", "")))
         version_ok = bool(contract and contract.sha256 == item.get("contract_sha256"))
         revoked = bool(item.get("revoked_at"))
-        result.append({
-            **item,
-            "status": "revoked" if revoked else "expired" if expired else
-            "contract_changed" if not version_ok else "active",
-            "current_contract_sha256": contract.sha256 if contract else None,
-        })
+        result.append(
+            {
+                **item,
+                "status": "revoked"
+                if revoked
+                else "expired"
+                if expired
+                else "contract_changed"
+                if not version_ok
+                else "active",
+                "current_contract_sha256": contract.sha256 if contract else None,
+            }
+        )
     return result
 
 
@@ -72,11 +80,17 @@ def issue(agent: Agent, scope: str, actor: str, days: int) -> dict[str, Any]:
         raise CapabilityDenied("The code_change verification contract is unavailable.")
     created = datetime.now(UTC)
     grant = {
-        "id": str(uuid.uuid4()), "task_type": "code_change", "scope": scope,
-        "risk": contract.risk, "contract_version": contract.version,
+        "id": str(uuid.uuid4()),
+        "task_type": "code_change",
+        "scope": scope,
+        "risk": contract.risk,
+        "contract_version": contract.version,
         "contract_sha256": contract.sha256,
-        "created_at": created.isoformat(), "expires_at": (created + timedelta(days=days)).isoformat(),
-        "created_by": actor, "revoked_at": None, "revoked_by": None,
+        "created_at": created.isoformat(),
+        "expires_at": (created + timedelta(days=days)).isoformat(),
+        "created_by": actor,
+        "revoked_at": None,
+        "revoked_by": None,
     }
     agent.config = {**(agent.config or {}), KEY: [*existing, grant]}
     return grant
