@@ -4,6 +4,7 @@ import { Archive, ArrowDownRight, ArrowUpRight, MoreHorizontal, Pause, Pencil, P
 import Link from "next/link";
 import { use, useState } from "react";
 
+import { AgentCapabilities } from "@/components/agent-capabilities";
 import { AgentFormDialog } from "@/components/agent-form";
 import { AgentAvatar, AgentStatus, AutonomyLevel, LicenceLadder, LicenceNextStep, TaskStatusBadge, providerLabel } from "@/components/domain";
 import { PageBody, PageHeader, useNewTask } from "@/components/shell/app-shell";
@@ -113,6 +114,7 @@ export default function AgentPage({ params }: { params: Promise<{ cid: string; a
               </ul>
             )}
           </Card>
+          <AgentCapabilities cid={cid} aid={aid} canAdmin={canAdmin} taskTypes={a.task_types} isDemo={a.is_demo_agent} />
           <Card>
             <CardHeader title="Why its autonomy changed" />
             {a.trust_events.length === 0 ? <EmptyState compact title="No promotion or demotion yet" /> : (
