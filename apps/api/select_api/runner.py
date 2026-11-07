@@ -219,6 +219,10 @@ def execute(db: Session, task_id: uuid.UUID, *, actor: Actor = SYSTEM) -> dict[s
     )
     if task.task_type == "quote":
         run.log = [*run.log, {"level": "info", "message": "Model extraction", "data": parsed}]
+    # A grant may have been revoked while the provider was responding.
+    # Refresh with a row lock so authorization and verification commit atomically
+    # relative to an administrator's revoke request.
+    db.refresh(agent, with_for_update=True)
     try:
         capabilities.require_task(agent, task)
     except capabilities.CapabilityDenied as exc:
