@@ -353,7 +353,9 @@ def submit_output(task_id: uuid.UUID, body: SubmitIn, ctx: CompanyDep, db: DbDep
         raise HTTPException(status.HTTP_409_CONFLICT, f"Task is {task.status.replace('_', ' ')}.")
     if task.assignee_id is None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Assign the task to an agent before submitting its output.")
-    agent = db.get(Agent, task.assignee_id)
+    agent = db.scalar(
+        select(Agent).where(Agent.id == task.assignee_id, Agent.company_id == ctx.company.id).with_for_update()
+    )
     if agent is None or agent.status != "active":
         raise HTTPException(status.HTTP_409_CONFLICT, "The assigned agent is not active.")
     if ctx.company.emergency_stop:
