@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "target_version": "1.0.0",
+  "last_reviewed": "2026-11-07",
+  "disclaimer": "Not a release certification. All gates are pending until independently verified evidence is recorded and reviewed.",
+  "gates": [
+    {
+      "id": "live-providers",
+      "issue": 11,
+      "title": "Real Anthropic, OpenAI, Gemini and Ollama integration",
+      "status": "pending",
+      "evidence": [],
+      "acceptance": "Record opt-in real generation, verification, approval, receipts and cost with safe test keys for each adapter."
+    },
+    {
+      "id": "mail-oauth",
+      "issue": 12,
+      "title": "Gmail OAuth and Microsoft 365 mail",
+      "status": "pending",
+      "evidence": [],
+      "acceptance": "Prove authorization-code PKCE, minimal scopes, refresh/revocation, Mail.Read/Mail.Send, retry and permission isolation."
+    },
+    {
+      "id": "sandbox-coding",
+      "issue": 13,
+      "title": "Isolated Claude Code / Codex execution",
+      "status": "pending",
+      "evidence": [],
+      "acceptance": "Disposable sandbox with timeout/network limits, diff and project tests, explicit human approval, optional PR; no host execution."
+    },
+    {
+      "id": "security",
+      "issue": 14,
+      "title": "Security, retention, recovery and key management",
+      "status": "pending",
+      "evidence": [],
+      "acceptance": "Independent review and tenant/SSRF/CSRF/approval negative tests, key recovery/rotation, data retention/export/deletion and full restore drill."
+    },
+    {
+      "id": "clean-install",
+      "issue": 15,
+      "title": "Clean install and upgrade on Windows, macOS and Linux",
+      "status": "pending",
+      "evidence": [],
+      "acceptance": "Real Docker startup, onboarding, persistent restart, upgrade and rollback on supported operating systems."
+    },
+    {
+      "id": "benchmark",
+      "issue": 16,
+      "title": "Fair 300-task independently reviewed autonomy benchmark",
+      "status": "pending",
+      "evidence": [],
+      "acceptance": "300 reviewed tasks with 30 traps and three repeats, matched Select/Paperclip/baseline cases; publish raw results and uncertainty."
+    },
+    {
+      "id": "release-validation",
+      "issue": 17,
+      "title": "Public release dry-run and operational validation",
+      "status": "pending",
+      "evidence": [],
+      "acceptance": "Verified green CI on release SHA, secrets scan across Git history, redacted live workflow, migration/rollback notes and reviewed release notes."
+    },
+    {
+      "id": "ux-accessibility",
+      "issue": 18,
+      "title": "First-run UX parity, responsiveness and accessibility",
+      "status": "pending",
+      "evidence": [],
+      "acceptance": "Measured five first-use flows, keyboard and WCAG 2.2 AA audit and responsive checks on supported viewport sizes."
+    }
+  ]
+}
