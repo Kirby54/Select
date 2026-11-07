@@ -15,6 +15,10 @@ and an agent stops needing your approval only once its verified record shows it 
   <img src="docs/screenshots/overview.png" alt="Select home after the demo week: four figures, the autonomy rate next to the errors found afterwards, what needs you and recent activity" width="900" />
 </p>
 
+> **Try Select without an API key:** [Start locally](#quickstart), create the first owner account, open the **demo company** from the account menu, then choose **Run demo week**. Explore verification receipts and human approvals using fictional data. [Screenshots](#explore-the-interface) · [Five-minute guide](docs/getting-started.md) · [Current limits](#limits).
+>
+> **Building reliable AI agents?** Select checks deliverables against code-defined contracts, records evidence, and makes autonomy revocable per agent and task type. If this is useful, [star Select](https://github.com/Kirby54/Select) to find it later, or [share feedback](https://github.com/Kirby54/Select/issues/new/choose).
+
 > **Status: 1.0.0 core release.** Self-hosted task management, deterministic verification and approvals are covered by automated tests, including Ubuntu Docker CI. This is **not production-safety certification**: native OAuth mail, sandboxed coding execution and independently verified real paid-provider acceptance remain unavailable or unverified. See [release notes](release/1.0.0-notes.md) and [Limits](#limits).
 
 ## Why Select
@@ -214,4 +218,4 @@ The application (`apps/`) is licensed under **AGPL-3.0-only** ([LICENSE](LICENSE
 
 ## Support
 
-Questions and ideas: GitHub Discussions. Bugs: GitHub Issues. Vulnerabilities: privately, see [SECURITY.md](SECURITY.md).
+Questions, ideas and bugs: [GitHub Issues](https://github.com/Kirby54/Select/issues/new/choose) (pick the relevant template). Security vulnerabilities: report privately as described in [SECURITY.md](SECURITY.md).
