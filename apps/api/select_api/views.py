@@ -442,6 +442,7 @@ def task_out(t: Task, assignee: Agent | None = None) -> dict[str, Any]:
         "title": t.title,
         "description": t.description,
         "task_type": t.task_type,
+        "resource_scope": (t.inputs or {}).get("resource_scope"),
         "assignee_id": str(t.assignee_id) if t.assignee_id else None,
         "assignee_name": assignee.name if assignee else None,
         "project_id": str(t.project_id) if t.project_id else None,
