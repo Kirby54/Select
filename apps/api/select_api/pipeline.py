@@ -104,9 +104,10 @@ def process_output(db: Session, task: Task, run: Run, output: dict[str, Any], ac
     if company is None or contract is None:
         raise PipelineError(f"no contract for task type '{task.task_type}'")
     agent = db.get(Agent, task.assignee_id) if task.assignee_id else None
+    grant = None
     if not task.is_demo:
         try:
-            capabilities.require_task(agent, task)
+            grant = capabilities.require_task(agent, task)
         except capabilities.CapabilityDenied as exc:
             raise PipelineError(str(exc)) from exc
     policy = autonomy.policy_for(company)
@@ -126,7 +127,19 @@ def process_output(db: Session, task: Task, run: Run, output: dict[str, Any], ac
         contract_version=contract.version,
         contract_sha256=contract.sha256,
         status=receipt.status,
-        body=receipt.model_dump(mode="json"),
+        body={
+            **receipt.model_dump(mode="json"),
+            **({
+                "capability_boundary": {
+                    "scope": capabilities.task_scope(task),
+                    "task_type": "code_change",
+                    "grant_id": grant["id"],
+                    "grant_contract_sha256": grant["contract_sha256"],
+                    "effect": "review_only_proposal",
+                    "unlocks": [],
+                },
+            } if grant is not None else {}),
+        },
         is_demo=task.is_demo,
     )
     db.add(row)
