@@ -196,6 +196,10 @@ None published yet. The protocol (`autonomy-bench`: same tasks and models, auton
 
 Start with [CONTRIBUTING.md](CONTRIBUTING.md). Good first contributions: a new contract for a task type you know, or a new deterministic rule — each with one accepted and one rejected example.
 
+## 1.0.0 release readiness
+
+**1.0.0 has not shipped.** Select is currently a 0.2.x pre-1.0 project. The acceptance criteria, eight open engineering/security tasks and strict verification command are tracked in [the release readiness checklist](release/README.md). The checklist is deliberately marked pending; passing CI alone is not a 1.0 certification.
+
 ## Roadmap
 
 1. Verify with real model keys and real mailboxes; keep Docker startup, recovery and tests green across supported environments.

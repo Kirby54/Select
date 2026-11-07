@@ -1,0 +1,48 @@
+{
+  "target": "1.0.0",
+  "status": "not_ready",
+  "assessed_at": "2026-11-07",
+  "release_commit": null,
+  "evidence": {
+    "live_provider_acceptance": {
+      "status": "pending",
+      "reference": null,
+      "requirement": "Real end-to-end provider generation and approval with user-provided test credentials for documented supported providers; no keys in repo."
+    },
+    "email_integrations": {
+      "status": "pending",
+      "reference": null,
+      "requirement": "Gmail OAuth and Microsoft Graph if advertised as v1-supported; otherwise explicitly remove from v1 scope and document supported IMAP/SMTP prerequisites."
+    },
+    "isolated_code_execution": {
+      "status": "pending",
+      "reference": null,
+      "requirement": "Sandboxed Claude Code/Codex execution if advertised as supported; otherwise explicitly exclude from v1 and preserve review-only guarantees."
+    },
+    "production_security": {
+      "status": "pending",
+      "reference": null,
+      "requirement": "Independent threat-model review, negative tenancy and approval tests, secret/dependency/history scans, and recorded resolution of findings."
+    },
+    "recovery_and_retention": {
+      "status": "pending",
+      "reference": null,
+      "requirement": "Rehearsed disaster restore including encryption key recovery, upgrade/rollback paths and documented retention/export/deletion policy."
+    },
+    "cross_platform_install": {
+      "status": "pending",
+      "reference": null,
+      "requirement": "Fresh Windows, macOS and Linux Docker install, upgrade and restart/persistence evidence, not just PowerShell syntax validation."
+    },
+    "independent_benchmark": {
+      "status": "pending",
+      "reference": null,
+      "requirement": "If any autonomy improvement claim is published: independently reviewed matched corpus and raw results, or explicitly state no comparative result exists."
+    },
+    "public_release_checks": {
+      "status": "pending",
+      "reference": null,
+      "requirement": "Complete clean clone and install; history-based secret scan; published tagged commit with green full CI, changelog, accurate limitations, release notes and licensing audit."
+    }
+  }
+}

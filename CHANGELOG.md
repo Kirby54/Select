@@ -4,6 +4,10 @@ All notable changes are listed here. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Release engineering
+- Added a fail-closed 1.0 readiness manifest with eight independently reviewable blockers, a standard-library preflight checker and CI tests. The 1.0.0 version is **not released** and the checks remain pending.
+- The preflight keeps version changes, change notes, verification evidence and reviewer attestation separate from normal development checks; no artificial graduation from 0.2.0.
+
 ## [0.2.0] — 2026-11-04
 
 The complete version: Select now runs a real company's work instead of a demo. Everything listed here runs and is covered by tests unless marked otherwise.
