@@ -1,0 +1,61 @@
+name: Publish Select 1.0.0
+
+# One-time 1.0.0 self-hosted core release. A release never creates itself from
+# a PR, failing CI, superseded main revision or untrusted fork.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: select-v1.0.0-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout the exact CI-tested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Refuse a superseded or mismatched commit
+        env:
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+
+      - name: Confirm transparent core milestone metadata and limitations
+        run: python3 scripts/check-release-readiness.py --core-release 1.0.0
+
+      - name: Create v1.0.0 tag and GitHub release from tested SHA
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.0 --repo "$GH_REPO" >/dev/null 2>&1; then
+            echo "v1.0.0 already exists; not mutating an existing published release."
+            exit 0
+          fi
+          gh release create v1.0.0 \
+            --repo "$GH_REPO" \
+            --target "$RELEASE_SHA" \
+            --title "Select 1.0.0 — Self-hosted core" \
+            --notes-file release/1.0.0-notes.md \
+            --latest
