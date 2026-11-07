@@ -236,6 +236,10 @@ def patch_task(task_id: uuid.UUID, body: TaskPatch, ctx: CompanyDep, db: DbDep) 
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_CONTENT, f"{agent.name} is not allowed to do '{task.task_type}'."
             )
+        try:
+            capabilities.require(agent, task.task_type, capabilities.task_scope(task))
+        except capabilities.CapabilityDenied as exc:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from exc
     if "status" in data and task.status == "awaiting_approval":
         raise HTTPException(status.HTTP_409_CONFLICT, "Decide the pending approval before changing the status.")
     changed = {k: {"from": str(getattr(task, k)), "to": str(v)} for k, v in data.items() if getattr(task, k) != v}
