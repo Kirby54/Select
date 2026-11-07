@@ -148,6 +148,11 @@ def test_verified_proposal_requires_human_approval_and_does_not_grant_other_righ
     ))
     assert result["outcome"] == "awaiting_approval"
     assert result["receipts"][0]["status"] == "verified"
+    boundary = result["receipts"][0]["body"]["capability_boundary"]
+    assert boundary["scope"] == REPO_A
+    assert boundary["grant_contract_sha256"]
+    assert boundary["unlocks"] == []
+    assert boundary["effect"] == "review_only_proposal"
     assert result["resource_scope"] == REPO_A
     approvals = ok(client.get(f"/api/companies/{cid}/approvals"))["items"]
     assert len(approvals) == 1
