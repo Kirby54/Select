@@ -417,20 +417,17 @@ def agent_capabilities(agent_id: uuid.UUID, ctx: CompanyDep, db: DbDep) -> dict[
     return {
         "grants": capabilities.grants(agent),
         "limits": {
-            "type": "code_change", "external_effects": "human approval only",
+            "type": "code_change",
+            "external_effects": "human approval only",
             "cannot": ["send_customer_email", "modify_production", "other_repositories"],
         },
     }
 
 
 @router.post("/companies/{company_id}/agents/{agent_id}/capabilities", status_code=201)
-def grant_capability(
-    agent_id: uuid.UUID, body: CapabilityGrantIn, ctx: CompanyDep, db: DbDep
-) -> dict[str, Any]:
+def grant_capability(agent_id: uuid.UUID, body: CapabilityGrantIn, ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
     ctx.require("admin")
-    agent = db.scalar(
-        select(Agent).where(Agent.id == agent_id, Agent.company_id == ctx.company.id).with_for_update()
-    )
+    agent = db.scalar(select(Agent).where(Agent.id == agent_id, Agent.company_id == ctx.company.id).with_for_update())
     if agent is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Agent not found.")
     try:
@@ -438,7 +435,12 @@ def grant_capability(
     except capabilities.CapabilityDenied as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     record(
-        db, ctx.company.id, ctx.principal.actor, "capability.granted", "agent", agent.id,
+        db,
+        ctx.company.id,
+        ctx.principal.actor,
+        "capability.granted",
+        "agent",
+        agent.id,
         f"Review-only code proposal grant for {body.scope}, expires in {body.days} days",
         {"grant_id": grant["id"], "scope": body.scope, "contract_sha256": grant["contract_sha256"]},
     )
@@ -447,13 +449,9 @@ def grant_capability(
 
 
 @router.post("/companies/{company_id}/agents/{agent_id}/capabilities/{grant_id}/revoke")
-def revoke_capability(
-    agent_id: uuid.UUID, grant_id: uuid.UUID, ctx: CompanyDep, db: DbDep
-) -> dict[str, Any]:
+def revoke_capability(agent_id: uuid.UUID, grant_id: uuid.UUID, ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
     ctx.require("admin")
-    agent = db.scalar(
-        select(Agent).where(Agent.id == agent_id, Agent.company_id == ctx.company.id).with_for_update()
-    )
+    agent = db.scalar(select(Agent).where(Agent.id == agent_id, Agent.company_id == ctx.company.id).with_for_update())
     if agent is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Agent not found.")
     try:
@@ -461,7 +459,12 @@ def revoke_capability(
     except capabilities.CapabilityDenied as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
     record(
-        db, ctx.company.id, ctx.principal.actor, "capability.revoked", "agent", agent.id,
+        db,
+        ctx.company.id,
+        ctx.principal.actor,
+        "capability.revoked",
+        "agent",
+        agent.id,
         f"Revoked review-only code proposal grant for {grant['scope']}",
         {"grant_id": str(grant_id), "scope": grant["scope"]},
     )
@@ -470,9 +473,7 @@ def revoke_capability(
 
 
 @router.post("/companies/{company_id}/agents/{agent_id}/capabilities/check")
-def check_capability(
-    agent_id: uuid.UUID, body: CapabilityCheckIn, ctx: CompanyDep, db: DbDep
-) -> dict[str, Any]:
+def check_capability(agent_id: uuid.UUID, body: CapabilityCheckIn, ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
     """Read-only diagnostic: makes DENIED boundaries demonstrable without performing an action."""
     agent = _agent(db, ctx.company.id, agent_id)
     try:
