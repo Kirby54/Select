@@ -312,6 +312,14 @@ export interface Receipt {
     deliverable_sha256: string;
     verified_at: string;
     verifier: string;
+    capability_boundary?: {
+      scope: string;
+      task_type: string;
+      grant_id: string;
+      grant_contract_sha256: string;
+      effect: "review_only_proposal";
+      unlocks: string[];
+    };
   };
   is_demo: boolean;
   created_at: string;
