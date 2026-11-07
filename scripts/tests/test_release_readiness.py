@@ -95,5 +95,34 @@ class ReleaseGateTests(unittest.TestCase):
         self.assertTrue(any("Missing gate IDs" in p for p in problems))
 
 
+    def test_core_milestone_checks_versions_locks_and_honest_limitations(self):
+        root = self.make_repo()
+        (root / "uv.lock").write_text(
+            'version = 1\\n[[package]]\\nname = "select-api"\\nversion = "1.0.0"\\n'
+            '[[package]]\\nname = "select-workspace"\\nversion = "1.0.0"\\n'
+            '[[package]]\\nname = "select-verify"\\nversion = "1.0.0"\\n',
+            encoding="utf-8",
+        )
+        (root / "apps/web/package-lock.json").write_text(
+            '{"version": "1.0.0", "packages": {"": {"version": "1.0.0"}}}', encoding="utf-8"
+        )
+        (root / "release/1.0.0-notes.md").write_text(
+            "Not a certification. No native OAuth. No sandboxed coding.", encoding="utf-8"
+        )
+        self.assertEqual(gate.core_release_check(root), [])
+        # Pending independent audit does not become verified by a core milestone.
+        self.assertEqual(len([x for x in gate.release_check(root) if x.startswith("BLOCKED")]), 8)
+
+        (root / "release/1.0.0-notes.md").write_text("Everything is certified!", encoding="utf-8")
+        problems = gate.core_release_check(root)
+        self.assertTrue(any("Release notes must disclose" in p for p in problems))
+
+        (root / "apps/web/package-lock.json").write_text(
+            '{"version": "0.2.0", "packages": {"": {"version": "0.2.0"}}}', encoding="utf-8"
+        )
+        problems = gate.core_release_check(root)
+        self.assertTrue(any("package-lock.json" in p for p in problems))
+
+
 if __name__ == "__main__":
     unittest.main()
