@@ -924,7 +924,7 @@ wheels = [
 
 [[package]]
 name = "select-api"
-version = "0.2.0"
+version = "1.0.0"
 source = { editable = "apps/api" }
 dependencies = [
     { name = "alembic" },
@@ -965,7 +965,7 @@ requires-dist = [
 
 [[package]]
 name = "select-verify"
-version = "0.2.0"
+version = "1.0.0"
 source = { editable = "packages/select-verify" }
 dependencies = [
     { name = "pydantic" },
@@ -980,7 +980,7 @@ requires-dist = [
 
 [[package]]
 name = "select-workspace"
-version = "0.2.0"
+version = "1.0.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]
