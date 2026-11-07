@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from . import jobs
+from . import capabilities, jobs
 from .audit import record
 from .auth import SYSTEM, Actor
 from .company_profile import settings_for
@@ -127,8 +127,9 @@ def maybe_autorun(db: Session, company: Company, task: Task, actor: Actor) -> bo
     if agent is None or not agent.provider or not agent.model or run_pending(db, task.id):
         return False
     try:
+        capabilities.require_task(agent, task)
         check_can_run(db, company, agent)
-    except RunRefused as exc:
+    except (RunRefused, capabilities.CapabilityDenied) as exc:
         db.add(
             TaskComment(
                 task_id=task.id,
