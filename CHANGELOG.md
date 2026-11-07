@@ -4,6 +4,10 @@ All notable changes are listed here. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Documentation
+- Put the no-API-key demo path and feedback link at the top of the README to help new visitors try the self-hosted core.
+- Point the support section to enabled GitHub Issues templates and fix the security contact link.
+
 ## [1.0.0] — 2026-11-07
 
 This is the **self-hosted core** 1.0 milestone, not a certification of production safety, all supported AI providers or roadmap completeness. See [release notes](release/1.0.0-notes.md).
