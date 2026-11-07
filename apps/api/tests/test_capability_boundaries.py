@@ -8,7 +8,6 @@ from uuid import UUID
 
 import pytest
 from helpers import ok, setup_company
-from sqlalchemy import select
 
 from select_api import capabilities
 from select_api.db import session_scope
@@ -109,7 +108,9 @@ def test_contract_hash_change_invalidates_grant(client, monkeypatch: pytest.Monk
         version = 2
         risk = "high"
         sha256 = "f" * 64
-    monkeypatch.setattr(capabilities, "get_contract", lambda kind: ChangedContract() if kind == "code_change" else original(kind))
+    monkeypatch.setattr(
+        capabilities, "get_contract", lambda kind: ChangedContract() if kind == "code_change" else original(kind)
+    )
     rows = ok(client.get(f"/api/companies/{cid}/agents/{aid}/capabilities"))["grants"]
     assert rows[0]["status"] == "contract_changed"
     assert new_code_task(client, cid, aid).status_code == 403
