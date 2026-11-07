@@ -98,9 +98,9 @@ class ReleaseGateTests(unittest.TestCase):
     def test_core_milestone_checks_versions_locks_and_honest_limitations(self):
         root = self.make_repo()
         (root / "uv.lock").write_text(
-            'version = 1\\n[[package]]\\nname = "select-api"\\nversion = "1.0.0"\\n'
-            '[[package]]\\nname = "select-workspace"\\nversion = "1.0.0"\\n'
-            '[[package]]\\nname = "select-verify"\\nversion = "1.0.0"\\n',
+            'version = 1\n[[package]]\nname = "select-api"\nversion = "1.0.0"\n'
+            '[[package]]\nname = "select-workspace"\nversion = "1.0.0"\n'
+            '[[package]]\nname = "select-verify"\nversion = "1.0.0"\n',
             encoding="utf-8",
         )
         (root / "apps/web/package-lock.json").write_text(
