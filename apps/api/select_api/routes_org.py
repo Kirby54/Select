@@ -10,7 +10,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import func, select
 
-from . import autonomy, delivery, jobs
+from . import autonomy, capabilities, delivery, jobs
 from .audit import record
 from .auth import CompanyDep, DbDep, PrincipalDep
 from .company_profile import COUNTRIES, normalize_rates, rate_allowed, validate_settings, validate_timezone
@@ -34,6 +34,8 @@ from .views import (
     AgentIn,
     AgentPatch,
     CatalogItemIn,
+    CapabilityCheckIn,
+    CapabilityGrantIn,
     CompanyIn,
     CompanyPatch,
     GoalIn,
@@ -407,6 +409,81 @@ def get_agent(agent_id: uuid.UUID, ctx: CompanyDep, db: DbDep) -> dict[str, Any]
         "costs": [{"kind": k, "amount": format(Decimal(str(a)), "f"), "events": n} for k, a, n in cost],
         "contracts": sorted(agent.task_types or []),
     }
+
+
+@router.get("/companies/{company_id}/agents/{agent_id}/capabilities")
+def agent_capabilities(agent_id: uuid.UUID, ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
+    agent = _agent(db, ctx.company.id, agent_id)
+    return {
+        "grants": capabilities.grants(agent),
+        "limits": {
+            "type": "code_change", "external_effects": "human approval only",
+            "cannot": ["send_customer_email", "modify_production", "other_repositories"],
+        },
+    }
+
+
+@router.post("/companies/{company_id}/agents/{agent_id}/capabilities", status_code=201)
+def grant_capability(
+    agent_id: uuid.UUID, body: CapabilityGrantIn, ctx: CompanyDep, db: DbDep
+) -> dict[str, Any]:
+    ctx.require("admin")
+    agent = db.scalar(
+        select(Agent).where(Agent.id == agent_id, Agent.company_id == ctx.company.id).with_for_update()
+    )
+    if agent is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Agent not found.")
+    try:
+        grant = capabilities.issue(agent, body.scope, ctx.principal.actor.name, body.days)
+    except capabilities.CapabilityDenied as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    record(
+        db, ctx.company.id, ctx.principal.actor, "capability.granted", "agent", agent.id,
+        f"Review-only code proposal grant for {body.scope}, expires in {body.days} days",
+        {"grant_id": grant["id"], "scope": body.scope, "contract_sha256": grant["contract_sha256"]},
+    )
+    db.commit()
+    return {**grant, "status": "active"}
+
+
+@router.post("/companies/{company_id}/agents/{agent_id}/capabilities/{grant_id}/revoke")
+def revoke_capability(
+    agent_id: uuid.UUID, grant_id: uuid.UUID, ctx: CompanyDep, db: DbDep
+) -> dict[str, Any]:
+    ctx.require("admin")
+    agent = db.scalar(
+        select(Agent).where(Agent.id == agent_id, Agent.company_id == ctx.company.id).with_for_update()
+    )
+    if agent is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Agent not found.")
+    try:
+        grant = capabilities.revoke(agent, grant_id, ctx.principal.actor.name)
+    except capabilities.CapabilityDenied as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    record(
+        db, ctx.company.id, ctx.principal.actor, "capability.revoked", "agent", agent.id,
+        f"Revoked review-only code proposal grant for {grant['scope']}",
+        {"grant_id": str(grant_id), "scope": grant["scope"]},
+    )
+    db.commit()
+    return {**grant, "status": "revoked"}
+
+
+@router.post("/companies/{company_id}/agents/{agent_id}/capabilities/check")
+def check_capability(
+    agent_id: uuid.UUID, body: CapabilityCheckIn, ctx: CompanyDep, db: DbDep
+) -> dict[str, Any]:
+    """Read-only diagnostic: makes DENIED boundaries demonstrable without performing an action."""
+    agent = _agent(db, ctx.company.id, agent_id)
+    try:
+        if body.action != "code_change":
+            raise capabilities.CapabilityDenied(
+                f"{body.action} is not grantable by verified task successes or code proposal grants."
+            )
+        grant = capabilities.require(agent, body.action, body.scope)
+        return {"allowed": True, "scope": body.scope, "action": body.action, "grant_id": grant["id"]}
+    except capabilities.CapabilityDenied as exc:
+        return {"allowed": False, "scope": body.scope, "action": body.action, "reason": str(exc)}
 
 
 @router.patch("/companies/{company_id}/agents/{agent_id}")
