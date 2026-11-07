@@ -11,7 +11,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import jobs
+from . import capabilities, jobs
 from .audit import record
 from .auth import SYSTEM, Actor
 from .config import get_settings
@@ -121,8 +121,9 @@ def execute(db: Session, task_id: uuid.UUID, *, actor: Actor = SYSTEM) -> dict[s
     agent = db.get(Agent, task.assignee_id) if task.assignee_id else None
     assert company is not None
     try:
+        capabilities.require_task(agent, task)
         connection = check_can_run(db, company, agent)
-    except RunRefused as exc:
+    except (RunRefused, capabilities.CapabilityDenied) as exc:
         task.status = "blocked"
         db.add(
             TaskComment(
@@ -218,6 +219,14 @@ def execute(db: Session, task_id: uuid.UUID, *, actor: Actor = SYSTEM) -> dict[s
     )
     if task.task_type == "quote":
         run.log = [*run.log, {"level": "info", "message": "Model extraction", "data": parsed}]
+    try:
+        capabilities.require_task(agent, task)
+    except capabilities.CapabilityDenied as exc:
+        run.status, run.error, run.finished_at = "failed", str(exc), datetime.now(UTC)
+        task.status = "blocked"
+        record(db, task.company_id, SYSTEM, "capability.denied", "task", task.id, f"T-{task.number}: {exc}")
+        db.commit()
+        return {"status": "blocked", "error": str(exc)}
     result = process_output(db, task, run, output, Actor("agent", str(agent.id), agent.name))
     if result.status == "needs_correction":
         jobs.enqueue(db, "run_task", {"task_id": str(task.id)}, company_id=task.company_id)
