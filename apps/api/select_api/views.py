@@ -113,6 +113,7 @@ class TaskIn(Strict):
     title: str = Field(min_length=1, max_length=200)
     description: str = Field(default="", max_length=10_000)
     task_type: str = Field(min_length=1, max_length=64)
+    resource_scope: str | None = Field(default=None, max_length=160)
     assignee_id: uuid.UUID | None = None
     project_id: uuid.UUID | None = None
     goal_id: uuid.UUID | None = None
@@ -150,6 +151,16 @@ class SubmitIn(Strict):
 class DecisionIn(Strict):
     decision: Literal["approved", "rejected", "changes_requested"]
     note: str = Field(default="", max_length=2000)
+
+
+class CapabilityGrantIn(Strict):
+    scope: str = Field(min_length=1, max_length=160)
+    days: int = Field(default=30, ge=1, le=90)
+
+
+class CapabilityCheckIn(Strict):
+    action: Literal["code_change", "send_customer_email", "modify_production"]
+    scope: str = Field(min_length=1, max_length=160)
 
 
 class NoteIn(Strict):
@@ -431,6 +442,7 @@ def task_out(t: Task, assignee: Agent | None = None) -> dict[str, Any]:
         "title": t.title,
         "description": t.description,
         "task_type": t.task_type,
+        "resource_scope": (t.inputs or {}).get("resource_scope"),
         "assignee_id": str(t.assignee_id) if t.assignee_id else None,
         "assignee_name": assignee.name if assignee else None,
         "project_id": str(t.project_id) if t.project_id else None,

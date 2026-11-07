@@ -450,6 +450,16 @@ export function VerificationReceipt({ receipt, defaultTechnical = false }: { rec
           <span>Missing, not guessed: <span className="font-mono">{receipt.body.missing.join(", ")}</span></span>
         </div>
       )}
+      {receipt.body.capability_boundary && (
+        <div className="border-t border-line-soft bg-surface-2 px-4 py-3 text-xs" role="note">
+          <p className="font-semibold text-fg">Verified for this proposal scope only</p>
+          <p className="mt-1 break-all font-mono text-muted">{receipt.body.capability_boundary.scope}</p>
+          <p className="mt-1 text-faint">
+            Human review required. This receipt grants no permission to send mail, run code,
+            modify production or use another repository.
+          </p>
+        </div>
+      )}
       <ul className="divide-y divide-line-soft px-4">
         {ordered.map((c) => <CheckRow key={c.id} check={c} technical={technical} />)}
       </ul>
@@ -457,6 +467,13 @@ export function VerificationReceipt({ receipt, defaultTechnical = false }: { rec
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 border-t border-line-soft bg-canvas/40 px-4 py-3 font-mono text-2xs text-faint">
           <dt>contract</dt><dd className="truncate text-muted">{receipt.contract_id} v{receipt.contract_version}</dd>
           <dt>contract sha256</dt><dd className="truncate text-muted">{receipt.contract_sha256}</dd>
+          {receipt.body.capability_boundary && (
+            <>
+              <dt>allowed scope</dt><dd className="break-all text-muted">{receipt.body.capability_boundary.scope}</dd>
+              <dt>grant id</dt><dd className="truncate text-muted">{receipt.body.capability_boundary.grant_id}</dd>
+              <dt>unlocked rights</dt><dd className="text-muted">none (review only)</dd>
+            </>
+          )}
           <dt>output sha256</dt><dd className="truncate text-muted">{receipt.body.deliverable_sha256}</dd>
           <dt>run</dt><dd className="truncate text-muted">{receipt.run_id}</dd>
           <dt>receipt</dt><dd className="truncate text-muted">{receipt.id}</dd>

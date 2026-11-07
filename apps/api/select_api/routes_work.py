@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import func, or_, select, update
 
-from . import automation, jobs, runner
+from . import automation, capabilities, jobs, runner
 from .audit import record
 from .auth import Actor, CompanyDep, DbDep
 from .contracts import get_contract
@@ -122,6 +122,15 @@ def create_task(body: TaskIn, ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
     ctx.require("member")
     if get_contract(body.task_type) is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"Unknown task type '{body.task_type}'.")
+    if body.task_type == "code_change":
+        if not body.assignee_id:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_CONTENT, "Assign a code proposal to an agent with a repo grant."
+            )
+    elif body.resource_scope:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Resource scopes are currently for code proposals only."
+        )
     assignee = None
     if body.assignee_id:
         assignee = _agent_in_company(db, ctx.company.id, body.assignee_id)
@@ -130,6 +139,10 @@ def create_task(body: TaskIn, ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
                 f"{assignee.name} is not allowed to do '{body.task_type}'. Add it on the agent first.",
             )
+        try:
+            capabilities.require(assignee, body.task_type, body.resource_scope)
+        except capabilities.CapabilityDenied as exc:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from exc
     linked: list[tuple[str, Project | Goal | Task | None]] = [
         ("project", db.get(Project, body.project_id) if body.project_id else None),
         ("goal", db.get(Goal, body.goal_id) if body.goal_id else None),
@@ -152,6 +165,7 @@ def create_task(body: TaskIn, ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
         goal_id=body.goal_id,
         parent_id=body.parent_id,
         sources=[s.model_dump() for s in body.sources],
+        resource_scope=body.resource_scope,
         origin="user",
         actor=ctx.principal.actor,
     )
@@ -226,6 +240,10 @@ def patch_task(task_id: uuid.UUID, body: TaskPatch, ctx: CompanyDep, db: DbDep) 
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_CONTENT, f"{agent.name} is not allowed to do '{task.task_type}'."
             )
+        try:
+            capabilities.require(agent, task.task_type, capabilities.task_scope(task))
+        except capabilities.CapabilityDenied as exc:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from exc
     if "status" in data and task.status == "awaiting_approval":
         raise HTTPException(status.HTTP_409_CONFLICT, "Decide the pending approval before changing the status.")
     changed = {k: {"from": str(getattr(task, k)), "to": str(v)} for k, v in data.items() if getattr(task, k) != v}
@@ -298,8 +316,9 @@ def run_task(task_id: uuid.UUID, ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
         raise HTTPException(status.HTTP_409_CONFLICT, "A run is already queued for this task.")
     agent = db.get(Agent, task.assignee_id) if task.assignee_id else None
     try:
+        capabilities.require_task(agent, task)
         runner.check_can_run(db, ctx.company, agent)
-    except runner.RunRefused as exc:
+    except (runner.RunRefused, capabilities.CapabilityDenied) as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
     job = jobs.enqueue(db, "run_task", {"task_id": str(task.id)}, company_id=ctx.company.id)
     task.status = "in_progress"
@@ -334,11 +353,17 @@ def submit_output(task_id: uuid.UUID, body: SubmitIn, ctx: CompanyDep, db: DbDep
         raise HTTPException(status.HTTP_409_CONFLICT, f"Task is {task.status.replace('_', ' ')}.")
     if task.assignee_id is None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Assign the task to an agent before submitting its output.")
-    agent = db.get(Agent, task.assignee_id)
+    agent = db.scalar(
+        select(Agent).where(Agent.id == task.assignee_id, Agent.company_id == ctx.company.id).with_for_update()
+    )
     if agent is None or agent.status != "active":
         raise HTTPException(status.HTTP_409_CONFLICT, "The assigned agent is not active.")
     if ctx.company.emergency_stop:
         raise HTTPException(status.HTTP_409_CONFLICT, "Emergency stop is on.")
+    try:
+        capabilities.require_task(agent, task)
+    except capabilities.CapabilityDenied as exc:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from exc
     run = new_run(db, task, "submitted", idempotency_key=body.idempotency_key)
     record(
         db,

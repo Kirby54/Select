@@ -20,6 +20,7 @@ const FREE_FORM = "general_task";
 const schema = z.object({
   title: z.string().trim().min(1, "Say what should be done").max(200),
   task_type: z.string().min(1, "Choose what kind of work this is"),
+  resource_scope: z.string().max(160),
   assignee_id: z.string(),
   priority: z.enum(["low", "medium", "high", "urgent"]),
   project_id: z.string(),
@@ -41,7 +42,7 @@ export function NewTaskDialog({ cid, open, onOpenChange, defaultAgentId }: { cid
   const [more, setMore] = useState(false);
   const form = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { title: "", task_type: FREE_FORM, assignee_id: defaultAgentId ?? "", priority: "medium", project_id: "", due_date: "", description: "", source: "" },
+    defaultValues: { title: "", task_type: FREE_FORM, resource_scope: "", assignee_id: defaultAgentId ?? "", priority: "medium", project_id: "", due_date: "", description: "", source: "" },
   });
   const taskType = useWatch({ control: form.control, name: "task_type" });
   const assignee = useWatch({ control: form.control, name: "assignee_id" });
@@ -56,6 +57,7 @@ export function NewTaskDialog({ cid, open, onOpenChange, defaultAgentId }: { cid
         body: {
           title: v.title,
           task_type: v.task_type,
+          resource_scope: v.task_type === "code_change" ? v.resource_scope : null,
           assignee_id: v.assignee_id || null,
           priority: v.priority,
           project_id: v.project_id || null,
@@ -124,6 +126,13 @@ export function NewTaskDialog({ cid, open, onOpenChange, defaultAgentId }: { cid
             More options
           </button>
         </div>
+        {taskType === "code_change" && (
+          <div className="sm:col-span-2">
+            <Field label="Repository scope" htmlFor="t-repo" hint="Required. An admin must grant this exact repo to the agent. Example: repo:Kirby54/Select.">
+              <Input id="t-repo" placeholder="repo:owner/name" required {...form.register("resource_scope")} />
+            </Field>
+          </div>
+        )}
         {more && (
           <>
             <Field label="Task type" htmlFor="t-type" error={errors.task_type?.message} hint="Decides which checks the result must pass.">
