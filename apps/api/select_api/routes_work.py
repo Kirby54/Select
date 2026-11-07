@@ -124,9 +124,13 @@ def create_task(body: TaskIn, ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"Unknown task type '{body.task_type}'.")
     if body.task_type == "code_change":
         if not body.assignee_id:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Assign a code proposal to an agent with a repo grant.")
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_CONTENT, "Assign a code proposal to an agent with a repo grant."
+            )
     elif body.resource_scope:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Resource scopes are currently for code proposals only.")
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Resource scopes are currently for code proposals only."
+        )
     assignee = None
     if body.assignee_id:
         assignee = _agent_in_company(db, ctx.company.id, body.assignee_id)
