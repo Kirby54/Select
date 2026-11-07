@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/OWNER/select/security/advisories/new
-    about: Please report vulnerabilities privately (see SECURITY.md). Replace OWNER with the repository owner when publishing.
+    url: https://github.com/Kirby54/Select/blob/main/SECURITY.md
+    about: Read the private vulnerability reporting instructions; do not disclose vulnerabilities in a public issue.
