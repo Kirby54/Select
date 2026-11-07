@@ -129,16 +129,20 @@ def process_output(db: Session, task: Task, run: Run, output: dict[str, Any], ac
         status=receipt.status,
         body={
             **receipt.model_dump(mode="json"),
-            **({
-                "capability_boundary": {
-                    "scope": capabilities.task_scope(task),
-                    "task_type": "code_change",
-                    "grant_id": grant["id"],
-                    "grant_contract_sha256": grant["contract_sha256"],
-                    "effect": "review_only_proposal",
-                    "unlocks": [],
-                },
-            } if grant is not None else {}),
+            **(
+                {
+                    "capability_boundary": {
+                        "scope": capabilities.task_scope(task),
+                        "task_type": "code_change",
+                        "grant_id": grant["id"],
+                        "grant_contract_sha256": grant["contract_sha256"],
+                        "effect": "review_only_proposal",
+                        "unlocks": [],
+                    },
+                }
+                if grant is not None
+                else {}
+            ),
         },
         is_demo=task.is_demo,
     )
