@@ -117,7 +117,7 @@ def release_check(root: Path, target: str = "1.0.0") -> list[str]:
             errors.append(f"{source}: version {actual}, expected {target}.")
     try:
         changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
-        if not re.search(r"(?m)^## \\[1\\.0\\.0\\](?:\\s|$)", changelog):
+        if not re.search(r"(?m)^## \[1\.0\.0\](?:\s|$)", changelog):
             errors.append("CHANGELOG.md needs a reviewed ## [1.0.0] entry.")
     except OSError as exc:
         errors.append(f"Cannot read changelog: {exc}")
