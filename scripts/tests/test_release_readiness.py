@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-SCRIPT = Path(__file__).resolve().parents[2] / "check-release-readiness.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "check-release-readiness.py"
 spec = importlib.util.spec_from_file_location("select_release_gate", SCRIPT)
 assert spec and spec.loader
 gate = importlib.util.module_from_spec(spec)
