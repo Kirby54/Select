@@ -408,6 +408,7 @@ def trust_out(t: Trust) -> dict[str, Any]:
         "id": str(t.id),
         "agent_id": str(t.agent_id),
         "task_type": t.task_type,
+        "resource_scope": (t.inputs or {}).get("resource_scope"),
         "level": t.level,
         "streak": t.streak,
         "successes": t.successes,
