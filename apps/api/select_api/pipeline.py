@@ -18,7 +18,7 @@ from select_verify import Contract, Receipt, verify
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import automation, autonomy
+from . import automation, autonomy, capabilities
 from .audit import record
 from .auth import SYSTEM, Actor
 from .contracts import build_context, get_contract
@@ -104,6 +104,11 @@ def process_output(db: Session, task: Task, run: Run, output: dict[str, Any], ac
     if company is None or contract is None:
         raise PipelineError(f"no contract for task type '{task.task_type}'")
     agent = db.get(Agent, task.assignee_id) if task.assignee_id else None
+    if not task.is_demo:
+        try:
+            capabilities.require_task(agent, task)
+        except capabilities.CapabilityDenied as exc:
+            raise PipelineError(str(exc)) from exc
     policy = autonomy.policy_for(company)
 
     run.output = output
