@@ -33,9 +33,9 @@ from .models import (
 from .views import (
     AgentIn,
     AgentPatch,
-    CatalogItemIn,
     CapabilityCheckIn,
     CapabilityGrantIn,
+    CatalogItemIn,
     CompanyIn,
     CompanyPatch,
     GoalIn,
