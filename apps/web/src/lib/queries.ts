@@ -33,6 +33,7 @@ import type {
   Routine,
   Task,
   TaskDetail,
+  TaskStatus,
   TemplateSummary,
   TrustEvent,
   Run,
@@ -87,12 +88,22 @@ export function useCachedAgentRole(name: string): string | undefined {
   return client.getQueryData<Agent[]>(cKey(params.cid, "agents"))?.find((a) => a.name === name)?.role;
 }
 
+/** Counted by the server: the agent's tasks now, its checks and finished work over `period_days`. */
+export interface AgentRecord {
+  period_days: number;
+  tasks: Record<TaskStatus, number>;
+  checks: { verified: number; failed: number; blocked: number };
+  finished: number;
+  autonomous: number;
+}
+
 export interface AgentDetail extends Agent {
   trust_events: TrustEvent[];
   runs: Run[];
   tasks: Task[];
   costs: { kind: string; amount: string; events: number }[];
   contracts: string[];
+  record: AgentRecord;
 }
 
 export const useAgent = (cid: string, id: string) =>

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import platform
 import sys
 from pathlib import Path
 
@@ -145,6 +146,31 @@ def main(argv: list[str] | None = None) -> None:
     probe.add_argument("--model", required=True)
     probe.add_argument("--base-url", default=None, help="optional custom API endpoint")
     probe.add_argument("--timeout", type=float, default=30)
+    runner = sub.add_parser(
+        "code-runner",
+        help="do code_change tasks in disposable workspaces (run it in a container or VM, not on the server)",
+        description="Token: set SELECT_RUNNER_TOKEN (never on the command line). Model keys: ANTHROPIC_API_KEY for "
+        "--cli claude, OPENAI_API_KEY for --cli codex.",
+    )
+    runner.add_argument("--api", required=True, help="Select's address, e.g. https://select.example.com")
+    runner.add_argument("--company", required=True, help="company id")
+    runner.add_argument("--agent", required=True, help="id of the agent whose code_change tasks to do")
+    runner.add_argument("--repository", required=True, help="local git checkout to clone from (never written to)")
+    runner.add_argument("--scope", required=True, help="repo:owner/name, as on the tasks and the agent's grant")
+    runner.add_argument("--test", required=True, help='the project\'s test command, e.g. "npm test"')
+    runner.add_argument("--cli", required=True, choices=("claude", "codex", "command"))
+    runner.add_argument(
+        "--command", dest="agent_command", default=None, help="the agent command, for --cli command (prompt on stdin)"
+    )
+    runner.add_argument("--pass-env", action="append", help="extra variable for --cli command (repeatable)")
+    runner.add_argument("--name", default=platform.node() or "runner", help="runner name shown in test reports")
+    runner.add_argument("--model", default=None, help="model for Claude Code or Codex")
+    runner.add_argument("--max-budget-usd", default=None, help="spending cap per task for Claude Code")
+    runner.add_argument("--agent-timeout", type=int, default=900, help="seconds")
+    runner.add_argument("--test-timeout", type=int, default=600, help="seconds")
+    runner.add_argument("--interval", type=int, default=30, help="seconds between checks for new tasks")
+    runner.add_argument("--once", action="store_true", help="do the waiting tasks once, then stop")
+    runner.add_argument("--keep-workspace", action="store_true", help="keep each temporary workspace to inspect")
     args = parser.parse_args(argv)
 
     if args.command == "serve":
@@ -170,6 +196,14 @@ def main(argv: list[str] | None = None) -> None:
         if not 1 <= args.timeout <= 300:
             parser.error("--timeout must be between 1 and 300 seconds")
         probe_provider(args.provider, args.model, args.base_url, args.timeout)
+    elif args.command == "code-runner":
+        from .code_runner import RunnerError
+        from .code_runner import main as runner_main
+
+        try:
+            runner_main(args)
+        except RunnerError as exc:
+            parser.exit(1, f"code-runner: {exc}\n")
     else:
         parser.print_help()
         sys.exit(2)

@@ -232,6 +232,8 @@ export function LicenceLadder({ licence }: { licence: Licence }) {
   const fill = licence.next_threshold ? Math.min(1, licence.streak / licence.next_threshold) : 0;
   const label = licence.frozen
     ? `${LEVEL_LABEL[licence.level]}, frozen by a human`
+    : licence.always_reviewed
+      ? `${LEVEL_LABEL[licence.level]}: a person reviews every result of this contract`
     : licence.promotion_blocked
       ? `${LEVEL_LABEL[licence.level]}, ${licence.level === "autonomous" ? "top level" : `capped at ${LEVEL_LABEL[licence.cap]} by risk`}`
       : licence.next_threshold
@@ -245,7 +247,7 @@ export function LicenceLadder({ licence }: { licence: Licence }) {
         return (
           <div key={level} className="flex flex-1 items-center last:flex-none">
             <span
-              title={capped ? `${LEVEL_LABEL[level]}: above the risk cap for this contract` : LEVEL_LABEL[level]}
+              title={capped ? `${LEVEL_LABEL[level]}: ${licence.always_reviewed ? "every result of this contract is reviewed" : "above the risk cap for this contract"}` : LEVEL_LABEL[level]}
               className={cx(
                 "relative flex size-3.5 shrink-0 items-center justify-center rounded-full",
                 reached ? STATION[licence.level] : capped ? "border border-dashed border-line-strong" : "border border-line-strong bg-surface",
@@ -275,6 +277,7 @@ export function LicenceLadder({ licence }: { licence: Licence }) {
 
 export function LicenceNextStep({ licence }: { licence: Licence }) {
   if (licence.frozen) return <Badge tone="danger"><Lock className="size-3" aria-hidden />Frozen by a human</Badge>;
+  if (licence.always_reviewed) return <span className="text-xs text-faint">Always reviewed by a person</span>;
   if (licence.promotion_blocked) {
     return <span className="text-xs text-faint">{licence.level === "autonomous" ? "Top level reached" : `Capped by ${licence.risk ?? "risk"} risk`}</span>;
   }
@@ -523,6 +526,43 @@ export function afterApproval(action: string | null, typeLabel: string, outgoing
 
 const RISK_TONE: Record<string, Tone> = { low: "neutral", medium: "neutral", high: "warning", legal: "danger" };
 
+/** Diff lines in colour: additions, removals, hunk headers and file headers. Other lines keep the text colour. */
+function diffLineTone(line: string): string {
+  if (line.startsWith("+++") || line.startsWith("---") || line.startsWith("diff --git")) return "font-semibold text-muted";
+  if (line.startsWith("+")) return "bg-success/8 text-success";
+  if (line.startsWith("-")) return "bg-danger/8 text-danger";
+  if (line.startsWith("@@")) return "text-accent";
+  return "";
+}
+
+/** What a reviewer must know before reading a patch: did anyone run the project's tests on it, and where. */
+function CodeTestNote({ content }: { content: Record<string, unknown> }) {
+  const tests = content.tests as { command?: string; exit_code?: number; duration_ms?: number; runner?: string } | undefined;
+  const passed = tests?.exit_code === 0;
+  return (
+    <p role="note" className={cx("mb-2.5 rounded-lg border px-3 py-2 text-xs leading-relaxed text-muted", passed ? "border-success/25 bg-success/6" : "border-warning/25 bg-warning/6")}>
+      {tests ? (
+        <>
+          <span className={cx("font-medium", passed ? "text-success" : "text-danger")}>{passed ? "Tests passed" : `Tests failed (exit code ${tests.exit_code})`}</span>
+          {" "}on this exact diff: <code className="font-mono">{tests.command}</code> in {((tests.duration_ms ?? 0) / 1000).toFixed(1)} s, reported by the code runner “{tests.runner}”. Select did not run them itself.
+        </>
+      ) : (
+        <><span className="font-medium text-warning">Not tested.</span> No code runner ran the project&apos;s tests on this patch.</>
+      )}
+      {" "}Select has not applied or pushed it: approving records your decision.
+    </p>
+  );
+}
+
+/** The contract's external action, as the approval card says it: "Iris asks to send a quote by e-mail". */
+const ACTION_TEXT: Record<string, string> = {
+  send_email: "send an e-mail",
+  send_quote_email: "send a quote by e-mail",
+  send_invoice_email: "mark an invoice draft ready",
+  publish_post: "mark a post ready to publish",
+  none_payments_are_manual: "prepare a payment you make yourself",
+};
+
 /**
  * One pending decision, readable in five seconds: who asks, what would happen, why a human is asked,
  * which checks ran, the exact content, and what approving or rejecting changes.
@@ -546,7 +586,7 @@ export function ApprovalCard({ approval, onDecide, busy, readOnly, risk, agentRo
   const highRisk = risk === "high" || risk === "legal";
   const agent = approval.agent_name ?? "The agent";
   const type = taskTypeLabel(approval.task_type ?? "");
-  const action = approval.action ? approval.action.replaceAll("_", " ") : null;
+  const action = approval.action ? (ACTION_TEXT[approval.action] ?? approval.action.replaceAll("_", " ")) : null;
 
   const approveButton = (
     <Button touch variant="primary" loading={busy} onClick={highRisk ? undefined : () => onDecide("approved", "")} icon={<Check className="size-3.5" aria-hidden />}>
@@ -563,7 +603,7 @@ export function ApprovalCard({ approval, onDecide, busy, readOnly, risk, agentRo
             <p className="text-[13px] text-muted">
               <span className="font-medium text-fg">{agent}</span>
               {agentRole && <span> · {agentRole}</span>}
-              <span> asks to {action ?? "close"}</span>
+              <span> {action ? `asks to ${action}` : "asks you to accept its result"}</span>
             </p>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-2">
               <Link href={`/c/${cid}/tasks/${approval.task_id}`} className="font-mono text-xs text-faint hover:text-fg">{approval.task_key}</Link>
@@ -613,15 +653,13 @@ export function ApprovalCard({ approval, onDecide, busy, readOnly, risk, agentRo
 
       <div className="px-4 py-3">
         <p className="mb-1.5 text-2xs font-medium tracking-wide text-faint uppercase">
-          {approval.task_type === "code_change" ? "Proposed diff — not applied or tested" : approval.payload.email ? "Exactly the e-mail that would be sent" : action ? "Exactly what would leave Select" : "Result to accept"}
+          {approval.task_type === "code_change" ? "Proposed diff — not applied" : approval.payload.email ? "Exactly the e-mail that would be sent" : action ? "Exactly what would leave Select" : "Result to accept"}
         </p>
-        {approval.task_type === "code_change" && (
-          <p role="note" className="mb-2.5 rounded-lg border border-warning/25 bg-warning/6 px-3 py-2 text-xs leading-relaxed text-muted">
-            Review-only proposal: Select has not applied this patch, run the suggested tests, or pushed code. Approval only records your decision.
-          </p>
-        )}
+        {approval.task_type === "code_change" && <CodeTestNote content={approval.payload.content} />}
         <pre className="max-h-[28rem] overflow-auto rounded-lg border border-line-soft bg-canvas px-3 py-2.5 font-mono text-xs leading-relaxed whitespace-pre-wrap text-fg">
-          {approval.payload.preview.join("\n")}
+          {approval.task_type === "code_change"
+            ? approval.payload.preview.map((line, i) => <span key={i} className={cx("block", diffLineTone(line))}>{line || " "}</span>)
+            : approval.payload.preview.join("\n")}
         </pre>
       </div>
 

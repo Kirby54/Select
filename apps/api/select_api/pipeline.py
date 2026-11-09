@@ -72,6 +72,23 @@ def render_preview(contract: Contract, deliverable: dict[str, Any], currency: st
         ]
     if contract.id == "social_post":
         return [f"Channel: {deliverable.get('channel', '')}", "", str(deliverable.get("text", ""))]
+    if contract.id == "code_change":
+        tests = deliverable.get("tests")
+        if isinstance(tests, dict):
+            seconds = int(tests.get("duration_ms") or 0) / 1000
+            outcome = "passed" if tests.get("exit_code") == 0 else f"failed (exit code {tests.get('exit_code')})"
+            command, runner = tests.get("command", ""), tests.get("runner", "")
+            ran = f"Tests: {outcome}: {command} in {seconds:.1f} s, reported by runner {runner}"
+        else:
+            ran = "Tests: not run. Nobody has run this patch."
+        base = deliverable.get("base_commit")
+        return [
+            f"Summary: {deliverable.get('summary', '')}",
+            ran,
+            *([f"Base commit: {base}"] if isinstance(base, str) else []),
+            "",
+            *str(deliverable.get("diff", "")).splitlines(),
+        ]
     return [f"{k}: {v(val)}" for k, val in deliverable.items()]
 
 

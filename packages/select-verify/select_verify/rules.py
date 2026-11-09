@@ -6,6 +6,8 @@ and returns an Outcome. Raising ``RuleConfigError`` means the contract itself is
 
 from __future__ import annotations
 
+import fnmatch
+import hashlib
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -143,6 +145,94 @@ def unified_diff_shape(data: dict[str, Any], params: dict[str, Any], ctx: Verify
     if len(paths) != len(set(paths)):
         return Outcome(False, "file appears more than once")
     return Outcome(True, "patch has a plausible text diff shape; not applied or tested", {"paths": paths})
+
+
+def _diff_paths(raw: str) -> list[str]:
+    return [m.group(1) for m in re.finditer(r"^diff --git a/(\S+) b/\S+$", raw, flags=re.MULTILINE)]
+
+
+@rule("diff_paths")
+def diff_paths(data: dict[str, Any], params: dict[str, Any], ctx: VerifyContext) -> Outcome:
+    """The files a patch touches must not match a forbidden pattern (CI configuration, secrets, keys).
+
+    Patterns are shell-style globs matched on the whole path and on its file name.
+    """
+    raw = unwrap(get_one(data, _param(params, "field")))
+    if not isinstance(raw, str) or not raw.strip():
+        return Outcome(False, "patch missing or not text")
+    forbidden = [str(p) for p in _param(params, "forbidden")]
+    paths = _diff_paths(raw)
+    hits = sorted(
+        {
+            path
+            for path in paths
+            for pattern in forbidden
+            if fnmatch.fnmatchcase(path, pattern) or fnmatch.fnmatchcase(path.rsplit("/", 1)[-1], pattern)
+        }
+    )
+    if hits:
+        return Outcome(False, "the patch touches protected files", {"protected": hits})
+    return Outcome(True, "no protected file is touched", {"paths": paths})
+
+
+_HEX40 = re.compile(r"[0-9a-f]{40}")
+_HEX64 = re.compile(r"[0-9a-f]{64}")
+
+
+@rule("test_evidence")
+def test_evidence(data: dict[str, Any], params: dict[str, Any], ctx: VerifyContext) -> Outcome:
+    """Test results that a code runner reports with a patch.
+
+    mode "presence": was a test run reported at all? An untested patch fails this (usually non-blocking) check.
+    mode "consistency": a reported run must be well formed, be about this exact patch (SHA-256 of the diff) and
+    base commit, and have passed. No report passes: there is nothing to contradict.
+
+    This checks the report, not the runner: Select does not run the tests itself, so the result is as trustworthy
+    as the runner that reported it.
+    """
+    mode = _param(params, "mode")
+    if mode not in ("presence", "consistency"):
+        raise RuleConfigError("test_evidence mode must be 'presence' or 'consistency'")
+    tests = unwrap(get_one(data, _param(params, "field")))
+    if mode == "presence":
+        if isinstance(tests, dict) and tests:
+            return Outcome(True, "a test run was reported for this patch", {"runner": tests.get("runner")})
+        return Outcome(False, "not tested: no test run was reported for this patch")
+    if tests is MISSING or tests is None:
+        return Outcome(True, "no test run reported, so nothing to check")
+    if not isinstance(tests, dict):
+        return Outcome(False, "test report is not an object")
+    diff = unwrap(get_one(data, str(params.get("diff_field", "diff"))))
+    base = unwrap(get_one(data, str(params.get("base_field", "base_commit"))))
+    command, code, duration = tests.get("command"), tests.get("exit_code"), tests.get("duration_ms")
+    problems = []
+    if not isinstance(command, str) or not command.strip() or len(command) > 500:
+        problems.append("command")
+    if not isinstance(code, int) or isinstance(code, bool):
+        problems.append("exit_code")
+    if not isinstance(duration, int) or isinstance(duration, bool) or duration < 0:
+        problems.append("duration_ms")
+    for key in ("diff_sha256", "output_sha256"):
+        if not isinstance(tests.get(key), str) or not _HEX64.fullmatch(tests[key]):
+            problems.append(key)
+    if not isinstance(base, str) or not _HEX40.fullmatch(base) or tests.get("base_commit") != base:
+        problems.append("base_commit")
+    if not isinstance(tests.get("runner"), str) or not tests["runner"].strip():
+        problems.append("runner")
+    if problems:
+        return Outcome(False, "test report is incomplete or malformed", {"fields": problems})
+    if not isinstance(diff, str) or hashlib.sha256(diff.encode("utf-8")).hexdigest() != tests["diff_sha256"]:
+        return Outcome(False, "the reported test run is about a different patch", {"runner": tests["runner"]})
+    evidence = {
+        "command": command,
+        "exit_code": code,
+        "duration_ms": duration,
+        "runner": tests["runner"],
+        "output_sha256": tests["output_sha256"],
+    }
+    if code != 0:
+        return Outcome(False, f"the project's tests failed (exit code {code})", evidence)
+    return Outcome(True, f"tests passed on this exact patch, as reported by runner {tests['runner']}", evidence)
 
 
 @rule("forbidden_phrases")

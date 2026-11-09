@@ -51,7 +51,7 @@ def test_scope_is_deny_by_default_and_does_not_allow_email_or_other_repository(c
     issued = grant(client, cid, aid)
     assert issued["status"] == "active"
     assert issued["scope"] == REPO_A
-    assert issued["contract_version"] == 1
+    assert issued["contract_version"] == 2  # code_change v2: protected files and test reports
     assert issued["contract_sha256"]
     ok(new_code_task(client, cid, aid), 201)
     assert new_code_task(client, cid, aid, REPO_B).status_code == 403

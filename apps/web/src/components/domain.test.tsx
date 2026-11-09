@@ -84,8 +84,36 @@ describe("ApprovalCard", () => {
         />
       </RTooltip.Provider>,
     );
-    expect(screen.getByText("Proposed diff — not applied or tested")).toBeTruthy();
-    expect(screen.getByRole("note").textContent).toContain("Approval only records your decision.");
+    expect(screen.getByText("Proposed diff — not applied")).toBeTruthy();
+    expect(screen.getByRole("note").textContent).toContain("Not tested.");
+    expect(screen.getByRole("note").textContent).toContain("approving records your decision");
+    expect(screen.getByText("+new").className).toContain("text-success");
+  });
+
+  it("says when a code runner's tests passed on the exact diff", () => {
+    render(
+      <RTooltip.Provider>
+        <ApprovalCard
+          approval={{
+            ...approval,
+            task_type: "code_change",
+            action: null,
+            payload: {
+              ...approval.payload,
+              preview: ["diff --git a/app.py b/app.py", "-old", "+new"],
+              content: { tests: { command: "npm test", exit_code: 0, duration_ms: 4200, runner: "ci-box" } },
+            },
+          }}
+          onDecide={vi.fn()}
+          busy={false}
+          risk="high"
+        />
+      </RTooltip.Provider>,
+    );
+    const note = screen.getByRole("note").textContent ?? "";
+    expect(note).toContain("Tests passed on this exact diff");
+    expect(note).toContain("npm test in 4.2 s");
+    expect(note).toContain("ci-box");
   });
 
   it("hides decision buttons for read-only members", () => {

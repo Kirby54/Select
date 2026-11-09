@@ -1,6 +1,6 @@
 # Code change proposals — review-only foundation
 
-Select can now accept a **text-only proposed diff** as a `code_change` task. This is **not** an integrated Claude Code/Codex runtime, and Select does not apply patches, execute tests or push Git commits.
+Select accepts a **text-only proposed diff** as a `code_change` task. Select itself never applies patches, executes code or pushes Git commits. To have Claude Code or Codex make the change in a disposable workspace and attach the project's test results, use the [code runner](code-runner.md); without it, a proposal is marked *not tested*.
 
 ## Purpose
 
@@ -28,4 +28,4 @@ Test commands in `tests_to_run` are suggestions only. Select does not execute th
 
 ## Roadmap to a real coding runtime
 
-Follow [issue #13](https://github.com/Kirby54/Select/issues/13): disposable isolated workspace, strictly scoped repository permissions, CLI adapters for Claude Code/Codex, bounded execution, real tests, a verified diff, evidence receipts and human approval before any pull request. Do not run untrusted agent commands on the Select host.
+The [code runner](code-runner.md) covers the first part of [issue #13](https://github.com/Kirby54/Select/issues/13): a disposable workspace without remotes, CLI adapters for Claude Code and Codex, time limits, the project's tests on the exact diff, a receipt binding the test report to that diff, and human approval. Still open: a run verified with a real model key, opening a pull request after approval, and network policies enforced by Select rather than by the runner's machine. Never run agent commands on the Select host.

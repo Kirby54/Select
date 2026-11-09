@@ -10,35 +10,94 @@ README = ROOT / "README.md"
 SHOTS = ROOT / "docs/screenshots"
 
 REQUIRED = [
-    "overview.png", "approvals.png", "agents.png", "costs.png",
-    "connections.png", "autonomy.png", "mobile-tasks.png", "mobile-autonomy.png",
+    "home.png",
+    "approvals.png",
+    "agent.png",
+    "tasks.png",
+    "team.png",
+    "messages.png",
+    "receipt.png",
+    "autonomy.png",
+    "routines.png",
+    "mobile-home.png",
+    "mobile-approval.png",
 ]
 BEGIN = "<!-- SELECT_SCREENSHOTS_BEGIN -->"
 END = "<!-- SELECT_SCREENSHOTS_END -->"
 
-GALLERY = """<!-- SELECT_SCREENSHOTS_BEGIN -->
-## Explore the interface
 
-These are real Playwright screenshots of Select running locally with **fictional demo data**.
-No external model provider or mailbox is connected in this capture session.
+def cell(name: str, title: str, alt: str) -> str:
+    return f'<td width="50%"><strong>{title}</strong><br /><img src="docs/screenshots/{name}" alt="{alt}" /></td>'
 
-<table>
-  <tr>
-    <td width="50%"><strong>Human approvals</strong><br /><img src="docs/screenshots/approvals.png" alt="Select approval queue with review context and verified results" /></td>
-    <td width="50%"><strong>Agent team</strong><br /><img src="docs/screenshots/agents.png" alt="Select agent management, responsibilities and runtime status" /></td>
-  </tr>
-  <tr>
-    <td><strong>Costs and budgets</strong><br /><img src="docs/screenshots/costs.png" alt="Select spending, budgets and agent activity" /></td>
-    <td><strong>Model connections</strong><br /><img src="docs/screenshots/connections.png" alt="Select model connections and generation verification" /></td>
-  </tr>
-</table>
 
-<p align="center">
-  <img src="docs/screenshots/mobile-tasks.png" alt="Select tasks on a mobile viewport" width="240" />
-  <img src="docs/screenshots/mobile-autonomy.png" alt="Select autonomy tracking on a mobile viewport" width="240" />
-</p>
+ROWS = [
+    (
+        cell(
+            "approvals.png",
+            "Exactly what would leave",
+            "The approval of a quote: who asks, why a person is asked, "
+            "the checks that passed and exactly the e-mail that would be sent",
+        ),
+        cell(
+            "agent.png",
+            "An agent's record",
+            "Sam, the support agent: tasks done, checks passed, work finished "
+            "without a person, and the licence earned on each type of task",
+        ),
+    ),
+    (
+        cell("tasks.png", "All the work", "Tasks grouped by status, with priority, project colour and agent"),
+        cell("team.png", "The team", "The org chart: each agent's role, connection and autonomy level"),
+    ),
+    (
+        cell(
+            "messages.png",
+            "E-mail in, work out",
+            "A customer e-mail triaged by an agent and routed by code to the quotes agent",
+        ),
+        cell(
+            "receipt.png",
+            "No invented numbers",
+            "A failed verification: a quantity the customer never wrote stops the quote before anyone is asked",
+        ),
+    ),
+    (
+        cell(
+            "autonomy.png",
+            "Autonomy, earned",
+            "Where each licence stands and what the next level needs, next to the errors found afterwards",
+        ),
+        cell("routines.png", "Work on a schedule", "Routines that create tasks on the company's clock"),
+    ),
+]
 
-<!-- SELECT_SCREENSHOTS_END -->"""
+GALLERY = "\n".join(
+    [
+        BEGIN,
+        "## See it work",
+        "",
+        "Real captures of Select running **Brightloop Studio**, a sample company that",
+        "[`scripts/sample-company.py`](scripts/sample-company.py) creates through the public API:",
+        "8 agents, 4 projects, 3 routines and a mailbox on local test servers. The agents' results were written",
+        "by the script and handed in through the submission API, so **no model was called**. Everything else is",
+        "Select at work: it verified each result, kept the receipts, asked for approvals, moved the licences,",
+        "triaged the incoming e-mail and sent the approved replies once over SMTP.",
+        "Refresh them with the *Refresh real README screenshots* workflow.",
+        "",
+        "<table>",
+        *(f"  <tr>\n    {left}\n    {right}\n  </tr>" for left, right in ROWS),
+        "</table>",
+        "",
+        '<p align="center">',
+        '  <img src="docs/screenshots/mobile-home.png" alt="Home on a phone" width="260" />',
+        '  <img src="docs/screenshots/mobile-approval.png" alt="Approving a quote on a phone, with the exact e-mail"'
+        ' width="260" />',
+        "</p>",
+        "",
+        END,
+    ]
+)
+
 
 def main() -> None:
     for name in REQUIRED:
@@ -61,6 +120,7 @@ def main() -> None:
         updated = current.replace("## Quickstart", GALLERY + "\n\n## Quickstart", 1)
     README.write_text(updated, encoding="utf-8")
     print(f"Updated README using {len(REQUIRED)} verified PNG files")
+
 
 if __name__ == "__main__":
     main()

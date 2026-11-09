@@ -307,7 +307,7 @@ export default function TaskPage({ params }: { params: Promise<{ cid: string; ti
         <div className="space-y-4">
           <Properties cid={cid} task={t} canWrite={canWrite} />
           <Origin cid={cid} task={t} />
-          {lastReceipt && (
+          {lastReceipt && tab !== "verification" && (
             <Card>
               <CardHeader title="Latest verification" />
               <div className="p-3"><VerificationReceipt receipt={lastReceipt} /></div>

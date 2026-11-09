@@ -42,4 +42,18 @@ The first visit asks for your name, e-mail and a password: you become the owner.
 
 Open the demo from the account menu (top right) → **Open the demo company**, then **Run demo week**: a recorded week in a fictional workshop. Agent outputs are replayed; checks, receipts, approvals and the autonomy engine run for real, and every demo row is labelled.
 
+### The sample company
+
+The README's screenshots show **Brightloop Studio**, a richer company that a script builds through the public API, like any client would: 8 agents (CEO, CTO, two engineers, marketing, support, sales, accounting), 4 projects, goals, 3 routines and a mailbox on local test servers. The agents' results are written in the script and handed in through the submission API, so no model is called; Select verifies them, asks for approvals, moves the licences, triages the e-mail and sends the approved replies. It is not marked as demo in the interface, so call it a sample wherever you show it.
+
+On a development stack in local mode ([installation.md](installation.md)):
+
+```bash
+uv run python scripts/dev-mail.py serve                                  # local IMAP + SMTP servers, keep running
+uv run python scripts/sample-company.py --api http://127.0.0.1:8000      # in another terminal
+node scripts/readme-screenshots.mjs http://localhost:3000 docs/screenshots   # optional: capture it
+```
+
+Without the mail servers, add `--no-mail`. With `SELECT_AUTH_MODE=token`, pass `--token` with an API token.
+
 Next: [agents.md](agents.md), [autonomy.md](autonomy.md), [verification.md](verification.md), [mail.md](mail.md).

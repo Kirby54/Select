@@ -59,11 +59,11 @@ def serve(imap_port: int, smtp_port: int, out: Path) -> None:
         imap.terminate()
 
 
-def drop(imap_port: int, sender: str, subject: str, body: str) -> None:
+def drop(imap_port: int, sender: str, subject: str, body: str, to: str = "contact@example.com") -> None:
     """Puts a message in the INBOX the way a mail server would (IMAP APPEND)."""
     msg = EmailMessage()
     msg["From"] = sender
-    msg["To"] = "contact@example.com"
+    msg["To"] = to
     msg["Subject"] = subject
     msg["Date"] = format_datetime(datetime.now(UTC))
     msg["Message-ID"] = f"<{uuid.uuid4().hex}@dev-mail.local>"
@@ -88,11 +88,12 @@ def main() -> None:
     drop_cmd.add_argument(
         "--body", default="Hello, could you quote 3.2 m of oak worktop and 2 wall shelves?\nBest regards, Jonas Weber"
     )
+    drop_cmd.add_argument("--to", default="contact@example.com", help="the address the e-mail was written to")
     args = parser.parse_args()
     if args.command == "serve":
         serve(args.imap_port, args.smtp_port, args.out)
     else:
-        drop(args.imap_port, args.sender, args.subject, args.body)
+        drop(args.imap_port, args.sender, args.subject, args.body, args.to)
 
 
 if __name__ == "__main__":

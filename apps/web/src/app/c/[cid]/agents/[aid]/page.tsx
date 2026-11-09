@@ -10,9 +10,9 @@ import { AgentAvatar, AgentStatus, AutonomyLevel, LicenceLadder, LicenceNextStep
 import { PageBody, PageHeader, useNewTask } from "@/components/shell/app-shell";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/ui/feedback";
 import { ConfirmDialog, Dropdown } from "@/components/ui/overlay";
-import { Badge, Button, Card, CardHeader, DemoTag, IconButton, cx } from "@/components/ui/primitives";
+import { Badge, Button, Card, CardHeader, DemoTag, IconButton, Stat, cx } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
-import { formatDate, money, relative, taskTypeLabel } from "@/lib/format";
+import { FREE_FORM, formatDate, money, percent, relative, taskTypeLabel } from "@/lib/format";
 import { useAction, useAgent, useAgents, useAutonomy, useCompany } from "@/lib/queries";
 
 export default function AgentPage({ params }: { params: Promise<{ cid: string; aid: string }> }) {
@@ -38,6 +38,11 @@ export default function AgentPage({ params }: { params: Promise<{ cid: string; a
   const reports = (agents.data ?? []).filter((m) => m.manager_id === a.id);
   const licences = (autonomy.data?.licences ?? []).filter((l) => l.agent_id === a.id);
   const caps = autonomy.data?.caps ?? {};
+  // Free-form work goes to any agent; its contract sends every result to a person, so there is no level to earn.
+  const kinds = a.is_demo_agent || a.task_types.includes(FREE_FORM) ? a.task_types : [...a.task_types, FREE_FORM];
+  const rec = a.record;
+  const checked = rec.checks.verified + rec.checks.failed + rec.checks.blocked;
+  const open = rec.tasks.todo + rec.tasks.in_progress + rec.tasks.backlog;
 
   return (
     <>
@@ -89,24 +94,35 @@ export default function AgentPage({ params }: { params: Promise<{ cid: string; a
               </p>
             </div>
           )}
+          <Card aria-label="Record" className="overflow-hidden">
+            <div className="grid grid-cols-2 gap-px bg-line-soft sm:grid-cols-4">
+              <Stat className="bg-surface" label="Done" value={rec.tasks.done} hint={`${open} open`} />
+              <Stat className="bg-surface" label="Waiting for you" value={rec.tasks.awaiting_approval} hint={rec.tasks.blocked ? `${rec.tasks.blocked} blocked` : "nothing blocked"} tone={rec.tasks.awaiting_approval ? "warning" : undefined} />
+              <Stat className="bg-surface" label="Passed checks" value={checked ? percent(rec.checks.verified / checked) : "—"} hint={`${rec.checks.verified} of ${checked} · ${rec.period_days} days`} />
+              <Stat className="bg-surface" label="Without a person" value={rec.finished ? percent(rec.autonomous / rec.finished) : "—"} hint={`${rec.autonomous} of ${rec.finished} finished`} tone={rec.autonomous ? "autonomous" : undefined} />
+            </div>
+          </Card>
           <Card>
             <CardHeader title="What it may do alone" />
-            {a.task_types.length === 0 ? (
+            {kinds.length === 0 ? (
               <EmptyState compact title="No task type allowed" description="Edit the agent to choose what it may work on." />
             ) : (
               <ul className="divide-y divide-line-soft">
-                {a.task_types.map((type) => {
+                {kinds.map((type) => {
                   const licence = licences.find((l) => l.task_type === type);
                   const trust = a.trust.find((x) => x.task_type === type);
                   const cap = caps[type] ?? "supervised";
+                  const always = type === FREE_FORM;
                   return (
                     <li key={type} className="grid items-center gap-x-6 gap-y-2 px-4 py-3 sm:grid-cols-[150px_auto_minmax(200px,1fr)_auto]">
                       <span className="text-[13px] text-fg">{taskTypeLabel(type)}</span>
                       <AutonomyLevel level={trust?.level ?? "supervised"} frozen={trust?.frozen} />
-                      {licence ? <LicenceLadder licence={licence} /> : <span className="text-xs text-faint">No verified result yet</span>}
+                      {always ? (
+                        <span className="text-xs text-faint">A person reviews every result: code can only check its shape</span>
+                      ) : licence ? <LicenceLadder licence={licence} /> : <span className="text-xs text-faint">No verified result yet</span>}
                       <span className="flex flex-col items-start gap-0.5 sm:items-end">
-                        {licence ? <LicenceNextStep licence={licence} /> : cap !== "autonomous" ? <Badge>{`capped at ${cap}`}</Badge> : null}
-                        {trust && <span className="text-xs text-faint tabular">{trust.successes} ok · {trust.failures} failed · streak {trust.streak}</span>}
+                        {always ? <Badge>Always reviewed</Badge> : licence ? <LicenceNextStep licence={licence} /> : cap !== "autonomous" ? <Badge>{`capped at ${cap}`}</Badge> : null}
+                        {trust && <span className="text-xs text-faint tabular">{trust.successes} ok · {trust.failures} failed{always ? "" : ` · streak ${trust.streak}`}</span>}
                       </span>
                     </li>
                   );
@@ -190,7 +206,7 @@ export default function AgentPage({ params }: { params: Promise<{ cid: string; a
               <div className="flex justify-between gap-3"><dt className="text-faint">Monthly budget</dt><dd className="text-muted tabular">{a.monthly_budget === "0" || a.monthly_budget === "0.00" ? "No limit" : money(a.monthly_budget)}</dd></div>
               {a.costs.map((c) => <div key={c.kind} className="flex justify-between gap-3"><dt className="text-faint">Cost ({c.kind})</dt><dd className="text-muted tabular">{money(c.amount, "", 4)}</dd></div>)}
               <div className="flex justify-between gap-3"><dt className="text-faint">Permissions</dt><dd className="text-right text-muted">{a.permissions.join(", ").replaceAll("_", " ") || "none"}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-faint">Contracts</dt><dd className="text-right text-muted">{a.contracts.map(taskTypeLabel).join(", ") || "—"}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-faint">Contracts</dt><dd className="text-right text-muted">{kinds.map(taskTypeLabel).join(", ") || "—"}</dd></div>
             </dl>
           </Card>
           {(a.description || a.objectives || a.instructions) && (
