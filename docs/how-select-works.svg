@@ -37,7 +37,7 @@
 <text x="773" y="718" fill="#F5F5F7" text-anchor="middle" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="37" font-weight="600">Sampled</text>
 <path d="M976 706h38m-12 -11 12 11-12 11" fill="none" stroke="#F5F5F7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 <text x="1243" y="718" fill="#F5F5F7" text-anchor="middle" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="37" font-weight="600">Autonomous</text>
-<text x="768" y="811" fill="#D0D2D6" text-anchor="middle" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="29">Each verified success moves an agent up. The first error sends it back.</text>
+<text x="768" y="811" fill="#D0D2D6" text-anchor="middle" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="29">A streak of verified successes moves an agent up. The first error sends it back.</text>
 <text x="768" y="864" fill="#94949B" text-anchor="middle" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="25">Payments, signatures, hiring and taxes always stay human.</text>
 <g transform="translate(1250 929) scale(2.6)"><g transform="translate(5.75 5.75)" fill="#F5F5F7"><path d="M9.5 3H4.5A4 4 0 0 0 .5 7v9a4 4 0 0 0 4 4h9a4 4 0 0 0 4-4v-5a1 1 0 0 0-2 0v5a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5a1 1 0 0 0 0-2Z"/><path d="M3.5359 2.5A4 4 0 0 1 7 .5h9a4 4 0 0 1 4 4v9a4 4 0 0 1-2 3.4641V4.5a2 2 0 0 0-2-2Z"/></g></g>
 <text x="1326" y="978" fill="#F5F5F7" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="42" font-weight="650" letter-spacing="-1.2">Select</text>

@@ -110,7 +110,9 @@ export default function OrganizationPage() {
     const el = viewport.current;
     if (!el || tree.nodes.length === 0) return;
     const k = Math.min(1.05, Math.max(0.35, Math.min((el.clientWidth - 64) / tree.width, (el.clientHeight - 96) / tree.height)));
-    setView({ k, x: (el.clientWidth - tree.width * k) / 2, y: Math.max(32, (el.clientHeight - tree.height * k) / 2 - 16) });
+    // Centred across, near the top: a small chart does not float in the middle of an empty canvas.
+    const centred = (el.clientHeight - tree.height * k) / 2 - 16;
+    setView({ k, x: (el.clientWidth - tree.width * k) / 2, y: Math.max(32, Math.min(centred, el.clientHeight * 0.12)) });
   }, [tree]);
   useEffect(() => { fit(); }, [fit]);
 

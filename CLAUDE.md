@@ -1,7 +1,7 @@
 # Select — notes for Claude Code
 
 Select runs a company with AI agents that earn their autonomy: every result is checked by code against a YAML delivery
-contract, and an agent stops needing approval per task type only once its verified record shows it can. Version 0.2.0.
+contract, and an agent stops needing approval per task type only once its verified record shows it can. Version 1.0.0.
 The owner writes in French: answer him in French. Code, comments, commit messages, docs and the interface stay in English.
 
 ## Layout
@@ -13,7 +13,7 @@ The owner writes in French: answer him in French. Code, comments, commit message
 | `packages/select-verify` | The verification library: contracts, deterministic rules, receipts (no database, no network) |
 | `contracts/` | One YAML contract per task type |
 | `packs/` | Demo company and team templates (fr/de/en) |
-| `scripts/` | `dev-up.sh` / `dev-down.sh` (run without Docker), `dev-mail.py` (local IMAP + SMTP servers), `screenshots.mjs` |
+| `scripts/` | `dev-up.sh` / `dev-down.sh` (run without Docker), `dev-mail.py` (local IMAP + SMTP servers), `sample-company.py` + `readme-screenshots.mjs` (the README's sample company and captures), `screenshots.mjs` (demo captures) |
 | `docs/` | User and developer documentation; `docs/fr/README.md` is the French guide |
 
 ## Commands
@@ -22,7 +22,7 @@ The owner writes in French: answer him in French. Code, comments, commit message
 uv sync --all-packages && (cd apps/web && npm ci)        # install
 uv run ruff check apps packages && uv run ruff format --check apps packages
 (cd apps/web && npm run lint && npm run typecheck && npm test && npm run build)
-SELECT_TEST_DATABASE_URL=postgresql+psycopg://user:pw@127.0.0.1:5432/select_test uv run pytest   # 79 tests; recreates that database's schema
+SELECT_TEST_DATABASE_URL=postgresql+psycopg://user:pw@127.0.0.1:5432/select_test uv run pytest   # recreates that database's schema
 uv run select-api check-contracts
 ./scripts/dev-up.sh                                       # API :8000, worker, web :3000 (local auth mode)
 (cd apps/web && E2E_BASE_URL=http://localhost:3000 npx playwright test scenario)

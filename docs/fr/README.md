@@ -1,10 +1,16 @@
+<p align="center"><img src="../hero-select.svg" width="100%" alt="Select — des agents IA qui gagnent leur autonomie." /></p>
+
 # Select — guide en français
 
 **Faites tourner votre entreprise avec des agents IA qui gagnent leur autonomie.**
 
 Des agents de tout type — développeurs, marketing, support, commercial — travaillent dans une organisation que vous définissez. Chaque résultat est vérifié par du code selon un contrat de livraison, et un agent ne se passe de votre validation qu'une fois que ses résultats vérifiés le justifient, type de tâche par type de tâche, révocable à tout moment.
 
-> **Version 0.2.** Comptes, démarrage guidé, vraies boîtes mail, routines et boucle de vérification fonctionnent et sont testés de bout en bout. Les appels réels aux modèles et la construction des images Docker n'ont pas encore été vérifiés (voir « Limites »).
+> **Version 1.0.0, le cœur auto-hébergé.** Comptes, démarrage guidé, boîtes mail, routines et boucle de vérification sont couverts par des tests automatiques, y compris un démarrage Docker Compose dans la CI Ubuntu. Ce n'est pas une certification pour la production : pas encore d'OAuth pour les e-mails, pas d'exécution isolée de Claude Code ou Codex, et aucun appel à un vrai modèle payant n'a encore été vérifié (voir « Limites »).
+
+<p align="center"><img src="../screenshots/home.png" width="900" alt="L'accueil de la société d'exemple : agents, travail en attente, part du travail fini sans personne à côté des erreurs trouvées après coup" /></p>
+
+Les captures montrent **Brightloop Studio**, une société d'exemple que le script `scripts/sample-company.py` crée par l'API publique : les résultats des agents sont écrits par le script et remis par l'API de soumission, sans appel à un modèle ; tout le reste (vérification, approbations, licences, tri et envoi des e-mails) est fait par Select. Voir [cinq minutes](../getting-started.md#the-sample-company).
 
 ## Démarrer en cinq minutes
 
@@ -65,12 +71,12 @@ Gmail : activez la validation en deux étapes et utilisez un mot de passe d'appl
 
 Les paiements, signatures, embauches et déclarations fiscales restent toujours sous contrôle humain, quel que soit le score.
 
-## Limites de la version 0.2
+## Limites de la version 1.0.0
 
-- Appels réels aux fournisseurs de modèles non testés (pas de clé dans l'environnement de développement).
-- Images Docker non construites dans l'environnement de développement (registres inaccessibles) ; `start.sh` testé avec un faux `docker`, `start.ps1` pas exécuté (pas de PowerShell).
-- Boîtes mail testées avec des serveurs IMAP et SMTP locaux, pas encore chez un vrai fournisseur.
-- Les agents écrivent du texte et des résultats structurés via les API ; ils ne travaillent pas encore dans un dépôt de code (pas de Claude Code ni de Codex intégrés).
+- Aucun appel à un vrai modèle payant n'a encore été vérifié : la CI remplace seulement l'appel réseau. Avant de connecter des données réelles, lancez la [sonde fournisseur](../provider-verification.md) avec votre propre clé de test.
+- Docker : la CI construit les images et démarre toute la pile avec Docker Compose sous Ubuntu, sauvegarde et restauration comprises ; les installations sur macOS et Windows et `start.ps1` n'ont pas encore été exécutées.
+- Boîtes mail testées avec des serveurs IMAP et SMTP locaux, pas encore chez un vrai fournisseur ; pas d'OAuth (Microsoft 365 et Outlook.com ne peuvent pas se connecter, Gmail demande un mot de passe d'application).
+- Code : les agents peuvent proposer un diff, relu par une personne ; rien n'est appliqué ni exécuté, et Claude Code ou Codex ne tournent pas encore dans un espace isolé.
 - Pièces jointes non lues, devis envoyés dans le corps de l'e-mail (pas de PDF), pas de facture électronique, franchise en base de TVA pas encore gérée.
 
 La documentation détaillée est en anglais dans le dossier `docs/` : [cinq minutes](../getting-started.md), [installation](../installation.md), [configuration](../configuration.md), [mail](../mail.md), [déploiement](../deployment.md), [sécurité](../security.md), [dépannage](../troubleshooting.md).

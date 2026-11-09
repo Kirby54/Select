@@ -69,6 +69,15 @@ def risk_cap(contract: Contract, policy: dict[str, Any]) -> str:
     return str(policy["max_level_by_risk"].get(contract.risk, "supervised"))
 
 
+def level_cap(contract: Contract, policy: dict[str, Any]) -> str:
+    """The highest level a licence can reach on this contract: its risk cap, or supervised when a person reviews
+    every result anyway (approval mode "always"). There is no autonomy to earn there, and a licence that climbed
+    would tell the owner something false."""
+    if contract.approval.mode == "always":
+        return "supervised"
+    return risk_cap(contract, policy)
+
+
 def get_trust(db: Session, company_id: uuid.UUID, agent_id: uuid.UUID, task_type: str) -> Trust:
     trust = db.scalar(select(Trust).where(Trust.agent_id == agent_id, Trust.task_type == task_type))
     if trust is None:
@@ -152,7 +161,7 @@ def credit_success(
     if trust.streak < threshold:
         return None
     target = LEVELS[rank(trust.level) + 1]
-    cap = risk_cap(contract, policy)
+    cap = level_cap(contract, policy)
     if rank(target) > rank(cap):
         return None
     streak = trust.streak

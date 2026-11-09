@@ -4,9 +4,23 @@ All notable changes are listed here. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Added
+- **Home at a glance:** four small charts from the real counts: work by status, verification results, licences by level, and work finished per day over 14 days (green when no person was needed).
+- **Agent record:** each agent's page shows what the server counts for it: tasks done and open, waiting for you, checks passed and work finished without a person over 30 days.
+- **Sample company:** `scripts/sample-company.py` builds Brightloop Studio through the public API (8 agents, 4 projects, goals, routines, a mailbox on local test servers). The agents' results are submitted through the submission API and no model is called; Select verifies, asks for approvals, moves licences and sends the approved e-mail. `scripts/readme-screenshots.mjs` captures it, and the README screenshots workflow now shows it instead of the demo.
+
+### Changed
+- Licences on contracts that always ask a person (free-form tasks, invoices, payments) no longer climb: there is no autonomy to earn there, and a rising level said something false.
+- Quote e-mails write each line as `Development day: 2 × €780.00 / day = €1,560.00`, so a unit never needs a plural in any language.
+- Clearer wording: approvals in "Needs you" show the task and why a person is asked; triage notes say "quote request"; approval cards say "asks to send a quote by e-mail".
+- The top bar's "running" indicator counts agent runs queued or running, not tasks in progress (which may wait for a correction).
+- Routines: Delete moved into the row menu. The org chart opens near the top. A task's Verification tab no longer repeats the latest receipt in the side panel.
+- The "How Select works" diagram says that a streak of verified successes moves an agent up.
+
 ### Documentation
 - Put the no-API-key demo path and feedback link at the top of the README to help new visitors try the self-hosted core.
 - Point the support section to enabled GitHub Issues templates and fix the security contact link.
+- README: new header, the sample company's real captures, an FAQ; demo screenshots the README no longer shows were removed. The French guide is updated to 1.0.0.
 
 ## [1.0.0] — 2026-11-07
 

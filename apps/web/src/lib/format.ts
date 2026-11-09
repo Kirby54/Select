@@ -71,6 +71,9 @@ export const TASK_TYPE_LABEL: Record<string, string> = {
 
 export const taskTypeLabel = (id: string) => TASK_TYPE_LABEL[id] ?? humanize(id);
 
+/** Free-form work: any agent may take it, and a person reviews every result (its contract says "always"). */
+export const FREE_FORM = "general_task";
+
 /** Where an inbox item leads: the approval queue, the e-mail, the task or the agent. */
 export function inboxHref(cid: string, item: { kind: string; task_id?: string; agent_id?: string; message_id?: string; id: string }): string {
   if (item.kind === "approval") return `/c/${cid}/approvals`;

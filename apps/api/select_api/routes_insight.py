@@ -68,11 +68,16 @@ def overview(ctx: CompanyDep, db: DbDep, days: int = Query(default=7, ge=1, le=3
     costs = {bool(d): Decimal(str(a)) for d, a in cost_rows}
     spent_month = month_spend(db, cid)
     budget = ctx.company.monthly_budget
-    # Daily series of outcomes for the chart: finished vs finished without a human.
+    # Daily series of outcomes for the chart: finished vs finished without a human. Every day of the period is
+    # present (UTC dates, quiet days at zero) so a chart can draw the calendar without guessing today's date.
     outcomes = db.scalars(select(Outcome).where(Outcome.company_id == cid, Outcome.created_at >= since)).all()
-    series: dict[str, dict[str, int]] = {}
+    today = datetime.now(UTC).date()
+    series: dict[str, dict[str, int]] = {
+        (today - timedelta(days=offset)).isoformat(): {"finished": 0, "autonomous": 0, "errors": 0}
+        for offset in range(days - 1, -1, -1)
+    }
     for o in outcomes:
-        day = o.created_at.date().isoformat()
+        day = o.created_at.astimezone(UTC).date().isoformat()
         slot = series.setdefault(day, {"finished": 0, "autonomous": 0, "errors": 0})
         slot["finished"] += 1
         slot["autonomous"] += int(o.autonomous)
@@ -127,6 +132,15 @@ def overview(ctx: CompanyDep, db: DbDep, days: int = Query(default=7, ge=1, le=3
     }
 
 
+APPROVAL_REASON = {
+    "supervised": "supervised",
+    "sampled": "picked for a random review",
+    "contract_always": "always reviewed",
+    "risk_cap": "capped by risk",
+    "new_recipient": "first e-mail to this address",
+}
+
+
 @router.get("/inbox")
 def inbox(ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
     cid = ctx.company.id
@@ -173,9 +187,9 @@ def inbox(ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
             {
                 "kind": "approval",
                 "id": str(a.id),
-                "title": f"Approve {t.title if t else 'task'}",
-                "detail": f"{agents[a.agent_id].name if a.agent_id in agents else 'Agent'} · "
-                f"{a.reason.replace('_', ' ')}",
+                "title": t.title if t else "Approval",
+                "detail": f"Approval · {agents[a.agent_id].name if a.agent_id in agents else 'Agent'} · "
+                f"{APPROVAL_REASON.get(a.reason, a.reason.replace('_', ' '))}",
                 "task_id": str(a.task_id),
                 "created_at": a.created_at.isoformat(),
                 "is_demo": a.is_demo,
@@ -195,11 +209,12 @@ def inbox(ctx: CompanyDep, db: DbDep) -> dict[str, Any]:
         )
     for e in demotions:
         name = agents[e.agent_id].name if e.agent_id in agents else "Agent"
+        contract = get_contract(e.task_type)
         items.append(
             {
                 "kind": "demotion",
                 "id": str(e.id),
-                "title": f"{name} lost autonomy on {e.task_type}",
+                "title": f"{name} lost autonomy: {contract.title if contract else e.task_type}",
                 "detail": e.reason,
                 "agent_id": str(e.agent_id),
                 "created_at": e.created_at.isoformat(),
@@ -252,7 +267,7 @@ def autonomy_view(ctx: CompanyDep, db: DbDep, days: int = Query(default=7, ge=1,
         select(TrustEvent).where(TrustEvent.company_id == cid).order_by(TrustEvent.created_at.desc()).limit(100)
     ).all()
     policy = autonomy.policy_for(ctx.company)
-    caps = {cid_: autonomy.risk_cap(c, policy) for cid_, c in registry().items()}
+    caps = {cid_: autonomy.level_cap(c, policy) for cid_, c in registry().items()}
     licences = []
     for t in trusts:
         agent = agents.get(t.agent_id)
@@ -269,6 +284,8 @@ def autonomy_view(ctx: CompanyDep, db: DbDep, days: int = Query(default=7, ge=1,
                 "promotion_blocked": bool(
                     contract and autonomy.rank(t.level) >= autonomy.rank(caps.get(t.task_type, "supervised"))
                 ),
+                # A person reviews every result of this contract: the licence has nothing to earn.
+                "always_reviewed": bool(contract and contract.approval.mode == "always"),
             }
         )
     return {
@@ -342,7 +359,7 @@ def contracts(ctx: CompanyDep, db: DbDep) -> list[dict[str, Any]]:
         by_contract.setdefault(contract_id, {})[st] = n
     policy = autonomy.policy_for(ctx.company)
     return [
-        {**contract_summary(c), "cap": autonomy.risk_cap(c, policy), "receipts": by_contract.get(c.id, {})}
+        {**contract_summary(c), "cap": autonomy.level_cap(c, policy), "receipts": by_contract.get(c.id, {})}
         for c in registry().values()
     ]
 

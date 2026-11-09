@@ -32,7 +32,6 @@ TEXT: dict[str, dict[str, str]] = {
         "gross": "Total TTC",
         "validity": "Ce devis est valable {days} jours.",
         "colon": "\u202f:",
-        "at": "à",
         "disclosure": (
             "Ce message a été préparé par un assistant IA et vérifié automatiquement, sans relecture humaine."
         ),
@@ -47,7 +46,6 @@ TEXT: dict[str, dict[str, str]] = {
         "gross": "Gesamtbetrag brutto",
         "validity": "Dieses Angebot ist {days} Tage gültig.",
         "colon": ":",
-        "at": "à",
         "disclosure": (
             "Diese Nachricht wurde von einem KI-Assistenten erstellt und automatisch geprüft, "
             "ohne menschliche Durchsicht."
@@ -63,7 +61,6 @@ TEXT: dict[str, dict[str, str]] = {
         "gross": "Total",
         "validity": "This quote is valid for {days} days.",
         "colon": ":",
-        "at": "at",
         "disclosure": "This message was prepared by an AI assistant and checked automatically, without human review.",
     },
 }
@@ -165,12 +162,13 @@ def _quote_body(company: Company, deliverable: dict[str, Any], words: dict[str, 
         item = catalog.get(str(line.get("catalog_ref")), {})
         unit = str(line.get("unit") or item.get("unit") or "")
         label = str(line.get("label") or item.get("label") or line.get("catalog_ref") or "")
-        quantity = f"{_quantity(line.get('quantity'), language)} {unit}".strip()
+        # "Development day: 2 × €780.00 / day": the unit follows the price, so no language needs a plural.
+        per_unit = f" / {unit}" if unit else ""
         own = _rate(line)
         rate = "" if single is not None or own is None else f" ({words['vat']} {format_rate(own, language)})"
         lines.append(
-            f"- {quantity} × {label} "
-            f"{words['at']} {format_amount(line.get('unit_price'), currency, language)} "
+            f"- {label}{words['colon']} {_quantity(line.get('quantity'), language)} × "
+            f"{format_amount(line.get('unit_price'), currency, language)}{per_unit} "
             f"= {format_amount(line.get('line_total'), currency, language)}{rate}"
         )
     totals = deliverable.get("totals") or {}

@@ -231,20 +231,21 @@ def route_triage(db: Session, task: Task) -> Task | None:
     assert company is not None
     result: dict[str, Any] = task.result or {}
     category = str(result.get("category", "other"))
+    said = category.replace("_", " ")  # "quote request", as people read it in notes and history
     priority = {"low": "low", "normal": "medium", "high": "high"}.get(str(result.get("priority")), "medium")
     target = settings_for(company)["routing"].get(category, "human")
     message = db.get(MailMessage, task.message_id) if task.message_id else None
     summary = str(result.get("summary") or "").strip()[:500]
     if target == "ignore":
         if message is not None:
-            message.status, message.status_note = "ignored", f"Triaged as {category}; the routing ignores it."
-        record(db, company.id, SYSTEM, "routing.ignored", "task", task.id, f"T-{task.number} triaged as {category}")
+            message.status, message.status_note = "ignored", f"Triaged as {said}; the routing ignores it."
+        record(db, company.id, SYSTEM, "routing.ignored", "task", task.id, f"T-{task.number} triaged as {said}")
         return None
     agent = pick_agent(db, company.id, target) if target != "human" else None
     if agent is None:
         reason = "the routing sends it to a person" if target == "human" else f"no active agent may do '{target}'"
         if message is not None:
-            message.status, message.status_note = "needs_human", f"Triaged as {category}; {reason}."
+            message.status, message.status_note = "needs_human", f"Triaged as {said}; {reason}."
         record(
             db,
             company.id,
@@ -252,7 +253,7 @@ def route_triage(db: Session, task: Task) -> Task | None:
             "routing.to_human",
             "task",
             task.id,
-            f"T-{task.number} triaged as {category}: {reason}",
+            f"T-{task.number} triaged as {said}: {reason}",
         )
         return None
     language = company.language if company.language in ROUTED_TITLES else "en"
@@ -274,7 +275,7 @@ def route_triage(db: Session, task: Task) -> Task | None:
         actor=SYSTEM,
     )
     if message is not None:
-        message.status, message.status_note = "routed", f"Triaged as {category} → T-{follow_up.number}"
+        message.status, message.status_note = "routed", f"Triaged as {said} → T-{follow_up.number}"
     record(
         db,
         company.id,
@@ -282,7 +283,7 @@ def route_triage(db: Session, task: Task) -> Task | None:
         "routing.routed",
         "task",
         task.id,
-        f"T-{task.number} triaged as {category} → T-{follow_up.number} for {agent.name}",
+        f"T-{task.number} triaged as {said} → T-{follow_up.number} for {agent.name}",
         {"follow_up": str(follow_up.id), "category": category},
     )
     return follow_up

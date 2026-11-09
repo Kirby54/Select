@@ -2,24 +2,46 @@
   <img src="docs/hero-select.svg" width="100%" alt="Select — AI agents that earn their autonomy. Every result checked by code. Trust earned from evidence, never by default." />
 </p>
 
-<h1 align="center">Select</h1>
-
-<p align="center"><strong>Run your company with AI agents that earn their autonomy.</strong></p>
+<p align="center"><strong>Run your company with AI agents that earn their autonomy.</strong><br />
+Open source · self-hosted · every result checked by code</p>
 
 <p align="center">
-Agents of any kind — developers, marketers, support, sales — work in an organization you design. Every result is checked by code against a delivery contract,
-and an agent stops needing your approval only once its verified record shows it can — per task type, revocable at any time.
+  <a href="#quickstart"><strong>Quickstart</strong></a> ·
+  <a href="docs/getting-started.md"><strong>Docs</strong></a> ·
+  <a href="#see-it-work"><strong>Screenshots</strong></a> ·
+  <a href="#limits"><strong>Limits</strong></a> ·
+  <a href="docs/fr/README.md"><strong>Français</strong></a>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/overview.png" alt="Select home after the demo week: four figures, the autonomy rate next to the errors found afterwards, what needs you and recent activity" width="900" />
+  <a href="https://github.com/Kirby54/Select/actions/workflows/ci.yml"><img src="https://github.com/Kirby54/Select/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI on main" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/app-AGPL--3.0-informational" alt="Application licence: AGPL-3.0-only" /></a>
+  <a href="packages/select-verify/LICENSE"><img src="https://img.shields.io/badge/select--verify-Apache--2.0-informational" alt="select-verify licence: Apache-2.0" /></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.0.0-lightgrey" alt="Version 1.0.0" /></a>
 </p>
 
-> **Try Select without an API key:** [Start locally](#quickstart), create the first owner account, open the **demo company** from the account menu, then choose **Run demo week**. Explore verification receipts and human approvals using fictional data. [Screenshots](#explore-the-interface) · [Five-minute guide](docs/getting-started.md) · [Current limits](#limits).
+## What is Select?
+
+Select is a control room for a company that works with AI agents of any kind: developers, marketers, support, sales,
+accounting. You design the organization, hand out work, and decide what leaves the company.
+
+The difference: **agents do not get autonomy because someone ticked a box. They earn it.** Every result is checked by
+code against a delivery contract and keeps a receipt. An agent stops needing your approval for a type of work only once
+its verified record shows it can, and loses that licence at the first blocking error. Payments, signatures, hiring and
+taxes always stay with a person.
+
+<p align="center">
+  <img src="docs/screenshots/home.png" alt="Home of a sample company: agents, work waiting for you, the share of work finished without a person next to the errors found afterwards, work by status, checks, licences and the last 14 days" width="900" />
+</p>
+
+> **Try it in five minutes, without an API key.** [Start Select](#quickstart) and create the owner account. Then open
+> the **demo company** (account menu → *Run demo week*), or create the sample company shown on this page with
+> `uv run python scripts/sample-company.py` ([how](docs/getting-started.md)).
 >
-> **Building reliable AI agents?** Select checks deliverables against code-defined contracts, records evidence, and makes autonomy revocable per agent and task type. If this is useful, [star Select](https://github.com/Kirby54/Select) to find it later, or [share feedback](https://github.com/Kirby54/Select/issues/new/choose).
-
-> **Status: 1.0.0 core release.** Self-hosted task management, deterministic verification and approvals are covered by automated tests, including Ubuntu Docker CI. This is **not production-safety certification**: native OAuth mail, sandboxed coding execution and independently verified real paid-provider acceptance remain unavailable or unverified. See [release notes](release/1.0.0-notes.md) and [Limits](#limits).
+> **Status: 1.0.0, self-hosted core.** Task management, deterministic verification and approvals are covered by
+> automated tests, including a Docker Compose start on Ubuntu CI. This is **not a production-safety certification**:
+> native OAuth mail, sandboxed coding execution and independently verified paid-provider runs are not available or not
+> verified yet. See the [release notes](release/1.0.0-notes.md) and [Limits](#limits).
 
 ## Why Select
 
@@ -52,39 +74,40 @@ Both diagrams are SVG and can be reviewed or edited directly in the repository.
 | Operations | Costs and budgets with hard stop, emergency stop, audit log with CSV export |
 | Demo | A recorded week in a fictional workshop, no API key |
 
-<table>
-  <tr>
-    <td width="50%"><img src="docs/screenshots/messages.png" alt="Messages: an e-mail received, the triage and quote tasks it created, and the reply sent" /></td>
-    <td width="50%"><img src="docs/screenshots/approval-email.png" alt="Approval: exactly the quote e-mail that will be sent, in French, with the VAT rate" /></td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/setup-company.png" alt="Guided setup: the country fills currency, VAT rates, time zone and language" /></td>
-    <td><img src="docs/screenshots/routines.png" alt="Routines: a weekly task on the company's clock, with its agent" /></td>
-  </tr>
-</table>
-
-These four come from the end-to-end test run against local IMAP and SMTP test servers (`E2E_SCREENSHOTS_DIR`); the others are the demo company. All are real captures.
 
 <!-- SELECT_SCREENSHOTS_BEGIN -->
-## Explore the interface
+## See it work
 
-These are real Playwright screenshots of Select running locally with **fictional demo data**.
-No external model provider or mailbox is connected in this capture session.
+Real captures of Select running **Brightloop Studio**, a sample company that
+[`scripts/sample-company.py`](scripts/sample-company.py) creates through the public API:
+8 agents, 4 projects, 3 routines and a mailbox on local test servers. The agents' results were written
+by the script and handed in through the submission API, so **no model was called**. Everything else is
+Select at work: it verified each result, kept the receipts, asked for approvals, moved the licences,
+triaged the incoming e-mail and sent the approved replies once over SMTP.
+Refresh them with the *Refresh real README screenshots* workflow.
 
 <table>
   <tr>
-    <td width="50%"><strong>Human approvals</strong><br /><img src="docs/screenshots/approvals.png" alt="Select approval queue with review context and verified results" /></td>
-    <td width="50%"><strong>Agent team</strong><br /><img src="docs/screenshots/agents.png" alt="Select agent management, responsibilities and runtime status" /></td>
+    <td width="50%"><strong>Exactly what would leave</strong><br /><img src="docs/screenshots/approvals.png" alt="The approval of a quote: who asks, why a person is asked, the checks that passed and exactly the e-mail that would be sent" /></td>
+    <td width="50%"><strong>An agent's record</strong><br /><img src="docs/screenshots/agent.png" alt="Sam, the support agent: tasks done, checks passed, work finished without a person, and the licence earned on each type of task" /></td>
   </tr>
   <tr>
-    <td><strong>Costs and budgets</strong><br /><img src="docs/screenshots/costs.png" alt="Select spending, budgets and agent activity" /></td>
-    <td><strong>Model connections</strong><br /><img src="docs/screenshots/connections.png" alt="Select model connections and generation verification" /></td>
+    <td width="50%"><strong>All the work</strong><br /><img src="docs/screenshots/tasks.png" alt="Tasks grouped by status, with priority, project colour and agent" /></td>
+    <td width="50%"><strong>The team</strong><br /><img src="docs/screenshots/team.png" alt="The org chart: each agent's role, connection and autonomy level" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><strong>E-mail in, work out</strong><br /><img src="docs/screenshots/messages.png" alt="A customer e-mail triaged by an agent and routed by code to the quotes agent" /></td>
+    <td width="50%"><strong>No invented numbers</strong><br /><img src="docs/screenshots/receipt.png" alt="A failed verification: a quantity the customer never wrote stops the quote before anyone is asked" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><strong>Autonomy, earned</strong><br /><img src="docs/screenshots/autonomy.png" alt="Where each licence stands and what the next level needs, next to the errors found afterwards" /></td>
+    <td width="50%"><strong>Work on a schedule</strong><br /><img src="docs/screenshots/routines.png" alt="Routines that create tasks on the company's clock" /></td>
   </tr>
 </table>
 
 <p align="center">
-  <img src="docs/screenshots/mobile-tasks.png" alt="Select tasks on a mobile viewport" width="240" />
-  <img src="docs/screenshots/mobile-autonomy.png" alt="Select autonomy tracking on a mobile viewport" width="240" />
+  <img src="docs/screenshots/mobile-home.png" alt="Home on a phone" width="260" />
+  <img src="docs/screenshots/mobile-approval.png" alt="Approving a quote on a phone, with the exact e-mail" width="260" />
 </p>
 
 <!-- SELECT_SCREENSHOTS_END -->
@@ -114,26 +137,6 @@ Five-minute guide: [docs/getting-started.md](docs/getting-started.md). Developme
 | Autonomous | finishes; a person can revoke the licence at once |
 
 Default promotion thresholds are 20 and 50 verified successes in a row — **starting hypotheses to calibrate, not proven values**. An e-mail to an address that never wrote to you always goes to a person. Details: [docs/autonomy.md](docs/autonomy.md).
-
-<p align="center">
-  <img src="docs/screenshots/autonomy.png" alt="Autonomy: the rate next to the errors found afterwards, where each licence stands and what the next level needs" width="900" />
-</p>
-
-<table>
-  <tr>
-    <td width="50%"><img src="docs/screenshots/tasks.png" alt="Tasks grouped by status, navigable with the keyboard" /></td>
-    <td width="50%"><img src="docs/screenshots/organization.png" alt="Org chart with each agent's role icon, model and autonomy" /></td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/verification.png" alt="Verification: contracts, checks and receipts with real counts" /></td>
-    <td><img src="docs/screenshots/task-receipts.png" alt="A task with its verification receipts" /></td>
-  </tr>
-</table>
-
-<p align="center">
-  <img src="docs/screenshots/mobile-overview.png" alt="Home on a phone" width="240" />
-  <img src="docs/screenshots/mobile-approvals.png" alt="Approvals on a phone" width="240" />
-</p>
 
 ## A contract
 
@@ -191,6 +194,23 @@ None published yet. The protocol (`autonomy-bench`: same tasks and models, auton
 - Attachments are not read; quotes are sent as e-mail text, without a PDF.
 - **No e-invoice**: the invoice draft is not an XRechnung or ZUGFeRD file and is never presented as compliant. Businesses exempt from VAT (*franchise en base*) are not handled properly yet.
 - No single sign-on, two-factor authentication, plugins or sandboxed code execution.
+
+## FAQ
+
+**Do I need an API key?** Not to try it: the demo company and the sample company run without one. Agents that do real
+work need a model: Anthropic, OpenAI, Gemini, or a local Ollama.
+
+**Can agents write code?** They can propose a diff, which Select checks for structure and sends to a person; nothing is
+applied or executed. Running Claude Code or Codex in an isolated workspace, verified by the project's tests, is next on
+the roadmap.
+
+**Where does my data go?** Nowhere but your server and the model provider you connect. Provider keys and mailbox
+passwords are stored encrypted.
+
+**How does it compare with Paperclip?** Paperclip is a mature orchestrator and is ahead on coding agents, plugins and
+agents that organise themselves. Select's bet is narrower: autonomy earned from verified results, value provenance and an
+honest error rate. A feature-by-feature comparison is in [docs/parity.md](docs/parity.md); no claim of superiority is
+made without a measurement.
 
 ## Documentation
 
