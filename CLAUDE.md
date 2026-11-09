@@ -58,7 +58,6 @@ Résultats des tests · Problèmes restants · Prochaine priorité.
 
 ## Not verified yet / next
 
-Real model calls (needs a key), `start.ps1` on Windows, full installs on Windows/macOS, and real mail providers.
+Real model calls (needs a key), a code runner run with real Claude Code or Codex (the CLIs accept its flags; no valid key used yet), `start.ps1` on Windows, full installs on Windows/macOS, and real mail providers.
 The Docker images and complete Compose stack have been built and started in Ubuntu CI, with web-to-API health verified.
-Next features: coding-agent runtimes (Claude Code, Codex) verified by the project's tests; quote PDFs; OAuth
-mailboxes; VAT-exempt businesses.
+Next features: pull requests from the code runner after approval; quote PDFs; OAuth mailboxes; VAT-exempt businesses.

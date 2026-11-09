@@ -40,8 +40,8 @@ taxes always stay with a person.
 >
 > **Status: 1.0.0, self-hosted core.** Task management, deterministic verification and approvals are covered by
 > automated tests, including a Docker Compose start on Ubuntu CI. This is **not a production-safety certification**:
-> native OAuth mail, sandboxed coding execution and independently verified paid-provider runs are not available or not
-> verified yet. See the [release notes](release/1.0.0-notes.md) and [Limits](#limits).
+> native OAuth mail and independently verified paid-provider runs are not available or not verified yet, and the code
+> runner for Claude Code and Codex has not yet run with a real model key. See the [release notes](release/1.0.0-notes.md) and [Limits](#limits).
 
 ## Why Select
 
@@ -190,7 +190,7 @@ None published yet. The protocol (`autonomy-bench`: same tasks and models, auton
 - **Provider calls** have not been exercised against real paid-model APIs (no keys in CI). An Ollama-compatible localhost HTTP stub is used to test the full worker, deterministic verification and approval pipeline; it does not execute a real model.
 - **Docker**: GitHub Actions builds both images, starts PostgreSQL, API, worker and web with Compose, and reaches the API health endpoint through the web proxy on Ubuntu. The `start.sh` script itself was tested with a stand-in Docker CLI; real macOS/Windows installations and `start.ps1` have not been exercised in CI.
 - **Mailboxes** were tested against local IMAP and SMTP servers, not yet at a real provider. No OAuth: Microsoft 365 and Outlook.com cannot connect yet; Gmail needs an app password.
-- **Agents write text and structured results through model APIs.** Code-change proposals can be checked for basic diff structure and sent to mandatory human review, but no repository code is edited, executed or pushed by Select. There is no isolated Claude Code or Codex runtime yet. See [review-only code proposals](docs/code-change-proposals.md).
+- **Coding agents** work through the [code runner](docs/code-runner.md), which you run on a disposable machine: Claude Code or Codex edit a clone without remotes, the project's tests run on the exact diff, and a person approves it. Select never applies, executes or pushes code. Tested end to end with a stand-in agent; the real CLIs accept the runner's command line, but no run with a valid model key has been recorded yet.
 - Attachments are not read; quotes are sent as e-mail text, without a PDF.
 - **No e-invoice**: the invoice draft is not an XRechnung or ZUGFeRD file and is never presented as compliant. Businesses exempt from VAT (*franchise en base*) are not handled properly yet.
 - No single sign-on, two-factor authentication, plugins or sandboxed code execution.
@@ -200,9 +200,10 @@ None published yet. The protocol (`autonomy-bench`: same tasks and models, auton
 **Do I need an API key?** Not to try it: the demo company and the sample company run without one. Agents that do real
 work need a model: Anthropic, OpenAI, Gemini, or a local Ollama.
 
-**Can agents write code?** They can propose a diff, which Select checks for structure and sends to a person; nothing is
-applied or executed. Running Claude Code or Codex in an isolated workspace, verified by the project's tests, is next on
-the roadmap.
+**Can agents write code?** Yes, through the [code runner](docs/code-runner.md): Claude Code or Codex change a fresh
+clone of your repository on a machine you choose, the project's tests run on the exact diff, and a person approves that
+diff. Select never applies or pushes it. The loop is tested with a stand-in agent; a run with a real model key is not
+verified yet.
 
 **Where does my data go?** Nowhere but your server and the model provider you connect. Provider keys and mailbox
 passwords are stored encrypted.
@@ -214,7 +215,7 @@ made without a measurement.
 
 ## Documentation
 
-[Five minutes](docs/getting-started.md) · [Installation](docs/installation.md) · [Provider probe](docs/provider-verification.md) · [Configuration](docs/configuration.md) · [Mail](docs/mail.md) · [Agents](docs/agents.md) · [Autonomy](docs/autonomy.md) · [Verification](docs/verification.md) · [Workflows and routines](docs/workflows.md) · [Architecture](docs/architecture.md) · [Deployment](docs/deployment.md) · [Security](docs/security.md) · [Troubleshooting](docs/troubleshooting.md) · [Design system](docs/design-system.md) · [Français](docs/fr/README.md)
+[Five minutes](docs/getting-started.md) · [Code runner](docs/code-runner.md) · [Installation](docs/installation.md) · [Provider probe](docs/provider-verification.md) · [Configuration](docs/configuration.md) · [Mail](docs/mail.md) · [Agents](docs/agents.md) · [Autonomy](docs/autonomy.md) · [Verification](docs/verification.md) · [Workflows and routines](docs/workflows.md) · [Architecture](docs/architecture.md) · [Deployment](docs/deployment.md) · [Security](docs/security.md) · [Troubleshooting](docs/troubleshooting.md) · [Design system](docs/design-system.md) · [Français](docs/fr/README.md)
 
 ## Contributing
 
@@ -227,7 +228,7 @@ Start with [CONTRIBUTING.md](CONTRIBUTING.md). Good first contributions: a new c
 ## Roadmap
 
 1. Verify with real model keys and real mailboxes; keep Docker startup, recovery and tests green across supported environments.
-2. Coding-agent runtimes: run Claude Code or Codex in a code workspace, verify with the project's tests, approve the exact diff.
+2. Coding agents: record real Claude Code and Codex runs through the code runner; open the pull request after approval.
 3. Run without Docker (embedded database), like a one-command install.
 4. Quote PDFs, attachments, OAuth mailboxes, VAT-exempt businesses.
 5. Run `autonomy-bench` and publish the raw results.

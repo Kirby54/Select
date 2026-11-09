@@ -301,3 +301,80 @@ def test_code_change_missing_patch_is_blocked(ctx):
     contract = load_contract((CONTRACTS / "code_change.yaml").read_text())
     receipt = verify(contract, {"summary": "Change"}, ctx, run_id="r")
     assert receipt.status == "blocked"
+
+
+# --- code change proposals: protected paths and test reports -------------------------------------------------
+
+PATCH = (
+    "diff --git a/src/app.py b/src/app.py\n--- a/src/app.py\n+++ b/src/app.py\n@@ -1 +1 @@\n"
+    "-print('hello')\n+print('Hello')\n"
+)
+BASE = "a" * 40
+
+
+def with_report(diff: str = PATCH, **changes: object) -> dict[str, object]:
+    import hashlib
+
+    report: dict[str, object] = {
+        "command": "python -m pytest",
+        "exit_code": 0,
+        "duration_ms": 1200,
+        "diff_sha256": hashlib.sha256(diff.encode("utf-8")).hexdigest(),
+        "output_sha256": "b" * 64,
+        "base_commit": BASE,
+        "runner": "laptop",
+    }
+    report.update(changes)
+    return {"summary": "Capitalise the greeting.", "diff": diff, "base_commit": BASE, "tests": report}
+
+
+def code_checks(output: dict[str, object]) -> dict[str, tuple[str, str]]:
+    contract = load_contract((CONTRACTS / "code_change.yaml").read_text())
+    receipt = verify(contract, output, VerifyContext(), run_id="r1")
+    return {c.id: (c.status, c.message) for c in receipt.checks}
+
+
+def test_tested_patch_passes_every_check() -> None:
+    checks = code_checks(with_report())
+    assert {k: s for k, (s, _) in checks.items()} == {
+        "summary_bounded": "passed",
+        "patch_structure": "passed",
+        "protected_paths": "passed",
+        "tests_match_patch": "passed",
+        "tested": "passed",
+    }
+    assert "runner laptop" in checks["tests_match_patch"][1]
+
+
+def test_untested_patch_is_verified_but_says_so() -> None:
+    contract = load_contract((CONTRACTS / "code_change.yaml").read_text())
+    receipt = verify(contract, {"summary": "s", "diff": PATCH}, VerifyContext(), run_id="r1")
+    assert receipt.status == "verified"  # the presence check is non-blocking
+    tested_check = next(c for c in receipt.checks if c.id == "tested")
+    assert (tested_check.status, tested_check.blocking) == ("failed", False)
+    assert tested_check.message.startswith("not tested")
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        ({"exit_code": 1}, "tests failed (exit code 1)"),
+        ({"diff_sha256": "c" * 64}, "different patch"),
+        ({"base_commit": "d" * 40}, "incomplete or malformed"),
+        ({"command": ""}, "incomplete or malformed"),
+        ({"exit_code": True}, "incomplete or malformed"),
+    ],
+)
+def test_bad_test_reports_fail_and_block(changes: dict[str, object], message: str) -> None:
+    contract = load_contract((CONTRACTS / "code_change.yaml").read_text())
+    receipt = verify(contract, with_report(**changes), VerifyContext(), run_id="r1")
+    check = next(c for c in receipt.checks if c.id == "tests_match_patch")
+    assert check.status == "failed" and check.blocking and message in check.message
+    assert receipt.status == "failed"
+
+
+@pytest.mark.parametrize("path", [".github/workflows/ci.yml", ".env", "config/.env.production", "certs/server.pem"])
+def test_patches_touching_protected_files_fail(path: str) -> None:
+    diff = PATCH.replace("src/app.py", path)
+    status, message = code_checks(with_report(diff))["protected_paths"]
+    assert status == "failed" and "protected" in message

@@ -6,7 +6,7 @@
 
 Des agents de tout type — développeurs, marketing, support, commercial — travaillent dans une organisation que vous définissez. Chaque résultat est vérifié par du code selon un contrat de livraison, et un agent ne se passe de votre validation qu'une fois que ses résultats vérifiés le justifient, type de tâche par type de tâche, révocable à tout moment.
 
-> **Version 1.0.0, le cœur auto-hébergé.** Comptes, démarrage guidé, boîtes mail, routines et boucle de vérification sont couverts par des tests automatiques, y compris un démarrage Docker Compose dans la CI Ubuntu. Ce n'est pas une certification pour la production : pas encore d'OAuth pour les e-mails, pas d'exécution isolée de Claude Code ou Codex, et aucun appel à un vrai modèle payant n'a encore été vérifié (voir « Limites »).
+> **Version 1.0.0, le cœur auto-hébergé.** Comptes, démarrage guidé, boîtes mail, routines et boucle de vérification sont couverts par des tests automatiques, y compris un démarrage Docker Compose dans la CI Ubuntu. Ce n'est pas une certification pour la production : pas encore d'OAuth pour les e-mails, et aucun appel à un vrai modèle payant n'a encore été vérifié, y compris pour le code runner de Claude Code et Codex (voir « Limites »).
 
 <p align="center"><img src="../screenshots/home.png" width="900" alt="L'accueil de la société d'exemple : agents, travail en attente, part du travail fini sans personne à côté des erreurs trouvées après coup" /></p>
 
@@ -76,7 +76,7 @@ Les paiements, signatures, embauches et déclarations fiscales restent toujours 
 - Aucun appel à un vrai modèle payant n'a encore été vérifié : la CI remplace seulement l'appel réseau. Avant de connecter des données réelles, lancez la [sonde fournisseur](../provider-verification.md) avec votre propre clé de test.
 - Docker : la CI construit les images et démarre toute la pile avec Docker Compose sous Ubuntu, sauvegarde et restauration comprises ; les installations sur macOS et Windows et `start.ps1` n'ont pas encore été exécutées.
 - Boîtes mail testées avec des serveurs IMAP et SMTP locaux, pas encore chez un vrai fournisseur ; pas d'OAuth (Microsoft 365 et Outlook.com ne peuvent pas se connecter, Gmail demande un mot de passe d'application).
-- Code : les agents peuvent proposer un diff, relu par une personne ; rien n'est appliqué ni exécuté, et Claude Code ou Codex ne tournent pas encore dans un espace isolé.
+- Code : avec le [code runner](../code-runner.md), Claude Code ou Codex modifient une copie jetable du dépôt sur une machine que vous choisissez, les tests du projet tournent sur le diff exact et une personne l'approuve ; Select n'applique ni ne pousse rien. Testé avec un agent de remplacement ; aucun passage avec une vraie clé n'est encore enregistré.
 - Pièces jointes non lues, devis envoyés dans le corps de l'e-mail (pas de PDF), pas de facture électronique, franchise en base de TVA pas encore gérée.
 
 La documentation détaillée est en anglais dans le dossier `docs/` : [cinq minutes](../getting-started.md), [installation](../installation.md), [configuration](../configuration.md), [mail](../mail.md), [déploiement](../deployment.md), [sécurité](../security.md), [dépannage](../troubleshooting.md).

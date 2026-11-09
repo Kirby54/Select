@@ -5,11 +5,14 @@ All notable changes are listed here. Format: [Keep a Changelog](https://keepacha
 ## [Unreleased]
 
 ### Added
+- **Code runner** (`select-api code-runner`): does `code_change` tasks with Claude Code (`claude --bare -p`), Codex (`codex exec --sandbox workspace-write`) or any command, each in a fresh clone without remotes and with a clean environment, runs the project's tests on the exact diff, and hands in the diff with a test report. Select never applies or pushes it; a person approves the exact diff. See [docs/code-runner.md](docs/code-runner.md).
+- `select-verify`: `diff_paths` (protected files) and `test_evidence` (a test report bound to the exact diff and base commit) rules.
 - **Home at a glance:** four small charts from the real counts: work by status, verification results, licences by level, and work finished per day over 14 days (green when no person was needed).
 - **Agent record:** each agent's page shows what the server counts for it: tasks done and open, waiting for you, checks passed and work finished without a person over 30 days.
 - **Sample company:** `scripts/sample-company.py` builds Brightloop Studio through the public API (8 agents, 4 projects, goals, routines, a mailbox on local test servers). The agents' results are submitted through the submission API and no model is called; Select verifies, asks for approvals, moves licences and sends the approved e-mail. `scripts/readme-screenshots.mjs` captures it, and the README screenshots workflow now shows it instead of the demo.
 
 ### Changed
+- **`code_change` contract v2:** protected files (CI configuration, `.env`, keys) block a patch; a reported test run must match the exact diff and have passed; an untested proposal says *not tested* (non-blocking). Grants issued for v1 stop matching, as for any contract change: issue them again. The approval card shows the test result and the diff in colour.
 - Licences on contracts that always ask a person (free-form tasks, invoices, payments) no longer climb: there is no autonomy to earn there, and a rising level said something false.
 - Quote e-mails write each line as `Development day: 2 × €780.00 / day = €1,560.00`, so a unit never needs a plural in any language.
 - Clearer wording: approvals in "Needs you" show the task and why a person is asked; triage notes say "quote request"; approval cards say "asks to send a quote by e-mail".

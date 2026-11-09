@@ -1,9 +1,11 @@
-# A code change is a REVIEW-ONLY PROPOSAL, never an executable patch.
-# Structural checks cannot establish correctness or that a patch applies.
+# A code change is a PROPOSAL that a person reviews; Select never applies, executes or pushes it.
+# A code runner (select-api code-runner) can attach the result of the project's tests, run in its own
+# disposable workspace. Select checks that the report is about this exact patch and that it passed; it does
+# not run the tests itself, so the report is as trustworthy as the runner you registered.
 id: code_change
-version: 1
+version: 2
 title: Code change proposal (human review required)
-description: A proposed text diff for a separate code workspace; it is NOT applied, executed or pushed by Select.
+description: A text diff for a repository, reviewed by a person. Select does not apply, execute or push it.
 risk: high
 required:
   - summary
@@ -16,6 +18,21 @@ checks:
     rule: unified_diff_shape
     description: Check text diff structure and reject traversal/binary patches; this is NOT a code correctness check.
     params: { field: diff, max_bytes: 100000, max_files: 20 }
+  - id: protected_paths
+    rule: diff_paths
+    description: The patch must not touch CI configuration, secrets or keys.
+    params:
+      field: diff
+      forbidden: [".github/*", ".gitlab-ci.yml", ".circleci/*", ".env", ".env.*", "*.pem", "*.key", "id_rsa*"]
+  - id: tests_match_patch
+    rule: test_evidence
+    description: A reported test run must be about this exact patch and base commit, and must have passed.
+    params: { mode: consistency, field: tests, diff_field: diff, base_field: base_commit }
+  - id: tested
+    rule: test_evidence
+    blocking: false
+    description: A code runner reported a test run; without one, the proposal is untested.
+    params: { mode: presence, field: tests }
 correction:
   max_attempts: 0
 approval:
