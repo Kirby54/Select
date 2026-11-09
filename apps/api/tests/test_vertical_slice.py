@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from datetime import UTC, datetime
 
 from helpers import good_quote, new_quote_task, ok, pending_approval, setup_company, submit, trust_level
 
@@ -55,6 +56,11 @@ def test_vertical_slice(client):
     # The error rate is never shown as 0 % from too small a sample.
     assert overview["autonomy"]["undetected_error_rate"] is None
     assert overview["autonomy"]["undetected_error_measurable"] is False
+    # One entry per day of the period, quiet days included, ending today (UTC): a chart can draw the calendar.
+    days = [d["day"] for d in overview["series"]]
+    assert len(days) == overview["period_days"] == 7 and days == sorted(days)
+    assert days[-1] == datetime.now(UTC).date().isoformat()
+    assert overview["series"][-1]["finished"] == 1 and sum(d["finished"] for d in overview["series"]) == 1
 
 
 def test_failed_verification_needs_correction_and_never_reaches_approval(client):

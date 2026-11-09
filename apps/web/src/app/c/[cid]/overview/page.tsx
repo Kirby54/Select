@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 
+import { DailyBars, GlanceCard, PartsBar, type Part } from "@/components/charts";
 import { ActivityTimeline } from "@/components/domain";
 import { PageBody, PageHeader } from "@/components/shell/app-shell";
 import { EmptyState, ErrorState, LoadingRows, useToast } from "@/components/ui/feedback";
@@ -139,6 +140,50 @@ function AutonomyLine({ o, cid }: { o: Overview; cid: string }) {
   );
 }
 
+/** Four small charts from the overview's own counts: the work, its checks, the licences and the last 14 days. */
+function AtAGlance({ o, cid }: { o: Overview; cid: string }) {
+  const t = o.tasks;
+  const work: Part[] = [
+    { key: "done", label: "Done", value: t.done, color: "bg-success" },
+    { key: "in_progress", label: "In progress", value: t.in_progress, color: "bg-accent" },
+    { key: "awaiting", label: "Waiting for you", value: t.awaiting_approval, color: "bg-supervised" },
+    { key: "blocked", label: "Blocked", value: t.blocked, color: "bg-danger" },
+    { key: "todo", label: "To do", value: t.todo, color: "bg-ghost" },
+  ];
+  const tasks = work.reduce((n, p) => n + p.value, 0);
+  const r = o.receipts;
+  const checked = r.verified + r.failed + r.blocked;
+  const checks: Part[] = [
+    { key: "verified", label: "Passed", value: r.verified, color: "bg-success" },
+    { key: "failed", label: "Failed", value: r.failed, color: "bg-danger" },
+    { key: "blocked", label: "Missing info", value: r.blocked, color: "bg-warning" },
+  ];
+  const l = o.levels;
+  const licences: Part[] = [
+    { key: "autonomous", label: "Autonomous", value: l.autonomous, color: "bg-autonomous" },
+    { key: "sampled", label: "Sampled", value: l.sampled, color: "bg-sampled" },
+    { key: "supervised", label: "Supervised", value: l.supervised, color: "bg-supervised" },
+  ];
+  const days = o.series.slice(-14);
+  const finished = days.reduce((n, d) => n + d.finished, 0);
+  return (
+    <section aria-label="At a glance" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <GlanceCard title="Work" figure={tasks} unit={tasks === 1 ? "task" : "tasks"} href={`/c/${cid}/tasks`}>
+        <PartsBar parts={work} label="Tasks by status" />
+      </GlanceCard>
+      <GlanceCard title="Checks" figure={checked ? percent(r.verified / checked) : "—"} unit={`passed · ${r.verified} of ${checked} results`} href={`/c/${cid}/verification`}>
+        <PartsBar parts={checks} label={`Verification results, last ${o.period_days} days`} />
+      </GlanceCard>
+      <GlanceCard title="Licences" figure={l.autonomous + l.sampled + l.supervised} unit="per agent and task type" href={`/c/${cid}/autonomy`}>
+        <PartsBar parts={licences} label="Licences by level" />
+      </GlanceCard>
+      <GlanceCard title="Finished" figure={finished} unit="in the last 14 days" href={`/c/${cid}/autonomy`}>
+        <DailyBars series={days} />
+      </GlanceCard>
+    </section>
+  );
+}
+
 const INBOX_ICON: Record<InboxItem["kind"], ReactNode> = {
   approval: <ClipboardCheck className="size-3.5 text-supervised" aria-hidden />,
   blocked: <AlertOctagon className="size-3.5 text-danger" aria-hidden />,
@@ -216,6 +261,7 @@ function OverviewInner() {
         <PageBody>
           <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>
           <Skeleton className="h-12 rounded-xl" />
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-40 rounded-xl" />)}</div>
           <div className="grid gap-6 lg:grid-cols-2">
             <Skeleton className="h-72 rounded-xl" />
             <Skeleton className="h-72 rounded-xl" />
@@ -264,6 +310,8 @@ function OverviewInner() {
           </div>
           <AutonomyLine o={o} cid={cid} />
         </div>
+
+        <AtAGlance o={o} cid={cid} />
 
         <div className="grid items-start gap-6 lg:grid-cols-2">
           <NeedsYou cid={cid} />

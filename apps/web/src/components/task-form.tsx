@@ -10,12 +10,9 @@ import { z } from "zod";
 import { Dialog } from "./ui/overlay";
 import { Button, Field, Input, Select, Textarea, cx } from "./ui/primitives";
 import { api } from "@/lib/api";
-import { taskTypeLabel } from "@/lib/format";
+import { FREE_FORM, taskTypeLabel } from "@/lib/format";
 import { useAction, useAgents, useContracts, useProjects } from "@/lib/queries";
 import type { Task } from "@/lib/types";
-
-/** Free-form work: any agent may take it, and a person always reviews the result. */
-const FREE_FORM = "general_task";
 
 const schema = z.object({
   title: z.string().trim().min(1, "Say what should be done").max(200),

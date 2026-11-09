@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, MoreHorizontal, Play, Plus } from "lucide-react";
+import { ArrowUpRight, CalendarClock, MoreHorizontal, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
@@ -142,6 +142,7 @@ function RoutineRow({ cid, r, canAdmin, canRun, onEdit }: { cid: string; r: Rout
   const toggle = useAction(cid, (enabled: boolean) => api(`/companies/${cid}/routines/${r.id}`, { method: "PATCH", body: { enabled } }), { success: (x: unknown) => ((x as Routine).enabled ? "Routine on" : "Routine off") });
   const run = useAction(cid, () => api<{ key: string }>(`/companies/${cid}/routines/${r.id}/run`, { method: "POST" }), { success: (t) => `${t.key} created` });
   const remove = useAction(cid, () => api(`/companies/${cid}/routines/${r.id}`, { method: "DELETE" }), { success: "Routine deleted" });
+  const [deleting, setDeleting] = useState(false);
   return (
     <li className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -167,14 +168,16 @@ function RoutineRow({ cid, r, canAdmin, canRun, onEdit }: { cid: string; r: Rout
             trigger={<IconButton label={`Actions for ${r.name}`}><MoreHorizontal className="size-4" aria-hidden /></IconButton>}
             items={[
               ...(canRun ? [{ label: "Run now", icon: <Play aria-hidden />, onSelect: () => run.mutate(undefined) }] : []),
-              ...(canAdmin ? [{ label: "Edit", onSelect: onEdit }, "separator" as const] : []),
-              ...(r.last_task_id ? [{ label: "Open the last task", onSelect: () => router.push(`/c/${cid}/tasks/${r.last_task_id}`) }] : []),
+              ...(canAdmin ? [{ label: "Edit", icon: <Pencil aria-hidden />, onSelect: onEdit }] : []),
+              ...(r.last_task_id ? [{ label: "Open the last task", icon: <ArrowUpRight aria-hidden />, onSelect: () => router.push(`/c/${cid}/tasks/${r.last_task_id}`) }] : []),
+              ...(canAdmin ? ["separator" as const, { label: "Delete…", icon: <Trash2 aria-hidden />, danger: true, onSelect: () => setDeleting(true) }] : []),
             ]}
           />
         )}
         {canAdmin && (
           <ConfirmDialog
-            trigger={<Button size="sm" variant="ghost" className="text-danger hover:text-danger">Delete</Button>}
+            open={deleting}
+            onOpenChange={setDeleting}
             title={`Delete ${r.name}?`}
             description="Tasks it already created stay. No new task is created on this schedule."
             confirmLabel="Delete"

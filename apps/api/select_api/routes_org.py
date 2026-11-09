@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import re
 import uuid
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 
 from . import autonomy, delivery, jobs
 from .audit import record
@@ -17,13 +18,16 @@ from .company_profile import COUNTRIES, normalize_rates, rate_allowed, validate_
 from .config import get_settings
 from .contracts import registry
 from .models import (
+    TASK_STATUSES,
     Agent,
     Company,
     CostEvent,
     Goal,
     Membership,
+    Outcome,
     Project,
     ProviderConnection,
+    ReceiptRow,
     Run,
     Task,
     Trust,
@@ -406,6 +410,41 @@ def get_agent(agent_id: uuid.UUID, ctx: CompanyDep, db: DbDep) -> dict[str, Any]
         "tasks": [task_out(t, agent) for t in tasks],
         "costs": [{"kind": k, "amount": format(Decimal(str(a)), "f"), "events": n} for k, a, n in cost],
         "contracts": sorted(agent.task_types or []),
+        "record": _agent_record(db, agent.id),
+    }
+
+
+RECORD_DAYS = 30
+
+
+def _agent_record(db: DbDep, agent_id: uuid.UUID) -> dict[str, Any]:
+    """The agent's record counted in the database: its tasks now, and its checks and outcomes over 30 days."""
+    since = datetime.now(UTC) - timedelta(days=RECORD_DAYS)
+    tasks = dict(
+        db.execute(
+            select(Task.status, func.count())
+            .where(Task.assignee_id == agent_id, Task.archived_at.is_(None))
+            .group_by(Task.status)
+        ).all()
+    )
+    checks = dict(
+        db.execute(
+            select(ReceiptRow.status, func.count())
+            .where(ReceiptRow.agent_id == agent_id, ReceiptRow.created_at >= since)
+            .group_by(ReceiptRow.status)
+        ).all()
+    )
+    finished, autonomous = db.execute(
+        select(func.count(), func.coalesce(func.sum(case((Outcome.autonomous, 1), else_=0)), 0)).where(
+            Outcome.agent_id == agent_id, Outcome.created_at >= since
+        )
+    ).one()
+    return {
+        "period_days": RECORD_DAYS,
+        "tasks": {name: int(tasks.get(name, 0)) for name in TASK_STATUSES},
+        "checks": {name: int(checks.get(name, 0)) for name in ("verified", "failed", "blocked")},
+        "finished": int(finished),
+        "autonomous": int(autonomous),
     }
 
 

@@ -456,6 +456,8 @@ export interface Licence extends Trust {
   risk: string | null;
   next_threshold: number | null;
   promotion_blocked: boolean;
+  /** The contract sends every result to a person: the licence has nothing to earn. */
+  always_reviewed: boolean;
 }
 
 export interface AutonomyView {

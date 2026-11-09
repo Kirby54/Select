@@ -10,7 +10,7 @@ import { createPortal } from "react-dom";
 import { inboxHref, relative } from "@/lib/format";
 import { api } from "@/lib/api";
 import { useMediaQuery } from "@/lib/hooks";
-import { useAction, useAuthState, useCompany, useInbox, useMailboxes, useOverview, usePersistentState } from "@/lib/queries";
+import { useAction, useAgents, useAuthState, useCompany, useInbox, useMailboxes, usePersistentState } from "@/lib/queries";
 import type { Company } from "@/lib/types";
 import { DemoBanner, ErrorState, LoadingRows } from "../ui/feedback";
 import { ConfirmDialog, Dialog, Dropdown, Popover } from "../ui/overlay";
@@ -131,12 +131,13 @@ function Notifications({ company }: { company: Company }) {
   );
 }
 
+/** Agent runs queued or running right now (not tasks "in progress", which may wait for a correction). */
 function RunningIndicator({ company }: { company: Company }) {
-  const overview = useOverview(company.id, 7);
-  const running = overview.data?.tasks.in_progress ?? 0;
+  const agents = useAgents(company.id);
+  const running = (agents.data ?? []).reduce((n, a) => n + a.working, 0);
   if (!running) return null;
   return (
-    <Link href={`/c/${company.id}/tasks`} className="hidden h-7 items-center gap-1.5 rounded-lg px-2 text-xs text-muted transition-colors hover:bg-hover hover:text-fg xl:inline-flex">
+    <Link href={`/c/${company.id}/agents`} className="hidden h-7 items-center gap-1.5 rounded-lg px-2 text-xs text-muted transition-colors hover:bg-hover hover:text-fg xl:inline-flex">
       <Loader2 className="size-3 animate-spin text-accent" aria-hidden />
       <span className="tabular">{running}</span> running
     </Link>

@@ -168,6 +168,13 @@ def test_free_form_task_is_always_reviewed(client):
         assert result["approvals"][-1]["reason"] == "contract_always"
         approval_id = result["approvals"][-1]["id"]
         ok(client.post(f"/api/companies/{cid}/approvals/{approval_id}/decide", json={"decision": "approved"}))
+    # The successes count, but the licence does not climb: there is no autonomy to earn on always-reviewed work.
+    detail = ok(client.get(f"/api/companies/{cid}/agents/{agent['id']}"))
+    licences = [(t["task_type"], t["level"], t["successes"]) for t in detail["trust"]]
+    assert licences == [("general_task", "supervised", 3)]
+    assert detail["record"]["tasks"]["done"] == 3
+    assert detail["record"]["checks"] == {"verified": 3, "failed": 0, "blocked": 0}
+    assert (detail["record"]["finished"], detail["record"]["autonomous"]) == (3, 0)
 
 
 def test_any_agent_takes_free_form_work_and_shows_when_it_works(client):

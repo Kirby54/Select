@@ -1,14 +1,107 @@
 "use client";
 
 /**
- * Hand-made, quiet charts (no chart library): TaskWeek (a unit chart where every square is a finished task),
- * AutonomyChart (finished vs. finished without a human, per day) and AmountChart (cost per day).
- * Each one exposes its numbers as a visually hidden table, and never relies on colour alone.
+ * Hand-made, quiet charts (no chart library): GlanceCard with PartsBar (a whole split into its parts) and DailyBars
+ * (finished work per day) for Home, TaskWeek (a unit chart where every square is a finished task), AutonomyChart
+ * (finished vs. finished without a human, per day) and AmountChart (cost per day).
+ * Each one exposes its numbers in text (a legend with counts or a visually hidden table), never by colour alone.
  */
+import Link from "next/link";
+import type { ReactNode } from "react";
+
 import { formatDay, money } from "@/lib/format";
 import { cx } from "./ui/primitives";
 
 type Day = { day: string; finished: number; autonomous: number; errors: number };
+
+/** One part of a whole: its name, its count and the background class that colours it. */
+export type Part = { key: string; label: string; value: number; color: string };
+
+/** A figure with its chart, the way Home shows the company at a glance. The whole card links to the details. */
+export function GlanceCard({ title, figure, unit, href, children }: { title: string; figure: ReactNode; unit?: ReactNode; href: string; children: ReactNode }) {
+  return (
+    <Link href={href} className="group block min-w-0 rounded-xl border border-line bg-surface p-4 transition-colors duration-[120ms] hover:border-line-strong sm:p-5">
+      <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">{title}</h3>
+      <p className="mt-2 flex min-w-0 items-baseline gap-2">
+        <span className="text-2xl font-bold tracking-tight text-fg tabular">{figure}</span>
+        {unit && <span className="min-w-0 truncate text-xs text-faint">{unit}</span>}
+      </p>
+      <div className="mt-3.5">{children}</div>
+    </Link>
+  );
+}
+
+/** A whole split into its parts on one bar; a small part keeps a visible sliver. The legend carries the counts. */
+export function PartsBar({ parts, label }: { parts: Part[]; label: string }) {
+  const shown = parts.filter((p) => p.value > 0);
+  return (
+    <>
+      <div
+        role="img"
+        aria-label={`${label}: ${parts.map((p) => `${p.value} ${p.label.toLowerCase()}`).join(", ")}`}
+        className="flex h-2 w-full gap-[3px] overflow-hidden rounded-full bg-line-soft"
+      >
+        {shown.map((p) => <span key={p.key} className={cx("h-full min-w-1.5 rounded-full", p.color)} style={{ flex: `${p.value} 1 0%` }} />)}
+      </div>
+      <ul className="mt-3.5 grid grid-cols-2 gap-x-4 gap-y-1.5" aria-hidden>
+        {parts.map((p) => (
+          <li key={p.key} className="flex min-w-0 items-center gap-2 text-xs">
+            <span className={cx("size-2 shrink-0 rounded-full", p.color)} />
+            <span className="min-w-0 truncate text-muted">{p.label}</span>
+            <span className={cx("ml-auto font-medium tabular", p.value ? "text-fg" : "text-ghost")}>{p.value}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+const utcDay = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" });
+
+/** Finished work per day: green when no person was needed, amber after a person's review. Days are UTC dates. */
+export function DailyBars({ series }: { series: Day[] }) {
+  const max = Math.max(1, ...series.map((s) => s.finished));
+  const first = series[0]?.day;
+  const last = series.at(-1)?.day;
+  return (
+    <figure>
+      <div className="flex h-[52px] items-end gap-[3px]" aria-hidden>
+        {series.map((s) => {
+          const reviewed = s.finished - s.autonomous;
+          return (
+            <span key={s.day} className="flex h-full min-w-0 flex-1 flex-col justify-end" title={`${utcDay.format(new Date(s.day))}: ${s.finished} finished, ${s.autonomous} without a person`}>
+              {s.finished === 0 ? (
+                <span className="h-[3px] rounded-full bg-line-soft" />
+              ) : (
+                <span className="flex flex-col gap-[2px]" style={{ height: `${Math.max(14, (s.finished / max) * 100)}%` }}>
+                  {reviewed > 0 && <span className="min-h-[3px] rounded-[2px] bg-supervised/55" style={{ flex: `${reviewed} 1 0%` }} />}
+                  {s.autonomous > 0 && <span className="min-h-[3px] rounded-[2px] bg-autonomous" style={{ flex: `${s.autonomous} 1 0%` }} />}
+                </span>
+              )}
+            </span>
+          );
+        })}
+      </div>
+      {first && last && (
+        <div className="mt-1.5 flex justify-between text-2xs text-faint tabular" aria-hidden>
+          <span>{utcDay.format(new Date(first))}</span>
+          <span>{utcDay.format(new Date(last))}</span>
+        </div>
+      )}
+      <figcaption className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+        <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-autonomous" aria-hidden />Without a person</span>
+        <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-supervised/55" aria-hidden />After review</span>
+      </figcaption>
+      <div className="sr-only">
+        <table>
+          <caption>Finished tasks per day</caption>
+          <thead><tr><th>Day</th><th>Finished</th><th>Without a person</th></tr></thead>
+          <tbody>{series.map((s) => <tr key={s.day}><td>{s.day}</td><td>{s.finished}</td><td>{s.autonomous}</td></tr>)}</tbody>
+        </table>
+      </div>
+    </figure>
+  );
+}
 
 const weekday = new Intl.DateTimeFormat("en-GB", { weekday: "short" });
 
