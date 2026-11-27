@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { Logo } from "@/components/shell/logo";
+import { BrandMark } from "@/components/shell/logo";
 import { Card } from "@/components/ui/primitives";
 
 /** The quiet frame around sign-in, first-account setup and invitations. */
@@ -9,7 +9,7 @@ export function AuthFrame({ title, description, children, footer }: { title: str
     <main id="main" className="flex min-h-dvh items-start justify-center px-4 py-12 sm:items-center sm:py-16">
       <div className="w-full max-w-[400px] animate-rise-in">
         <div className="flex items-center gap-3">
-          <Logo className="size-8 shrink-0 text-fg" title="" />
+          <BrandMark className="size-8 shrink-0" />
           <div>
             <p className="text-[15px] font-semibold tracking-[-0.01em]">Select</p>
             <p className="text-xs text-muted">Agents that earn their autonomy</p>

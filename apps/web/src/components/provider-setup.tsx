@@ -170,7 +170,7 @@ export function ProviderSetup({ cid, onDone }: { cid: string; onDone: (summary: 
             </div>
             <Button variant="primary" loading={busy} disabled={probeBusy} onClick={() => void apply()}>Use this model</Button>
           </div>
-          <div className="rounded-xl border border-line bg-surface-2 p-3.5 space-y-2.5">
+          <div className="glass p-3.5 space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-[13px] font-semibold text-fg">Verify generation</p>

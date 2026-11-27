@@ -1,16 +1,18 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertOctagon, ArrowDownRight, ArrowRight, Bot, CircleDollarSign, CircleDot, ClipboardCheck, Mail, OctagonX, Play, RotateCcw, Send, ShieldCheck } from "lucide-react";
+import { AlertOctagon, ArrowDownRight, ArrowRight, Bot, CircleDollarSign, CircleDot, ClipboardCheck, Mail, OctagonX, Play, Plus, RotateCcw, Send, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 
 import { ActivityTimeline } from "@/components/domain";
-import { PageBody, PageHeader } from "@/components/shell/app-shell";
+import { SceneHistogram, SceneLegend } from "@/components/pyramid-scene";
+import { taskBands, useSelectedBand } from "@/components/scene-backdrop";
+import { PageBody, PageHeader, useNewTask } from "@/components/shell/app-shell";
 import { EmptyState, ErrorState, LoadingRows, useToast } from "@/components/ui/feedback";
 import { ConfirmDialog } from "@/components/ui/overlay";
-import { Button, Card, DemoTag, Progress, Skeleton, cx } from "@/components/ui/primitives";
+import { Button, DemoTag, Progress, Skeleton, cx } from "@/components/ui/primitives";
 import { api, errorMessage } from "@/lib/api";
 import { inboxHref, money, percent, relative } from "@/lib/format";
 import { useAgents, useCompany, useCompanyId, useInbox, useOverview } from "@/lib/queries";
@@ -93,14 +95,14 @@ function DemoControls({ company }: { company: Company }) {
 /** One figure, the way an operator scans it: the number first, its name, one line of context. */
 function Metric({ href, value, label, detail, icon, tone }: { href: string; value: ReactNode; label: string; detail?: ReactNode; icon: ReactNode; tone?: "warning" | "danger" }) {
   return (
-    <Link href={href} className="group block rounded-xl border border-line bg-surface p-4 transition-colors duration-[120ms] hover:border-line-strong sm:p-5">
+    <Link href={href} className="glass glass-hover group block min-w-0 px-4 py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className={cx("text-2xl font-bold tracking-tight tabular sm:text-3xl", tone === "danger" ? "text-danger" : tone === "warning" ? "text-warning" : "text-fg")}>{value}</p>
-          <p className="mt-1 text-xs font-semibold text-muted sm:text-sm">{label}</p>
-          {detail && <p className="mt-1.5 hidden truncate text-xs text-faint sm:block">{detail}</p>}
+          <p className={cx("text-2xl leading-tight font-bold tracking-tight tabular", tone === "danger" ? "text-danger" : tone === "warning" ? "text-warning" : "text-white")}>{value}</p>
+          <p className="mt-0.5 truncate text-xs font-semibold text-white/80">{label}</p>
+          {detail && <p className="mt-0.5 truncate text-[11px] text-white/60">{detail}</p>}
         </div>
-        <span className="mt-1.5 shrink-0 text-faint [&_svg]:size-4" aria-hidden>{icon}</span>
+        <span className="mt-1 shrink-0 text-white/55 [&_svg]:size-4" aria-hidden>{icon}</span>
       </div>
     </Link>
   );
@@ -109,8 +111,8 @@ function Metric({ href, value, label, detail, icon, tone }: { href: string; valu
 /** A section heading in capitals above its list. */
 function Heading({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mb-3 flex items-center justify-between gap-3">
-      <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">{children}</h2>
+    <div className="flex shrink-0 items-center justify-between gap-3 px-4 pt-3 pb-2">
+      <h2 className="text-[10px] font-medium tracking-[0.12em] text-white/65 uppercase">{children}</h2>
       {action}
     </div>
   );
@@ -122,7 +124,7 @@ function AutonomyLine({ o, cid }: { o: Overview; cid: string }) {
   return (
     <Link
       href={`/c/${cid}/autonomy`}
-      className="group block rounded-xl border border-line bg-surface px-4 py-4 transition-[border-color,background-color] duration-[120ms] hover:border-line-strong hover:bg-surface-2 sm:px-5"
+      className="glass glass-hover group block px-4 py-3"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="inline-flex items-center gap-2 text-xs font-semibold text-muted">
@@ -135,19 +137,19 @@ function AutonomyLine({ o, cid }: { o: Overview; cid: string }) {
           Explore evidence <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
         </span>
       </div>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 sm:gap-5">
+      <div className="mt-2 grid gap-3 sm:grid-cols-2 sm:gap-5">
         <div className="min-w-0">
           <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-            <strong className="text-3xl font-bold leading-none tracking-tight text-fg tabular">{percent(a.autonomy_rate)}</strong>
+            <strong className="text-2xl font-bold leading-none tracking-tight text-white tabular">{percent(a.autonomy_rate)}</strong>
             <span className="text-xs text-muted">finished without a person</span>
           </p>
           <p className="mt-1.5 text-xs text-faint">
             {a.finished ? `${a.autonomous} of ${a.finished} finished tasks` : "No finished tasks yet"}
           </p>
         </div>
-        <div className="min-w-0 border-t border-line-soft pt-3 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-5">
+        <div className="min-w-0 border-t border-white/10 pt-3 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-5">
           <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-            <strong className={cx("text-3xl font-bold leading-none tracking-tight tabular", a.undetected_errors ? "text-danger" : "text-fg")}>
+            <strong className={cx("text-2xl font-bold leading-none tracking-tight tabular", a.undetected_errors ? "text-danger" : "text-white")}>
               {a.undetected_error_measurable ? percent(a.undetected_error_rate, 1) : "—"}
             </strong>
             <span className="text-xs text-muted">errors found afterwards</span>
@@ -175,30 +177,30 @@ function NeedsYou({ cid }: { cid: string }) {
   const inbox = useInbox(cid);
   const items = inbox.data?.items ?? [];
   return (
-    <section aria-label="Needs you" className="min-w-0">
+    <section aria-label="Needs you" className="glass flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <Heading action={items.length > 6 ? <Link href={`/c/${cid}/inbox`} className="text-xs font-medium text-accent hover:text-accent-strong">All {items.length}</Link> : null}>Needs you</Heading>
-      <Card>
+      <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto pb-1">
         {inbox.isPending ? (
           <div className="space-y-2 p-4">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-10" />)}</div>
         ) : items.length === 0 ? (
           <EmptyState compact icon={<ClipboardCheck />} title="Nothing waits for you" />
         ) : (
-          <ul className="divide-y divide-line-soft">
+          <ul className="divide-y divide-white/[0.07]">
             {items.slice(0, 6).map((item) => (
               <li key={`${item.kind}-${item.id}`}>
-                <Link href={inboxHref(cid, item)} className="flex items-start gap-3 px-4 py-2.5 transition-colors duration-[120ms] hover:bg-hover">
-                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-surface-2">{INBOX_ICON[item.kind]}</span>
+                <Link href={inboxHref(cid, item)} className="flex items-start gap-3 px-4 py-2 transition-colors duration-[120ms] hover:bg-white/5">
+                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-white/[0.07]">{INBOX_ICON[item.kind]}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-fg">{item.title}</span>
-                    <span className="block truncate text-xs text-faint">{item.detail}</span>
+                    <span className="block truncate text-sm text-white">{item.title}</span>
+                    <span className="block truncate text-xs text-white/60">{item.detail}</span>
                   </span>
-                  <span className="shrink-0 text-xs text-faint">{relative(item.created_at)}</span>
+                  <span className="shrink-0 text-xs text-white/55">{relative(item.created_at)}</span>
                 </Link>
               </li>
             ))}
           </ul>
         )}
-      </Card>
+      </div>
     </section>
   );
 }
@@ -206,9 +208,9 @@ function NeedsYou({ cid }: { cid: string }) {
 function RecentActivity({ o, company: c }: { o: Overview; company: Company }) {
   const cid = c.id;
   return (
-    <section aria-label="Recent activity" className="min-w-0">
+    <section aria-label="Recent activity" className="glass flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <Heading action={<Link href={`/c/${cid}/activity`} className="text-xs font-medium text-accent hover:text-accent-strong">All activity</Link>}>Recent activity</Heading>
-      <Card>
+      <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto pb-1">
         {o.recent.length === 0 ? (
           <EmptyState
             compact
@@ -219,7 +221,7 @@ function RecentActivity({ o, company: c }: { o: Overview; company: Company }) {
         ) : (
           <ActivityTimeline events={o.recent.slice(0, 8)} dense />
         )}
-      </Card>
+      </div>
     </section>
   );
 }
@@ -231,6 +233,8 @@ function OverviewInner() {
   const inbox = useInbox(cid);
   const agents = useAgents(cid);
 
+  const newTask = useNewTask();
+  const { selected, setSelected } = useSelectedBand();
   const header = (c?: Company) => <PageHeader title="Home" actions={c?.is_demo ? <DemoControls company={c} /> : undefined} />;
 
   if (overview.isPending || company.isPending) {
@@ -261,39 +265,77 @@ function OverviewInner() {
     o.tasks.blocked ? `${o.tasks.blocked} blocked` : null,
   ].filter(Boolean).join(" · ");
 
+  const bands = taskBands(o, cid);
+  const series = o.series.slice(-30);
+  const dayLabel = (d?: string) => (d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "");
+  const histogramLabel = series.length ? `Finished · ${dayLabel(series[0]?.day)} → ${dayLabel(series[series.length - 1]?.day)}` : "";
+
   return (
     <>
       {header(c)}
-      <PageBody className="space-y-6">
+      {/* One screen on laptops and desktops: the figures float in glass over the pyramids, nothing scrolls.
+          On phones the same panels stack and scroll over the scene. */}
+      <section
+        aria-label="Home"
+        className={cx(
+          "pointer-events-none relative z-10 flex min-h-0 flex-1 flex-col gap-3 p-3 sm:p-4 lg:grid lg:flex-none lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:gap-4 lg:overflow-hidden",
+          // exactly the screen under the top bar (and the demo note): nothing to scroll
+          c.is_demo ? "lg:h-[calc(100dvh-75px-var(--titlebar))]" : "lg:h-[calc(100dvh-44px-var(--titlebar))]",
+        )}
+      >
+        <div className="pointer-events-auto grid grid-cols-2 gap-3 lg:col-start-1 lg:row-start-1 xl:grid-cols-4">
+          <Metric href={`/c/${cid}/agents`} value={o.agents.active} label={o.agents.active === 1 ? "Agent active" : "Agents active"} detail={`${working} working now · ${o.agents.paused} paused`} icon={<Bot />} />
+          <Metric href={`/c/${cid}/tasks`} value={o.tasks.in_progress} label="Tasks in progress" detail={`${o.tasks.todo} to do · ${o.tasks.blocked} blocked`} icon={<CircleDot />} />
+          <Metric href={`/c/${cid}/approvals`} value={waiting} label="Waiting for you" detail={waitingDetail} icon={<ClipboardCheck />} tone={waiting ? "warning" : undefined} />
+          <Metric
+            href={`/c/${cid}/costs`}
+            value={money(o.costs.month_live, "USD", 2)}
+            label="AI spend this month"
+            detail={budget > 0 ? `of ${money(o.costs.monthly_budget, "USD", 0)} budget · estimated` : "No budget limit · estimated"}
+            icon={<CircleDollarSign />}
+            tone={budget > 0 && Number(o.costs.month_live) / budget > 0.9 ? "danger" : undefined}
+          />
+        </div>
+
         {o.emergency_stop && (
-          <div role="alert" className="flex items-center gap-2.5 rounded-xl border border-danger/35 bg-danger/8 px-4 py-3 text-sm text-danger">
+          <div role="alert" className="glass pointer-events-auto flex items-center gap-2.5 self-start px-4 py-2.5 text-sm text-danger lg:col-start-1 lg:row-start-2">
             <OctagonX className="size-4 shrink-0" aria-hidden />
             Emergency stop is on: no agent runs until it is lifted from the top bar.
           </div>
         )}
 
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-            <Metric href={`/c/${cid}/agents`} value={o.agents.active} label={o.agents.active === 1 ? "Agent active" : "Agents active"} detail={`${working} working now · ${o.agents.paused} paused`} icon={<Bot />} />
-            <Metric href={`/c/${cid}/tasks`} value={o.tasks.in_progress} label="Tasks in progress" detail={`${o.tasks.todo} to do · ${o.tasks.blocked} blocked`} icon={<CircleDot />} />
-            <Metric href={`/c/${cid}/approvals`} value={waiting} label="Waiting for you" detail={waitingDetail} icon={<ClipboardCheck />} tone={waiting ? "warning" : undefined} />
-            <Metric
-              href={`/c/${cid}/costs`}
-              value={money(o.costs.month_live, "USD", 2)}
-              label="AI spend this month"
-              detail={budget > 0 ? `of ${money(o.costs.monthly_budget, "USD", 0)} budget · estimated` : "No budget limit · estimated"}
-              icon={<CircleDollarSign />}
-              tone={budget > 0 && Number(o.costs.month_live) / budget > 0.9 ? "danger" : undefined}
-            />
-          </div>
-          <AutonomyLine o={o} cid={cid} />
-        </div>
+        {/* Room for the pyramids on phones */}
+        <div className="h-[34dvh] shrink-0 lg:hidden" aria-hidden />
 
-        <div className="grid items-start gap-6 lg:grid-cols-2">
+        <div className="pointer-events-auto flex min-h-0 flex-col gap-3 max-lg:min-h-[640px] lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:gap-4">
+          {c.role !== "viewer" && (
+            <button
+              type="button"
+              onClick={() => newTask()}
+              className="glass glass-hover flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full! px-4 text-sm font-medium text-white"
+            >
+              <Plus className="size-4" aria-hidden />
+              New task
+            </button>
+          )}
           <NeedsYou cid={cid} />
           <RecentActivity o={o} company={c} />
         </div>
-      </PageBody>
+
+        <div className="pointer-events-auto flex flex-col gap-3 lg:col-start-1 lg:row-start-3 lg:flex-row lg:items-end lg:gap-4">
+          <div className="glass w-full px-3 py-2.5 lg:w-[230px] lg:shrink-0">
+            <SceneLegend bands={bands} selected={selected} onSelect={setSelected} />
+          </div>
+          <div className="min-w-0 flex-1 lg:max-w-[460px]">
+            <AutonomyLine o={o} cid={cid} />
+          </div>
+          {series.length > 0 && (
+            <div className="glass w-full px-3 py-2.5 lg:ml-auto lg:w-[190px] lg:shrink-0">
+              <SceneHistogram values={series.map((d) => d.finished)} label={histogramLabel} />
+            </div>
+          )}
+        </div>
+      </section>
     </>
   );
 }

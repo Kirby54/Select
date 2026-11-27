@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 
-import { Logo } from "@/components/shell/logo";
+import { BrandMark } from "@/components/shell/logo";
 import { ErrorState, LoadingRows, useToast } from "@/components/ui/feedback";
 import { Button, Card, DemoTag } from "@/components/ui/primitives";
 import { api, errorMessage } from "@/lib/api";
@@ -49,7 +49,7 @@ function Home() {
     <main id="main" className="flex min-h-dvh items-start justify-center px-4 py-12 sm:items-center sm:py-16">
       <div className="w-full max-w-[520px] animate-rise-in">
         <div className="flex items-center gap-3">
-          <Logo className="size-8 shrink-0 text-fg" title="" />
+          <BrandMark className="size-8 shrink-0" />
           <div>
             <p className="text-[15px] font-semibold tracking-[-0.01em]">Select</p>
             <p className="text-xs text-muted">Agents that earn their autonomy</p>

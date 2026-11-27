@@ -1,0 +1,14 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Window controls for the built-in title bar of the Select interface on this machine",
+  "windows": ["main"],
+  "remote": { "urls": ["http://localhost:3000/*", "http://127.0.0.1:3000/*"] },
+  "permissions": [
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging",
+    "core:window:allow-is-maximized"
+  ]
+}

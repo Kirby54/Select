@@ -30,7 +30,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
         <RDialog.Overlay className={cx(SCRIM, "z-50")} />
         <RDialog.Content
           className={cx(
-            "fixed z-50 flex max-h-[88dvh] flex-col overflow-hidden border border-line bg-surface shadow-[var(--shadow-dialog)]",
+            "glass-menu fixed z-50 flex max-h-[88dvh] flex-col overflow-hidden",
             "inset-x-0 bottom-0 rounded-t-2xl sm:inset-x-4 sm:top-[10vh] sm:bottom-auto sm:mx-auto sm:max-h-[80vh] sm:rounded-2xl",
             "data-[state=open]:animate-pop-in data-[state=closed]:animate-pop-out",
             wide ? "sm:max-w-2xl" : "sm:max-w-[440px]",
@@ -149,7 +149,7 @@ export function DetailPanel({ open, onOpenChange, title, subtitle, children, act
         <RDialog.Overlay className="fixed inset-0 z-40 bg-scrim/70 data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out lg:bg-black/25" />
         <RDialog.Content
           className={cx(
-            "fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-line bg-surface shadow-[var(--shadow-dialog)] sm:inset-y-2 sm:right-2 sm:rounded-2xl sm:border",
+            "glass-menu fixed inset-y-0 right-0 z-50 flex w-full flex-col sm:inset-y-2 sm:right-2 sm:rounded-[22px]",
             "data-[state=open]:animate-sheet-in data-[state=closed]:animate-sheet-out",
             size === "lg" ? "sm:max-w-[680px]" : "sm:max-w-[520px]",
           )}
@@ -187,7 +187,7 @@ export function Dropdown({ trigger, items, align = "end", label }: { trigger: Re
           align={align}
           sideOffset={6}
           aria-label={label}
-          className="z-50 min-w-48 origin-[var(--radix-dropdown-menu-content-transform-origin)] rounded-[10px] bg-raised p-1 shadow-[var(--shadow-popover)] data-[state=open]:animate-pop-in data-[state=closed]:animate-pop-out"
+          className="z-50 min-w-48 origin-[var(--radix-dropdown-menu-content-transform-origin)] glass-menu rounded-[14px] p-1 data-[state=open]:animate-pop-in data-[state=closed]:animate-pop-out"
         >
           {items.map((item, i) =>
             item === "separator" ? (
@@ -223,7 +223,7 @@ export function Tooltip({ content, children, side = "top" }: { content: ReactNod
         <RTooltip.Content
           side={side}
           sideOffset={6}
-          className="z-[70] max-w-xs rounded-md bg-raised px-2 py-1 text-xs text-fg shadow-[var(--shadow-popover)] data-[state=delayed-open]:animate-fade-in"
+          className="z-[70] max-w-xs glass-menu rounded-md px-2 py-1 text-xs text-fg data-[state=delayed-open]:animate-fade-in"
         >
           {content}
         </RTooltip.Content>
@@ -241,7 +241,7 @@ export function Popover({ trigger, children, align = "end", className }: { trigg
           align={align}
           sideOffset={8}
           className={cx(
-            "z-50 w-80 max-w-[calc(100vw-24px)] origin-[var(--radix-popover-content-transform-origin)] overflow-hidden rounded-xl bg-raised shadow-[var(--shadow-popover)] data-[state=open]:animate-pop-in data-[state=closed]:animate-pop-out",
+            "z-50 w-80 max-w-[calc(100vw-24px)] origin-[var(--radix-popover-content-transform-origin)] glass-menu overflow-hidden rounded-[18px] data-[state=open]:animate-pop-in data-[state=closed]:animate-pop-out",
             className,
           )}
         >

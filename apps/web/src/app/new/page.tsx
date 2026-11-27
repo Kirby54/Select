@@ -9,7 +9,7 @@ import { Suspense, useState, type ReactNode } from "react";
 import { CatalogImport } from "@/components/catalog-import";
 import { MailboxForm } from "@/components/mailbox-form";
 import { ProviderSetup } from "@/components/provider-setup";
-import { Logo } from "@/components/shell/logo";
+import { BrandMark } from "@/components/shell/logo";
 import { ErrorState, LoadingRows, useToast } from "@/components/ui/feedback";
 import { Badge, Button, Card, Field, Input, Select, cx } from "@/components/ui/primitives";
 import { api, errorMessage } from "@/lib/api";
@@ -358,7 +358,7 @@ function Wizard() {
       <div className="mx-auto max-w-5xl animate-rise-in">
         <div className="mb-6 flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-2.5" aria-label="Select home">
-            <Logo className="size-7 shrink-0 text-fg" title="" />
+            <BrandMark className="size-7 shrink-0" />
             <span className="text-[14px] font-semibold">Set up a company</span>
           </Link>
           {company.data && <Badge tone="accent">{company.data.name}</Badge>}

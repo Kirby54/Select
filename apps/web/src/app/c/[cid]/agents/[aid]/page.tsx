@@ -80,7 +80,7 @@ export default function AgentPage({ params }: { params: Promise<{ cid: string; a
       <PageBody className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:space-y-0">
         <div className="min-w-0 space-y-4">
           {!a.connected && !a.is_demo_agent && (
-            <div className="flex items-start gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-[13px] text-muted">
+            <div className="flex items-start gap-3 glass px-4 py-3 text-[13px] text-muted">
               <PlugZap className="mt-0.5 size-4 shrink-0 text-faint" aria-hidden />
               <p>
                 This agent cannot run live yet{a.provider ? `: add an enabled ${providerLabel(a.provider)} connection` : ": choose a provider and a model"}.

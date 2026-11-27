@@ -1,0 +1,14 @@
+{
+  "name": "@select/desktop",
+  "version": "1.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "tauri": "tauri",
+    "build": "tauri build --no-bundle",
+    "icons": "tauri icon ../web/public/icon.svg"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.6"
+  }
+}

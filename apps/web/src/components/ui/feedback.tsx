@@ -38,7 +38,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             role={t.tone === "error" ? "alert" : "status"}
-            className="pointer-events-auto flex w-full max-w-sm animate-pop-in items-start gap-2.5 rounded-xl bg-raised px-3.5 py-3 shadow-[var(--shadow-popover)]"
+            className="pointer-events-auto flex w-full max-w-sm animate-pop-in items-start gap-2.5 glass-menu rounded-[18px] px-3.5 py-3"
           >
             {t.tone === "success" ? (
               <CheckCircle2 className="mt-px size-4 shrink-0 text-success" aria-hidden />
@@ -71,7 +71,7 @@ export function EmptyState({ icon, title, description, action, compact }: { icon
   return (
     <div className={cx("flex flex-col items-center justify-center text-center", compact ? "px-6 py-8" : "px-6 py-14")}>
       {icon && (
-        <div className="mb-3.5 flex size-10 items-center justify-center rounded-xl border border-line bg-surface-2 text-muted shadow-[var(--shadow-sheen)] [&_svg]:size-[18px]">
+        <div className="mb-3.5 flex size-10 items-center justify-center glass text-muted shadow-[var(--shadow-sheen)] [&_svg]:size-[18px]">
           {icon}
         </div>
       )}
@@ -122,7 +122,7 @@ export function LoadingRows({ rows = 6, className }: { rows?: number; className?
 
 export function DemoBanner() {
   return (
-    <div className="flex items-center gap-2 border-b border-line-soft bg-surface/60 px-4 py-1.5 text-xs text-muted sm:px-6" role="note">
+    <div className="flex items-center gap-2 border-b border-white/[0.07] px-4 py-1.5 text-xs text-white/70 sm:px-6" role="note">
       <span className="inline-flex h-[18px] shrink-0 items-center rounded-[5px] border border-dashed border-line-strong px-1.5 text-2xs font-medium tracking-wide text-faint uppercase">Demo</span>
       <span className="min-w-0 truncate sm:whitespace-normal">
         <strong className="font-medium text-fg">Demo company.</strong>

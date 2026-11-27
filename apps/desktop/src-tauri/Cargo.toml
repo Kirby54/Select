@@ -1,0 +1,21 @@
+[package]
+name = "select-desktop"
+version = "1.0.0"
+description = "Select — desktop window for the self-hosted Select interface"
+edition = "2021"
+license = "AGPL-3.0-only"
+
+[lib]
+name = "select_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[profile.release]
+codegen-units = 16
+opt-level = "s"
+strip = true
