@@ -308,7 +308,7 @@ export function Kbd({ children, className }: { children: ReactNode; className?: 
 }
 
 export function Card({ children, className, as: As = "section", ...rest }: { children: ReactNode; className?: string; as?: "section" | "div" | "article"; "aria-label"?: string }) {
-  return <As className={cx("rounded-xl border border-line bg-surface shadow-[var(--shadow-sheen)]", className)} {...rest}>{children}</As>;
+  return <As className={cx("glass", className)} {...rest}>{children}</As>;
 }
 
 export function CardHeader({ title, description, actions, className }: { title: ReactNode; description?: ReactNode; actions?: ReactNode; className?: string }) {

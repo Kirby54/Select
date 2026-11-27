@@ -12,6 +12,8 @@ import { api } from "@/lib/api";
 import { useMediaQuery } from "@/lib/hooks";
 import { useAction, useAuthState, useCompany, useInbox, useMailboxes, useOverview, usePersistentState } from "@/lib/queries";
 import type { Company } from "@/lib/types";
+import { useGlassSpotlight } from "../liquid-glass";
+import { SceneBackdrop } from "../scene-backdrop";
 import { DemoBanner, ErrorState, LoadingRows } from "../ui/feedback";
 import { ConfirmDialog, Dialog, Dropdown, Popover } from "../ui/overlay";
 import { IconButton, Kbd, cx } from "../ui/primitives";
@@ -67,7 +69,7 @@ function PlaceTabs({ company }: { company: Company }) {
   const place = sectionOf(parts[0]);
   if (!place?.tabs || parts.length !== 1) return null;
   return (
-    <nav aria-label={`${place.label} pages`} className="shrink-0 border-b border-line-soft bg-canvas px-3 sm:px-5">
+    <nav aria-label={`${place.label} pages`} className="glass-bar relative z-20 shrink-0 border-b border-white/[0.07] px-3 sm:px-5">
       <ul className="scrollbar-none -mb-px flex gap-4 overflow-x-auto">
         {place.tabs.map((tab) => {
           const active = parts[0] === tab.href;
@@ -78,7 +80,7 @@ function PlaceTabs({ company }: { company: Company }) {
                 aria-current={active ? "page" : undefined}
                 className={cx(
                   "flex h-10 items-center border-b-2 text-compact font-medium whitespace-nowrap transition-colors duration-[120ms]",
-                  active ? "border-fg text-fg" : "border-transparent text-muted hover:text-fg",
+                  active ? "border-accent text-white" : "border-transparent text-muted hover:text-fg",
                 )}
               >
                 {tab.label}
@@ -207,7 +209,7 @@ function MobileTabs({ company, onMore }: { company: Company; onMore: () => void 
       : { href: "organization", label: "Team", icon: Users },
   ];
   return (
-    <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-30 border-t border-line-soft bg-sidebar/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
+    <nav aria-label="Primary" className="glass-bar fixed inset-x-0 bottom-0 z-30 border-t border-white/[0.08] pb-[env(safe-area-inset-bottom)] lg:hidden">
       <ul className="mx-auto grid max-w-lg grid-cols-5">
         {tabs.map((tab) => {
           const href = `/c/${company.id}/${tab.href}`;
@@ -246,6 +248,8 @@ export function AppShell({ cid, children }: { cid: string; children: ReactNode }
   const titleSlot = useCallback((el: HTMLDivElement | null) => setSlots((s) => (s.title === el ? s : { ...s, title: el })), []);
   const actionsSlot = useCallback((el: HTMLDivElement | null) => setSlots((s) => (s.actions === el ? s : { ...s, actions: el })), []);
   const pendingG = useRef(0);
+  const shellRef = useRef<HTMLDivElement>(null);
+  useGlassSpotlight(shellRef);
   const pathname = usePathname();
   const router = useRouter();
   const mod = useModKey();
@@ -307,24 +311,25 @@ export function AppShell({ cid, children }: { cid: string; children: ReactNode }
   return (
     <SlotContext.Provider value={slots}>
     <NewTaskContext.Provider value={openNewTask}>
-      <div className="flex h-dvh overflow-hidden">
+    <SceneBackdrop cid={cid}>
+      <div ref={shellRef} data-scene={pathname.endsWith("/overview") ? "home" : "page"} className="flex h-[calc(100dvh-var(--titlebar))] overflow-hidden">
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[80] focus:rounded-lg focus:bg-raised focus:px-3 focus:py-2 focus:text-[13px]">Skip to content</a>
-        <aside className={cx("hidden h-full shrink-0 border-r border-line-soft lg:block", collapsed ? "w-14" : "w-[232px]")}>
-          <Sidebar company={c} collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} onNewTask={() => openNewTask()} />
+        <aside className={cx("glass-bar relative z-20 hidden h-full shrink-0 border-r border-white/[0.07] lg:block", collapsed ? "w-14" : "w-[200px]")}>
+          <Sidebar company={c} collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} onNewTask={() => openNewTask()} onSearch={() => setPaletteOpen(true)} />
         </aside>
         <RDialog.Root open={mobileOpen} onOpenChange={setMobileOpen}>
           <RDialog.Portal>
             <RDialog.Overlay className="fixed inset-0 z-40 bg-scrim data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out lg:hidden" />
-            <RDialog.Content className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] border-r border-line shadow-[var(--shadow-dialog)] data-[state=open]:animate-drawer-in data-[state=closed]:animate-drawer-out lg:hidden" aria-label="Navigation">
+            <RDialog.Content className="glass-bar fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] border-r border-white/[0.08] bg-black/70 shadow-[var(--shadow-dialog)] data-[state=open]:animate-drawer-in data-[state=closed]:animate-drawer-out lg:hidden" aria-label="Navigation">
               <RDialog.Title className="sr-only">Navigation</RDialog.Title>
               <RDialog.Description className="sr-only">Main navigation</RDialog.Description>
-              <Sidebar company={c} collapsed={false} onNavigate={() => setMobileOpen(false)} onNewTask={() => openNewTask()} />
+              <Sidebar company={c} collapsed={false} onNavigate={() => setMobileOpen(false)} onNewTask={() => openNewTask()} onSearch={() => setPaletteOpen(true)} />
             </RDialog.Content>
           </RDialog.Portal>
         </RDialog.Root>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="z-30 flex h-12 shrink-0 items-center gap-2 border-b border-line-soft bg-canvas px-3 sm:px-5">
+          <header className="glass-bar relative z-30 flex h-11 shrink-0 items-center gap-2 border-b border-white/[0.07] px-3 sm:px-4">
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <Crumbs company={c} />
               <div ref={titleSlot} className="flex min-w-0 items-center gap-2" />
@@ -335,7 +340,7 @@ export function AppShell({ cid, children }: { cid: string; children: ReactNode }
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}
-                className="flex h-7 items-center gap-2 rounded-lg border border-line bg-surface px-2 text-[13px] text-faint transition-colors duration-[120ms] hover:border-line-strong hover:text-muted max-sm:w-7 max-sm:justify-center max-sm:px-0 sm:w-48"
+                className="flex h-7 items-center gap-2 rounded-md border border-line-strong bg-black px-2 text-[13px] text-faint transition-colors duration-[120ms] hover:border-ghost hover:text-muted max-sm:w-7 max-sm:justify-center max-sm:px-0 sm:w-48 lg:hidden"
                 aria-label={`Search (${mod} K)`}
               >
                 <Search className="size-3.5 shrink-0" aria-hidden />
@@ -361,8 +366,8 @@ export function AppShell({ cid, children }: { cid: string; children: ReactNode }
             </div>
           </header>
           <PlaceTabs company={c} />
-          {c.is_demo && <DemoBanner />}
-          <main id="main" tabIndex={-1} className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-[calc(56px+env(safe-area-inset-bottom))] focus:outline-none lg:pb-0">
+          {c.is_demo && <div className="glass-bar relative z-20"><DemoBanner /></div>}
+          <main id="main" tabIndex={-1} className={cx("relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto pb-[calc(56px+env(safe-area-inset-bottom))] focus:outline-none lg:pb-0", pathname.endsWith("/overview") && "pointer-events-none lg:overflow-hidden")}>
             <div key={pathname} className="flex flex-1 animate-rise-in flex-col">{children}</div>
           </main>
         </div>
@@ -395,6 +400,7 @@ export function AppShell({ cid, children }: { cid: string; children: ReactNode }
           />
         )}
       </div>
+    </SceneBackdrop>
     </NewTaskContext.Provider>
     </SlotContext.Provider>
   );
@@ -415,7 +421,7 @@ export function PageHeader({ title, description, actions, meta }: { title: strin
       {slots.title &&
         createPortal(
           <>
-            <h1 className={cx("truncate text-sm font-bold text-fg", !detail && "tracking-wider uppercase")} title={description}>{title}</h1>
+            <h1 className={cx("truncate text-sm text-white", detail ? "font-semibold" : "font-semibold tracking-[0.01em]")} title={description}>{title}</h1>
             {meta && desktop && <div className="flex shrink-0 items-center gap-1.5">{meta}</div>}
           </>,
           slots.title,

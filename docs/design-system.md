@@ -1,39 +1,42 @@
-# Design system — SELECT Graphite Edition
+# Design system — SELECT Desert Edition
 
-A dark graphite interface that should feel like a native desktop app: calm, dense where work happens, precise everywhere.
-Tokens live in [`apps/web/src/app/globals.css`](../apps/web/src/app/globals.css) (`@theme`). Components never use raw hex values.
+Pure black, hairlines and one violet accent (the look of the Whale journal), with a live 3D scene behind the app and
+Apple-style liquid glass on every panel. Tokens live in [`apps/web/src/app/globals.css`](../apps/web/src/app/globals.css)
+(`@theme`). Components never use raw hex values; three.js palettes are data, kept next to the scene code.
 
-## How it was chosen
+## The scene and the glass
 
-The direction was researched with the **UI UX Pro Max** skill (data pinned at commit `623a9a9`), then adapted to Select:
-
-| Skill result | Decision |
-| --- | --- |
-| Design-system generator: glassmorphism, blue + orange palette, Plus Jakarta Sans | **Rejected.** It targets marketing pages and contradicts the brief (no electric blue, no glass everywhere). |
-| Style search: *Minimalism & Swiss Style* (enterprise apps, one accent, no decoration) | **Adopted** as the base. |
-| Style search: *Data-Dense Dashboard* (8–12 px padding, ~36 px rows) | **Adopted** for tables, lists and the status strip. |
-| Style search: *Dark Mode (OLED)* | Dark only; its neon glows **rejected**. |
-| Typography: *Minimal Swiss* pairing (Inter only, weights for hierarchy) | **Adopted**, self-hosted, so no request leaves to Google. |
-| Chart guidance: waffle / unit chart for a share of a whole | **Adopted** as `TaskWeek`, the signature autonomy view. |
-| UX rules: skip link, visible focus, reduced motion, confirmation of irreversible actions, deep links, 24 px web targets | **Applied**, see Accessibility. |
-| Pro-rules checklist (written for native mobile) | Used for the phone layout: tab bar, 44 px main actions, no content under fixed bars. |
+- **Scene** (`components/pyramid-scene.tsx`, mounted once by `components/scene-backdrop.tsx`): three Giza-like pyramids of
+  particles, coloured by height from orange (apex) to violet (base), with bright ridges; white sand carried by the wind, which
+  always blows left to right on screen; dunes and stars. It turns at Whale's pace (0.072 rad/s) and keeps moving even with
+  reduced motion, at the owner's request. Full strength on Home; dimmed to 32 %, 1x resolution and 30 fps behind other pages;
+  hidden on the org chart, which draws its own 3D pyramid. If the machine stays under ~40 fps, it drops to 1x by itself.
+- **Legend**: the Home legend lists task statuses; hovering a row lights that layer of the pyramids in its status colour.
+- **Glass** (`.glass`, style *liquid-glass* from UI UX Pro Max): a 22 % dark tint, 5–7 px blur with saturation, a specular
+  rim, and on Home only an SVG lens (`#liquid-lens`, Chromium and the desktop window; other browsers keep the blur). Outside
+  Home the tint rises to 58 % and the blur to 16 px so text keeps 4.5:1. `.glass-menu` (74 % tint, 30 px blur) is for menus,
+  dialogs, side panels, the palette and toasts. `.glass-bar` is the sidebar and top bar.
+- **Light from the pointer** (`components/liquid-glass.tsx`): the rim of every glass panel lights up on the side nearest the
+  mouse, even before the pointer is over it.
+- **Reduced transparency**: with `prefers-reduced-transparency`, every glass surface becomes opaque.
 
 ## Colour
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `canvas` | #111214 | app background |
-| `sidebar` | #161719 | navigation |
-| `surface` | #1B1D20 | cards, panels, sheets |
-| `surface-2` | #222428 | fields, segmented controls, table group headers |
-| `raised` | #2A2D32 | menus, popovers, tooltips, toasts |
-| `line` / `line-soft` / `line-strong` | #303238 / #26282C / #3E4148 | card borders / row separators / field hover |
-| `fg` / `muted` / `faint` | #F5F5F7 / #A1A1A6 / #94949B | text: primary, secondary, tertiary |
-| `ghost` | #707077 | disabled and decorative marks only |
-| `accent` / `accent-strong` | #A5B4C8 / #BCC8D8 | primary action, focus ring, selection |
-| `supervised` / `sampled` / `autonomous` | #D9B26A / #7DB4C8 / #7CC59E | autonomy levels only |
-| `danger` | #ED948C | failures, demotions, destructive actions |
-| `hover` / `press` / `selected` | white 4.5 % / white 7.5 % / accent 14 % | interaction layers valid on any surface |
+| `canvas` | black 50 % (the page itself is #000) | backgrounds that let the scene through |
+| `surface` / `card` | rgb(14 14 18) at 50 % | panels without the glass class |
+| `surface-2` | white 6 % | fields, segmented controls, table group headers |
+| `raised` | rgb(26 26 32) at 86 % | small floating chips |
+| `line` / `line-soft` / `line-strong` / `line-control` | #1F1F1F / #161616 / #2A2A2A / #3A3A3A | borders, separators, the search box |
+| `fg` / `muted` / `faint` | #DCDDDE / #999999 / #8A8A8A | text: primary, secondary, tertiary |
+| `ghost` | #666666 | disabled and decorative marks only |
+| `accent` / `accent-strong` | #A68BFF / #C4B5FF | primary action, focus ring, selection |
+| `nav` / `nav-active` / `brand-sub` | #E6E6E6 / #F87171 / #CFCFCF | sidebar links, the red bar on the current page, the light word of the brand |
+| `live` | #4ADE80 | "agents running now" pulse |
+| `supervised` / `sampled` / `autonomous` | #D29922 / #58A6FF / #3FB950 | autonomy levels only |
+| `danger` | #F85149 | failures, demotions, destructive actions |
+| `window-close` | #C42B1C | close button of the desktop title bar |
 
 Measured contrast (WCAG 2.2 AA): `fg` ≥ 12.6:1, `muted` ≥ 5.3:1 and `faint` ≥ 4.5:1 on every surface. The brief's tertiary grey
 `#707077` measures 3.4:1 on cards, so it is kept as `ghost` for non-text marks. Supervised and autonomous have almost the same

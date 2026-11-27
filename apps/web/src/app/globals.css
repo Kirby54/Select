@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * SELECT — Graphite Edition. Design tokens: the only place where raw values live.
+ * SELECT — Desert Edition (the Whale look: pure black, hairlines, violet accent). Design tokens: the only place where raw values live.
  * Components use these names (bg-surface, text-muted, rounded-xl, ease-spring…), never hex codes.
  * Full rationale: docs/design-system.md.
  *
@@ -11,56 +11,64 @@
  */
 @theme {
   /* Surfaces, from back to front */
-  --color-canvas: #111214;
-  --color-sidebar: #161719;
-  --color-surface: #1b1d20;
-  --color-surface-2: #222428;
-  --color-raised: #2a2d32;
-  --color-card: #1b1d20; /* alias of surface, kept for older markup */
+  --color-canvas: rgb(0 0 0 / 0.5);
+  --color-sidebar: #000000;
+  --color-surface: rgb(14 14 18 / 0.5);
+  --color-surface-2: rgb(255 255 255 / 0.06);
+  --color-raised: rgb(26 26 32 / 0.86);
+  --color-card: rgb(14 14 18 / 0.5); /* alias of surface, kept for older markup */
 
   /* Lines */
-  --color-line: #303238;
-  --color-line-soft: #26282c;
-  --color-line-strong: #3e4148;
+  --color-line: #1f1f1f;
+  --color-line-soft: #161616;
+  --color-line-strong: #2a2a2a;
 
   /* Text */
-  --color-fg: #f5f5f7;
-  --color-muted: #a1a1a6;
-  --color-faint: #94949b;
-  --color-ghost: #707077;
+  --color-fg: #dcddde;
+  --color-muted: #999999;
+  --color-faint: #8a8a8a;
+  --color-ghost: #666666;
+
+  /* Whale-style navigation: text links, a red bar on the current page, a green "running" pulse */
+  --color-nav: #e6e6e6;
+  --color-nav-active: #f87171;
+  --color-brand-sub: #cfcfcf;
+  --color-line-control: #3a3a3a;
+  --color-live: #4ade80;
+  --color-window-close: #c42b1c;
 
   /* One accent: action, focus, selection */
-  --color-accent: #a5b4c8;
-  --color-accent-strong: #bcc8d8;
-  --color-on-accent: #111214;
+  --color-accent: #a68bff;
+  --color-accent-strong: #c4b5ff;
+  --color-on-accent: #0a0a0a;
 
   /* Meaning only. Levels are always paired with a label and a 1-2-3 meter, never colour alone. */
-  --color-supervised: #d9b26a;
-  --color-sampled: #7db4c8;
-  --color-autonomous: #7cc59e;
-  --color-danger: #ed948c;
-  --color-warning: #d9b26a;
-  --color-success: #7cc59e;
+  --color-supervised: #d29922;
+  --color-sampled: #58a6ff;
+  --color-autonomous: #3fb950;
+  --color-danger: #f85149;
+  --color-warning: #d29922;
+  --color-success: #3fb950;
 
   /* Project dots: eight hues, told apart by name too, never by colour alone */
-  --color-dot-1: #e57fa8;
-  --color-dot-2: #6fa8f5;
-  --color-dot-3: #63c795;
-  --color-dot-4: #a993f5;
-  --color-dot-5: #e3b25a;
-  --color-dot-6: #55c2c7;
-  --color-dot-7: #ee9064;
-  --color-dot-8: #b9c46a;
+  --color-dot-1: #8b7cf6;
+  --color-dot-2: #2dd4bf;
+  --color-dot-3: #4f8cf7;
+  --color-dot-4: #facc15;
+  --color-dot-5: #fb923c;
+  --color-dot-6: #4ade80;
+  --color-dot-7: #f472b6;
+  --color-dot-8: #22d3ee;
 
   /* Interaction layers, valid on any surface */
-  --color-hover: rgb(255 255 255 / 0.045);
+  --color-hover: rgb(255 255 255 / 0.05);
   --color-press: rgb(255 255 255 / 0.075);
-  --color-selected: rgb(165 180 200 / 0.14);
-  --color-scrim: rgb(6 7 8 / 0.62);
+  --color-selected: rgb(139 108 239 / 0.16);
+  --color-scrim: rgb(0 0 0 / 0.72);
 
   /* Inter for words; the system monospace for machine values (keys, ids, costs, logs). */
-  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: system-ui, -apple-system, "Segoe UI", "Inter Variable", Inter, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", Consolas, "SFMono-Regular", Menlo, monospace;
 
   /* Type ladder (14 px body): nano 10 for section labels in capitals, micro 11 for badges,
      compact 13 for navigation and dense rows, then Tailwind's xs 12 · sm 14 · 2xl/3xl for figures. */
@@ -81,13 +89,13 @@
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 9px;
-  --radius-xl: 12px;
-  --radius-2xl: 16px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
 
   /* Elevation: a hairline ring plus a soft, dark shadow. Cards have none. */
   --shadow-popover: 0 0 0 1px rgb(255 255 255 / 0.06), 0 12px 32px -8px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.3);
   --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.07), 0 28px 72px -16px rgb(0 0 0 / 0.7), 0 4px 12px rgb(0 0 0 / 0.35);
-  --shadow-sheen: inset 0 1px 0 rgb(255 255 255 / 0.035);
+  --shadow-sheen: none;
 
   /* Motion: hover 120 · menus 180 · panels 280. Springs are CSS linear() curves, no library. */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -117,9 +125,12 @@
 }
 
 @layer base {
+  /* Height of the built-in title bar: 0 in a browser, 32 px in the Select desktop window. */
+  :root { --titlebar: 0px; }
+  body.desktop { --titlebar: 32px; padding-top: var(--titlebar); }
   html {
     color-scheme: dark;
-    background: var(--color-canvas);
+    background: #000;
     color: var(--color-fg);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -129,7 +140,7 @@
   body {
     min-height: 100dvh;
     font-size: 0.875rem;
-    line-height: 1.43;
+    line-height: 1.5;
   }
   h1, h2, h3 {
     text-wrap: balance;
@@ -157,7 +168,7 @@
     scrollbar-color: var(--color-raised) transparent;
   }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-thumb { background: var(--color-raised); border-radius: 8px; border: 3px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb { background: #222; border-radius: 8px; border: 3px solid transparent; background-clip: padding-box; }
   ::-webkit-scrollbar-thumb:hover { background-color: var(--color-line-strong); }
   ::-webkit-scrollbar-track { background: transparent; }
   /* Phones: 16 px fields so iOS does not zoom on focus. */
@@ -190,9 +201,87 @@
   .sel-check:hover { border-color: var(--color-faint); }
   .sel-check:checked {
     border-color: var(--color-accent);
-    background: var(--color-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23111214' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 8.5 2.5 2.5L12 5.5'/%3E%3C/svg%3E") center / 14px no-repeat;
+    background: var(--color-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%230a0a0a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 8.5 2.5 2.5L12 5.5'/%3E%3C/svg%3E") center / 14px no-repeat;
   }
   .sel-check:disabled { opacity: 0.5; }
+
+  /* Apple Liquid Glass (ui-ux-pro-max "liquid-glass"): mostly clear, the scene stays visible through it;
+     a light lens (SVG displacement, Chromium/WebView2) bends what passes behind; a specular rim lit from the
+     top-left; a faint dark tint only so white text keeps 4.5:1 over bright sand. */
+  /* Zero specificity: any absolute / fixed / sticky utility on the element wins. */
+  :where(.glass) { position: relative; }
+  .glass {
+    isolation: isolate;
+    border-radius: 22px;
+    background:
+      radial-gradient(120% 90% at 0% 0%, rgb(255 255 255 / 0.09), transparent 55%),
+      rgb(10 10 14 / 0.22);
+    -webkit-backdrop-filter: blur(7px) saturate(185%) brightness(1.08);
+    backdrop-filter: blur(7px) saturate(185%) brightness(1.08);
+    backdrop-filter: url(#liquid-lens) blur(5px) saturate(185%) brightness(1.08);
+    border: 1px solid rgb(255 255 255 / 0.13);
+    box-shadow:
+      inset 1px 1px 0 rgb(255 255 255 / 0.32),
+      inset -1px -1px 0 rgb(255 255 255 / 0.06),
+      inset 0 0 22px rgb(255 255 255 / 0.04),
+      0 14px 40px -14px rgb(0 0 0 / 0.55);
+  }
+  /* Outside Home, pages are denser: the same glass with more frost and tint so text stays at 4.5:1. */
+  [data-scene="page"] .glass {
+    background:
+      radial-gradient(120% 90% at 0% 0%, rgb(255 255 255 / 0.07), transparent 55%),
+      rgb(12 12 16 / 0.58);
+    /* no lens here: dense pages over a dimmed scene gain nothing from it and the GPU saves the work */
+    -webkit-backdrop-filter: blur(16px) saturate(170%);
+    backdrop-filter: blur(16px) saturate(170%);
+  }
+  /* Light that follows the mouse: a radial glow, centred on the pointer (--mx, --my set in JS), drawn only on
+     the rim, so the edge facing the cursor lights up even before the pointer is over the card. */
+  .glass::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: radial-gradient(220px circle at var(--mx, -999px) var(--my, -999px), rgb(255 255 255 / 0.95), rgb(200 190 255 / 0.35) 35%, transparent 70%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    pointer-events: none;
+    z-index: 2;
+  }
+  /* and a soft light inside when the pointer is over the card */
+  .glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(260px circle at var(--mx, -999px) var(--my, -999px), rgb(255 255 255 / 0.08), transparent 65%);
+    pointer-events: none;
+    z-index: -1;
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .glass { background: rgb(18 18 22 / 0.94); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  }
+  /* Denser glass for things that float above the page (menus, dialogs, side panels, palette, toasts). */
+  .glass-menu {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.02)), rgb(16 16 20 / 0.74) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    backdrop-filter: blur(30px) saturate(180%);
+    border: 1px solid rgb(255 255 255 / 0.12);
+    box-shadow: inset 1px 1px 0 rgb(255 255 255 / 0.18), 0 24px 64px -16px rgb(0 0 0 / 0.7);
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .glass-menu { background: rgb(16 16 20 / 0.98) !important; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  }
+  .glass-hover { transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out); }
+  .glass-hover:hover { border-color: rgb(255 255 255 / 0.22); }
+  /* Bars (sidebar, top bar, tabs): the same material, flatter. */
+  .glass-bar {
+    background: rgb(0 0 0 / 0.42);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    backdrop-filter: blur(24px) saturate(160%);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -428,7 +428,7 @@ export function VerificationReceipt({ receipt, defaultTechnical = false }: { rec
   const failing = checks.filter((c) => c.status !== "passed");
   const ordered = [...failing, ...checks.filter((c) => c.status === "passed")];
   return (
-    <div className="overflow-hidden rounded-xl border border-line bg-surface">
+    <div className="overflow-hidden glass">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-soft px-4 py-2.5">
         <div className="flex items-center gap-2.5">
           <ReceiptStatus status={receipt.status} />
@@ -555,7 +555,7 @@ export function ApprovalCard({ approval, onDecide, busy, readOnly, risk, agentRo
   );
 
   return (
-    <article className="overflow-hidden rounded-xl border border-line bg-surface shadow-[var(--shadow-sheen)]" aria-label={`Approval for ${approval.task_key}`}>
+    <article className="overflow-hidden glass" aria-label={`Approval for ${approval.task_key}`}>
       <header className="flex flex-wrap items-start justify-between gap-3 px-4 pt-3.5 pb-3">
         <div className="flex min-w-0 items-start gap-3">
           <AgentAvatar name={agent} size="md" />

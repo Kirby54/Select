@@ -222,7 +222,7 @@ function TasksInner() {
             <button
               type="button"
               onClick={() => router.replace(`/c/${cid}/tasks`)}
-              className="inline-flex h-7 items-center gap-2 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-fg transition-colors hover:border-line-strong"
+              className="inline-flex h-7 items-center gap-2 glass px-2.5 text-xs font-medium text-fg transition-colors hover:border-line-strong"
               aria-label={`Project ${project?.name ?? ""}: show all projects`}
             >
               <ProjectDot id={projectFilter} />
@@ -320,7 +320,7 @@ function TasksInner() {
                           <button
                             type="button"
                             onClick={() => setInspected(t.id)}
-                            className="block w-full rounded-lg border border-line bg-surface p-3 text-left shadow-[var(--shadow-sheen)] transition-colors duration-[120ms] hover:border-line-strong"
+                            className="block w-full glass p-3 text-left shadow-[var(--shadow-sheen)] transition-colors duration-[120ms] hover:border-line-strong"
                           >
                             <span className="flex items-center gap-2">
                               <PriorityIcon priority={t.priority} />

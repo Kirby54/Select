@@ -1,10 +1,11 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Maximize2, Minus, Move, Network, Plus, UserPlus } from "lucide-react";
+import { ArrowLeft, ArrowRight, Box, GitBranch, Hand, Maximize2, Minus, Move, Network, Plus, Spline, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent } from "react";
 
 import { AgentFormDialog } from "@/components/agent-form";
+import { OrgPyramid3D, type OrgMode } from "@/components/org-pyramid-3d";
 import { AgentAvatar, AgentStatus, AutonomyLevel, LEVEL_LABEL, LevelMeter, providerLabel } from "@/components/domain";
 import { PageHeader } from "@/components/shell/app-shell";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/ui/feedback";
@@ -12,7 +13,7 @@ import { DetailPanel } from "@/components/ui/overlay";
 import { Button, Field, IconButton, Select, cx } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
 import { taskTypeLabel } from "@/lib/format";
-import { useAction, useAgents, useCompany, useCompanyId } from "@/lib/queries";
+import { useAction, useAgents, useCompany, useCompanyId, usePersistentState } from "@/lib/queries";
 import type { Agent, Level } from "@/lib/types";
 
 const W = 240;
@@ -92,6 +93,14 @@ export default function OrganizationPage() {
   const [drag, setDrag] = useState<{ id: string; x: number; y: number; active: boolean; target: string | null; sx: number; sy: number } | null>(null);
   const justDragged = useRef(false);
   const canAdmin = !!company.data && ["owner", "admin"].includes(company.data.role);
+  const [shape, setShape] = usePersistentState<"3d" | "tree">("org.view", "3d");
+  const [mode, setMode] = useState<OrgMode>("move");
+  const [hint, setHint] = useState<string | null>(null);
+  useEffect(() => {
+    if (!hint) return;
+    const t = window.setTimeout(() => setHint(null), 3800);
+    return () => window.clearTimeout(t);
+  }, [hint]);
 
   const list = useMemo(() => agents.data ?? [], [agents.data]);
   const byId = useMemo(() => new Map(list.map((a) => [a.id, a])), [list]);
@@ -117,6 +126,16 @@ export default function OrganizationPage() {
   const reorder = useAction(cid, (items: { id: string; manager_id: string | null; position: number }[]) =>
     api(`/companies/${cid}/org/reorder`, { method: "POST", body: items }), { success: "Organization saved" });
 
+  const link3d = (childId: string, managerId: string) => {
+    const child = byId.get(childId);
+    const manager = byId.get(managerId);
+    if (!child || !manager) return;
+    if (child.manager_id === manager.id) { setHint(`${child.name} already reports to ${manager.name}.`); return; }
+    if (isDescendant(manager, child)) { setHint(`${manager.name} reports to ${child.name}: that link would make a loop.`); return; }
+    const siblings = list.filter((a) => a.manager_id === manager.id);
+    reorder.mutate([{ id: child.id, manager_id: manager.id, position: siblings.length }]);
+    setHint(`${child.name} now reports to ${manager.name}.`);
+  };
   const zoom = (factor: number) => setView((v) => ({ ...v, k: Math.min(2, Math.max(0.3, v.k * factor)) }));
   const onCanvasDown = (e: RPointerEvent) => {
     if ((e.target as HTMLElement).closest("button")) return;
@@ -210,12 +229,54 @@ export default function OrganizationPage() {
       <PageHeader
         title="Organization"
         description="Who reports to whom, which model holds each post, and how much autonomy it has earned"
-        actions={canAdmin && <Button size="sm" variant="primary" icon={<UserPlus className="size-3.5" aria-hidden />} onClick={() => setCreating({})}>Add agent</Button>}
+        actions={
+          <div className="flex items-center gap-2">
+            <div role="radiogroup" aria-label="View" className="flex rounded-full border border-white/10 bg-white/5 p-0.5">
+              {([["3d", "3D", Box], ["tree", "Tree", Network]] as const).map(([value, label, Icon]) => (
+                <button key={value} type="button" role="radio" aria-checked={shape === value} onClick={() => setShape(value)}
+                  className={cx("flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors", shape === value ? "bg-white/15 text-white" : "text-white/60 hover:text-white")}>
+                  <Icon className="size-3.5" aria-hidden />{label}
+                </button>
+              ))}
+            </div>
+            {canAdmin && <Button size="sm" variant="primary" icon={<UserPlus className="size-3.5" aria-hidden />} onClick={() => setCreating({})}>Add agent</Button>}
+          </div>
+        }
       />
       {agents.isPending ? <LoadingRows /> : agents.isError ? <ErrorState error={agents.error} retry={() => void agents.refetch()} /> :
         list.length === 0 ? (
           <EmptyState icon={<Network />} title="No organization yet" description="Add a first agent; the others will report to it or to each other."
             action={canAdmin ? <Button size="sm" variant="primary" onClick={() => setCreating({})}>Add agent</Button> : undefined} />
+        ) : shape === "3d" ? (
+          <div className="relative min-h-[520px] flex-1">
+            <OrgPyramid3D
+              cid={cid}
+              agents={list.filter((a) => a.status !== "archived")}
+              mode={mode}
+              selected={selected}
+              onSelect={setSelected}
+              canRelink={(a) => canAdmin && !a.is_demo_agent}
+              onLink={link3d}
+              onHint={setHint}
+            />
+            <div className="glass absolute top-4 left-1/2 z-[1100] flex -translate-x-1/2 items-center gap-1 rounded-full! p-1" role="radiogroup" aria-label="What dragging does">
+              {([["move", "Move", Hand, "Drag an agent anywhere in space"], ["link", "Link", Spline, "Drag from an agent onto its new manager"]] as const).map(([value, label, Icon, title]) => (
+                <button key={value} type="button" role="radio" aria-checked={mode === value} title={title} onClick={() => setMode(value)}
+                  className={cx("flex min-h-11 items-center gap-1.5 rounded-full px-3.5 text-xs font-medium transition-colors sm:min-h-9", mode === value ? "bg-white/15 text-white" : "text-white/65 hover:text-white")}>
+                  <Icon className="size-3.5" aria-hidden />{label}
+                </button>
+              ))}
+            </div>
+            <p className="glass pointer-events-none absolute bottom-4 left-4 z-[1100] hidden max-w-md items-center gap-2 px-3 py-2 text-xs text-white/75 md:flex">
+              <GitBranch className="size-3.5 shrink-0" aria-hidden />
+              {mode === "move"
+                ? "Drag an agent to place it anywhere · drag the empty space to turn · scroll to zoom · click to open"
+                : "Drag from an agent onto its new manager · the line goes up from report to manager"}
+            </p>
+            {hint && (
+              <p role="status" aria-live="polite" className="glass-menu absolute top-16 left-1/2 z-[1200] -translate-x-1/2 rounded-full px-4 py-2 text-xs text-white">{hint}</p>
+            )}
+          </div>
         ) : (
           <div className="relative min-h-0 flex-1">
             <div className="absolute right-4 bottom-4 z-10 flex items-center gap-0.5 rounded-xl bg-raised/90 p-1 shadow-[var(--shadow-popover)] backdrop-blur-md">

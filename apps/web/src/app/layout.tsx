@@ -4,6 +4,9 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
+import { LiquidLensFilter } from "@/components/liquid-glass";
+import { DesktopTitlebar } from "@/components/shell/desktop-titlebar";
+
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
@@ -12,12 +15,14 @@ export const metadata: Metadata = {
   icons: { icon: "/icon.svg" },
 };
 
-export const viewport: Viewport = { themeColor: "#111214", colorScheme: "dark", viewportFit: "cover" };
+export const viewport: Viewport = { themeColor: "#000000", colorScheme: "dark", viewportFit: "cover" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
+        <LiquidLensFilter />
+        <DesktopTitlebar />
         <Providers>{children}</Providers>
       </body>
     </html>
