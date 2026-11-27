@@ -58,14 +58,22 @@ const shots = [
   ["settings", "settings"],
   ["inbox", "inbox"],
   ["goals", "goals"],
+  ["routines", "routines"],
 ];
+// The pyramid scenes (Home behind every page, the 3D org chart) are WebGL: give them time to draw.
+const SCENE_SETTLE_MS = 1800;
 for (const [path, name] of shots) {
   await desktop.goto(`${base}/c/${cid}/${path}`);
   await desktop.waitForLoadState("networkidle");
   await desktop.evaluate(() => document.fonts.ready);
-  await desktop.waitForTimeout(250);
+  await desktop.waitForTimeout(SCENE_SETTLE_MS);
   await desktop.screenshot({ path: `${out}/${name}.png`, animations: "disabled", caret: "hide" });
 }
+// The first step of the guided setup.
+await desktop.goto(`${base}/new`);
+await desktop.waitForLoadState("networkidle");
+await desktop.evaluate(() => document.fonts.ready);
+await desktop.screenshot({ path: `${out}/setup-company.png`, animations: "disabled", caret: "hide" });
 // A task with a correction and its receipts.
 const rows = await desktop.evaluate(async (c) => (await (await fetch(`/api/companies/${c}/tasks?limit=200`)).json()).items, cid);
 const corrected = rows.find((t) => t.attempts > 1) ?? rows[0];
@@ -79,11 +87,11 @@ const phone = await browser.newPage({
   viewport: { width: 390, height: 844 }, deviceScaleFactor: 2,
   isMobile: true, hasTouch: true, colorScheme: "dark", reducedMotion: "reduce",
 });
-for (const path of ["overview", "approvals", "tasks", "autonomy"]) {
+for (const path of ["overview", "approvals", "tasks", "autonomy", "organization"]) {
   await phone.goto(`${base}/c/${cid}/${path}`);
   await phone.waitForLoadState("networkidle");
   await phone.evaluate(() => document.fonts.ready);
-  await phone.waitForTimeout(200);
+  await phone.waitForTimeout(SCENE_SETTLE_MS);
   const overflow = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   if (overflow > 1) throw new Error(`horizontal overflow on ${path}: ${overflow}px`);
   await phone.screenshot({ path: `${out}/mobile-${path}.png`, fullPage: false, animations: "disabled", caret: "hide" });

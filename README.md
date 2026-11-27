@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/hero-select.svg" width="100%" alt="Select — AI agents that earn their autonomy. Every result checked by code. Trust earned from evidence, never by default." />
+  <img src="docs/hero-select.svg" width="100%" alt="Select — AI agents that earn their autonomy: the pyramid mark beside three pyramids of light made of particles. Every result checked by code." />
 </p>
 
 <h1 align="center">Select</h1>
@@ -54,8 +54,8 @@ Both diagrams are SVG and can be reviewed or edited directly in the repository.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/messages.png" alt="Messages: an e-mail received, the triage and quote tasks it created, and the reply sent" /></td>
-    <td width="50%"><img src="docs/screenshots/approval-email.png" alt="Approval: exactly the quote e-mail that will be sent, in French, with the VAT rate" /></td>
+    <td width="50%"><img src="docs/screenshots/approvals.png" alt="Approval in liquid glass over the dimmed pyramid scene: exactly the quote e-mail that would leave Select" /></td>
+    <td width="50%"><img src="docs/screenshots/organization.png" alt="The team as a 3D pyramid: the manager at the apex, reports below, drag to place, link to change who reports to whom" /></td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/setup-company.png" alt="Guided setup: the country fills currency, VAT rates, time zone and language" /></td>
@@ -63,7 +63,11 @@ Both diagrams are SVG and can be reviewed or edited directly in the repository.
   </tr>
 </table>
 
-These four come from the end-to-end test run against local IMAP and SMTP test servers (`E2E_SCREENSHOTS_DIR`); the others are the demo company. All are real captures.
+All screenshots are real captures of the demo company made with `scripts/screenshots.mjs`.
+
+### The interface
+
+Pure black, hairlines and one violet accent. **Home fits one screen**: three pyramids of particles (orange apex to violet base, white sand blowing across) with the real figures floating in **liquid-glass** panels; hovering a legend row lights that task status. Every page sits on the same glass over the dimmed scene, and the rim of a panel lights up as the pointer comes near. **Team** shows the organization as a 3D pyramid: drag agents anywhere, or link one to another to change who it reports to (loops are refused). Details: [design system](docs/design-system.md).
 
 <!-- SELECT_SCREENSHOTS_BEGIN -->
 ## Explore the interface
@@ -102,6 +106,8 @@ cd select
 The script writes `.env` with random secrets (keep a copy), starts the containers and opens <http://localhost:3000>, where the first visit creates your account. Without the script: `cp .env.example .env`, set the secrets, `docker compose up --build`.
 
 No API key yet? Open the demo company from the account menu and press **Run demo week**.
+
+**Windows desktop app, without Docker:** `.\scripts\start-desktop.ps1` starts an embedded PostgreSQL, the API, the worker and the web server, then opens Select in its own frameless window (Tauri, `apps/desktop`); `-Stop` stops everything. Needs uv, Node.js 22 and, the first time, Rust.
 
 Five-minute guide: [docs/getting-started.md](docs/getting-started.md). Development setup without Docker: [docs/installation.md](docs/installation.md).
 

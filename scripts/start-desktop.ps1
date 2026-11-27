@@ -21,7 +21,9 @@ $Url = "http://localhost:3000"
 if ($Stop) {
     if (Test-Path $PidFile) {
         foreach ($id in Get-Content $PidFile) {
-            try { Stop-Process -Id ([int]$id) -Force -ErrorAction Stop } catch { Write-Host "Process $id was already stopped." }
+            # /T: also the children (a launcher such as npm or uv keeps the real server as a child process)
+            taskkill /PID $id /T /F *> $null
+            if ($LASTEXITCODE -ne 0) { Write-Host "Process $id was already stopped." }
         }
         Remove-Item $PidFile
     }
@@ -94,7 +96,14 @@ command.upgrade(cfg, 'head')
 & $Python $migrateScript
 if ($LASTEXITCODE -ne 0) { Write-Host "Database migration failed." -ForegroundColor Red; exit 1 }
 
-# 3. API and worker.
+# 3. API and worker. Refuse to start next to an older Select still holding the ports: it would serve stale files.
+foreach ($port in 8000, 3000) {
+    $busy = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($busy) {
+        Write-Host "Port $port is already used by process $($busy.OwningProcess). Stop it (or run this script with -Stop) and start again." -ForegroundColor Red
+        exit 1
+    }
+}
 $started = @()
 $api = Start-Process -PassThru -WindowStyle Hidden -FilePath (Join-Path $Venv "Scripts\select-api.exe") -ArgumentList "serve", "--port", "8000" `
     -RedirectStandardOutput "$Logs\api.log" -RedirectStandardError "$Logs\api.err.log"
